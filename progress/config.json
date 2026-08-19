@@ -1,0 +1,265 @@
+{
+  "projectName": "知识闪卡复习工具",
+  "generatedFiles": {
+    "progressDocument": "项目开发进度.md",
+    "boardDocument": "当前执行看板.md"
+  },
+  "baselineDocuments": [
+    "项目产品定位.md",
+    "项目开发方案.md",
+    "DESIGN.md",
+    "AGENTS.md"
+  ],
+  "trackingPrinciples": [
+    "以可验证的完成结果作为进度单位，不以已经开始代替已经完成。",
+    "每次只推进一个边界清楚的小步，并在完成后立即登记结构化进度源。",
+    "用户确认下一步方案后，开始改代码前必须写明本步纳入、本步明确不纳入和后续归属任务。",
+    "进度项必须关联阶段、里程碑、模块和验收标准，避免模糊描述。",
+    "阻塞、返工和范围变化必须同步登记风险与日志。",
+    "结构化 JSON 是唯一真相源，Markdown 进度文档只能由脚本生成。"
+  ],
+  "stepCompletionRequirements": [
+    "有明确任务 ID 和实施对象。",
+    "有代码、文档、测试、配置或可运行流程等实际产出。",
+    "有自动化命令或人工验收结果作为验证证据。",
+    "任务卡、风险、技术债和日志已按实际情况同步。"
+  ],
+  "statusDefinitions": [
+    {
+      "status": "未开始",
+      "meaning": "尚未投入实施",
+      "rule": "仅完成范围识别，尚无可验收产出。"
+    },
+    {
+      "status": "进行中",
+      "meaning": "已开始推进",
+      "rule": "已有实施动作，但尚未满足验收标准。"
+    },
+    {
+      "status": "已完成",
+      "meaning": "已达到验收标准",
+      "rule": "必须记录结果、验证方式和影响文件。"
+    },
+    {
+      "status": "阻塞",
+      "meaning": "当前无法继续",
+      "rule": "必须记录原因、影响范围和解除条件。"
+    },
+    {
+      "status": "暂缓",
+      "meaning": "当前版本不实施",
+      "rule": "必须记录暂缓依据和后续归属。"
+    }
+  ],
+  "phases": [
+    {
+      "id": "phase-0",
+      "label": "第零阶段：产品与治理基线",
+      "goal": "冻结产品定位、技术方案、设计规范和结构化进度跟踪规则",
+      "plannedCycle": "1-2 天",
+      "status": "已完成"
+    },
+    {
+      "id": "phase-1",
+      "label": "第一阶段：工程基础与资料导入",
+      "goal": "建立 TypeScript Web 工程、MySQL 数据层、Windows 运行脚本和单资料导入主链路",
+      "plannedCycle": "2-3 周",
+      "status": "已完成"
+    },
+    {
+      "id": "phase-2",
+      "label": "第二阶段：核心复习体验",
+      "goal": "完成复习面板、组合筛选、顺序切卡、掌握状态和内容渲染",
+      "plannedCycle": "2-3 周",
+      "status": "已完成"
+    },
+    {
+      "id": "phase-3",
+      "label": "第三阶段：标注与可视化编辑",
+      "goal": "完成高亮挖空、公式遮罩、可视化正文编辑、层级维护和多设备编辑锁",
+      "plannedCycle": "3-4 周",
+      "status": "已完成"
+    },
+    {
+      "id": "phase-4",
+      "label": "第四阶段：AI 与数据治理",
+      "goal": "完成多 Provider AI、讲解保存、回收站、导出恢复和每日备份",
+      "plannedCycle": "2-3 周",
+      "status": "已完成"
+    },
+    {
+      "id": "phase-5",
+      "label": "第五阶段：移动端与发布",
+      "goal": "完成 iPhone PWA、Cloudflare Tunnel、一键运行、账号保护和发布验收",
+      "plannedCycle": "2-3 周",
+      "status": "进行中"
+    },
+    {
+      "id": "phase-6",
+      "label": "第六阶段：题库与刷题",
+      "goal": "完成章节题、真题和模拟题的题库导入、管理、双模式刷题、统计、错题专项、AI 讲解与完整备份",
+      "plannedCycle": "4-6 周",
+      "status": "已完成"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "label": "M0 方案可执行",
+      "completion": "产品、开发、设计和进度治理基线完整且可校验",
+      "status": "已完成"
+    },
+    {
+      "id": "M1",
+      "label": "M1 资料可导入",
+      "completion": "合法 Markdown/ZIP 可预览、校验并写入 MySQL",
+      "status": "已完成"
+    },
+    {
+      "id": "M2",
+      "label": "M2 可连续复习",
+      "completion": "组合筛选、顺序切卡、状态保存和内容渲染完整可用",
+      "status": "已完成"
+    },
+    {
+      "id": "M3",
+      "label": "M3 可标注可编辑",
+      "completion": "高亮挖空、可视化编辑、层级维护和双设备编辑锁可用",
+      "status": "已完成"
+    },
+    {
+      "id": "M4",
+      "label": "M4 AI 与数据可用",
+      "completion": "AI 讲解、备份恢复、导出和回收站闭环可用",
+      "status": "已完成"
+    },
+    {
+      "id": "M5",
+      "label": "M5 资料可组织",
+      "completion": "课程、科目、资料九宫格、封面和学习状态趋势可用",
+      "status": "进行中"
+    },
+    {
+      "id": "M6",
+      "label": "M6 题库可刷可追溯",
+      "completion": "题库导入、题目管理、背题/检测、统计、错题专项、AI 题目讲解历史和备份恢复闭环可用",
+      "status": "已完成"
+    },
+    {
+      "id": "GA",
+      "label": "GA 可安全发布",
+      "completion": "iPhone PWA、Cloudflare Tunnel、登录保护和 Windows 发布包通过验收",
+      "status": "进行中"
+    }
+  ],
+  "modules": [
+    {
+      "id": "project-governance",
+      "name": "项目治理",
+      "capabilityLayer": "治理层",
+      "status": "已完成",
+      "summary": "产品定位、开发方案、设计规范、Agent 约定和结构化进度跟踪基线已建立。"
+    },
+    {
+      "id": "runtime-foundation",
+      "name": "运行与配置",
+      "capabilityLayer": "基础设施层",
+      "status": "进行中",
+      "summary": "TypeScript 工程、MySQL 连接、路径配置、Windows 启停脚本和固定 Node.js 运行时。"
+    },
+    {
+      "id": "content-ingestion",
+      "name": "资料导入",
+      "capabilityLayer": "内容治理层",
+      "status": "进行中",
+      "summary": "单 Markdown/ZIP 解析与严格结构校验已完成，预览修正、资源复制和重复检测待后续任务。"
+    },
+    {
+      "id": "review-experience",
+      "name": "复习体验",
+      "capabilityLayer": "业务层",
+      "status": "进行中",
+      "summary": "已完成按资料续读、资料与掌握状态筛选、顺序切换、掌握状态和复习记录；PH5-13 的背默模式及登录后浏览器回归仍在进行。"
+    },
+    {
+      "id": "document-rendering",
+      "name": "内容渲染",
+      "capabilityLayer": "展示层",
+      "status": "已完成",
+      "summary": "安全渲染结构化正文、表格、代码、数学公式和受管图片；移动端表格压缩换行且不产生横向滚动。"
+    },
+    {
+      "id": "annotation-cloze",
+      "name": "高亮与挖空",
+      "capabilityLayer": "交互层",
+      "status": "已完成",
+      "summary": "文本、表格和整段公式高亮，以及仅当前会话有效的重点挖空与揭示重置已完成；可视化编辑会安全清理可能漂移的高亮。"
+    },
+    {
+      "id": "visual-editor",
+      "name": "可视化编辑",
+      "capabilityLayer": "编辑层",
+      "status": "已完成",
+      "summary": "已完成不展示 Markdown/LaTeX 源码的结构化正文、表格、公式和受管图片编辑，以及章、节、闪卡的新增、移动、排序和软删除；正文编辑通过设备租约锁避免跨设备同时修改。"
+    },
+    {
+      "id": "ai-service",
+      "name": "AI 讲解",
+      "capabilityLayer": "智能服务层",
+      "status": "已完成",
+      "summary": "已完成多 Provider 配置、后端加密密钥存储、OpenAI 兼容请求适配、连接测试、默认/临时提示词、当前讲解持久化及真实环境组合验收。"
+    },
+    {
+      "id": "data-governance",
+      "name": "数据治理",
+      "capabilityLayer": "支撑层",
+      "status": "进行中",
+      "summary": "已提供闪卡层级软删除、回收站、导出恢复、每日备份和恢复前留档；第六阶段将题库、题目 AI 讲解版本及作答快照纳入备份恢复，并兼容旧闪卡备份。"
+    },
+    {
+      "id": "question-bank",
+      "name": "题库与题目",
+      "capabilityLayer": "业务层",
+      "status": "进行中",
+      "summary": "在课程、科目下分别管理章节题、真题和模拟题；覆盖严格导入、目录、章节、题目与结构化题目内容。"
+    },
+    {
+      "id": "practice-experience",
+      "name": "刷题与统计",
+      "capabilityLayer": "交互层",
+      "status": "进行中",
+      "summary": "提供背题、检测、会话续答、最终答案判定、错题专项和题库/章节/题型/模式统计。"
+    },
+    {
+      "id": "question-ai",
+      "name": "题目 AI 讲解",
+      "capabilityLayer": "智能服务层",
+      "status": "进行中",
+      "summary": "复用当前启用 Provider，为单题提供带作答上下文的讲解、取消和持久化版本历史。"
+    },
+    {
+      "id": "delivery-security",
+      "name": "发布与安全",
+      "capabilityLayer": "交付层",
+      "status": "进行中",
+      "summary": "账号密码门禁和 Windows 发布包已完成；iPhone PWA、Cloudflare Tunnel 与 GA 公网安全验收仍在进行。"
+    }
+  ],
+  "priorities": [
+    {
+      "level": "P0",
+      "scope": "MVP 主链路必须完成",
+      "trackingRule": "优先拆成最小可验收步骤，未通过主链路验收不得进入体验扩展。"
+    },
+    {
+      "level": "P1",
+      "scope": "MVP 后的可靠性与体验",
+      "trackingRule": "仅在对应 P0 主链路稳定后启动。"
+    },
+    {
+      "level": "P2",
+      "scope": "明确延期能力",
+      "trackingRule": "可以保留方案，不提前进入实现。"
+    }
+  ]
+}

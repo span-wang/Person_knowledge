@@ -1,0 +1,39 @@
+{
+  "phaseId": "phase-0",
+  "tasks": [
+    {
+      "id": "GOV-001",
+      "sequence": "0",
+      "order": 10,
+      "title": "建立产品、开发、设计与进度治理基线",
+      "priority": "P0",
+      "moduleIds": [
+        "project-governance"
+      ],
+      "milestoneIds": [
+        "M0"
+      ],
+      "status": "已完成",
+      "acceptance": "基线文档、AGENTS 规则、结构化进度源和生成/校验脚本全部存在且校验通过。",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10"
+    },
+    {
+      "id": "GOV-002",
+      "sequence": "0b",
+      "order": 20,
+      "title": "收口 iOS 风格前端设计与精简文案规范",
+      "priority": "P0",
+      "moduleIds": [
+        "project-governance"
+      ],
+      "milestoneIds": [
+        "M0"
+      ],
+      "status": "已完成",
+      "acceptance": "DESIGN.md 明确 iOS 风格、页面结构、组件、文案长度、按钮词表和移动端验收红线。",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10"
+    }
+  ]
+}

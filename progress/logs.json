@@ -1,0 +1,2652 @@
+{
+  "entries": [
+    {
+      "id": "LOG-094",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH5-08"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "完成本机深浅色模式浏览器验收",
+      "action": "修复后的前端类型检查通过后，使用终端 Playwright 在设置页依次验证跟随系统、浅色和深色模式，检查本机持久化、简约与秋日枫叶皮肤 token、刷新恢复以及 390x844/1440x900 宽度。",
+      "result": "显示模式会写入 knowledge-flashcards-color-mode 并映射至 data-color-mode；深色刷新后仍保持选中。简约与秋日枫叶皮肤都即时使用各自的浅深 token，移动和桌面均未产生横向溢出，PH5-08 达到验收标准。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "390x844：深色模式 mode/stored=dark、documentWidth=390；刷新后深色 radio 仍选中。",
+        "秋日枫叶深色背景/正文为 rgb(23, 21, 18)/rgb(243, 238, 232)，浅色模式写入 light，跟随系统写入 system。",
+        "1440x900：documentWidth=1440；浏览器控制台仅有 React DevTools 开发提示。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "output/playwright/ph5-08-mobile-autumn-dark-20260819.png",
+        "output/playwright/ph5-08-desktop-autumn-dark-20260819.png"
+      ],
+      "next": "PH5-08 已完成；继续选择其余进行中的独立验收任务。"
+    },
+    {
+      "id": "LOG-093",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH5-01"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "补充移动端 PWA 与选词回归证据",
+      "action": "在不读取本机账号凭据的前提下，使用终端 Playwright 旧本地服务执行 390x844 复习页回归，检查页面宽度、底部固定导航、安全区内边距、PWA 元数据，并拖选正文确认高亮操作状态。",
+      "result": "390x844 页面 bodyWidth/documentWidth 均为 390，底部导航为 fixed 且主内容保留底部内边距，Manifest、apple-mobile-web-app-capable 和 viewport-fit=cover 均生效；拖选正文后高亮按钮可用。真实 iPhone Safari 的主屏幕安装、原生长按浮动工具栏和 Home Indicator 仍待设备验收，因此 PH5-01 保持进行中。",
+      "verification": [
+        "Playwright viewportWidth=390、bodyWidth=390、documentWidth=390。",
+        "底部导航 position=fixed、height=61px、padding-bottom=8px，主内容 padding-bottom=96px。",
+        "正文拖选得到可识别文本，高亮按钮由 disabled 变为可用。",
+        "截图保存为 output/playwright/ph5-01-mobile-20260819.png。",
+        "内置浏览器仍因 Cannot redefine property: process 无法连接，未执行真实 iPhone Safari 验收。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "output/playwright/ph5-01-mobile-20260819.png"
+      ],
+      "next": "取得真实 iPhone Safari 或可用设备桥接后，完成添加到主屏幕、长按选词原生浮动工具栏和 Home Indicator 安全区验收；设备差异只在 PH5-01 范围内修正。"
+    },
+    {
+      "id": "LOG-092",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-09"
+      ],
+      "phaseMilestone": "第六阶段 / M6、GA",
+      "step": "完成题库主链路与备份恢复验收",
+      "action": "串行运行题库导入、目录、数据治理和备份真实 MySQL/HTTP 回归；清理两条已确认无引用的历史夹具资源；启动隔离本地 API/Web，使用 Playwright 验证题库入口、检测结果、AI 历史区、桌面/390px 无横向溢出和控制台错误。",
+      "result": "真实 MySQL/HTTP 回归全部通过，备份验证题库与资源归档；临时题库夹具验证检测前隐藏答案、完成后显示结果和统计错题；桌面与 390px 页面无横向溢出且控制台无错误。真实 Provider 联网生成未执行，避免使用真实 API Key。",
+      "verification": [
+        "npm run test:question-import:integration 通过。",
+        "npm run test:question-bank:integration 通过。",
+        "npm run test:data-governance:integration 通过。",
+        "npm run test:backup:integration 通过。",
+        "npm run db:check、npm run storage:check 通过。",
+        "Playwright 1440x900 与 390x844 截图和宽度检查通过，控制台错误数为 0。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md",
+        "output/playwright/ph6-09-question-desktop.png",
+        "output/playwright/ph6-09-question-mobile.png",
+        "output/playwright/ph6-09-question-mobile-workspace.png",
+        "output/playwright/ph6-09-practice-mobile.png"
+      ],
+      "next": "第六阶段主链路完成；真实 Provider 多模型兼容、公网 Tunnel 或新需求另立任务。"
+    },
+    {
+      "id": "LOG-091",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-08"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "实现题目 AI 讲解与版本历史",
+      "action": "新增题目 AI 共享契约、Provider 生成与取消服务、历史版本查询和认证 HTTP 路由；在题目详情接入折叠讲解区、临时提示词、历史过时标记和安全渲染；补服务与 HTTP 测试。",
+      "result": "题目 AI 仅发送当前题干、选项、答案、解析、知识点和可选本次作答上下文，成功生成追加 question_ai_explanations 版本，取消或 Provider 错误不写入；题目版本变化后历史讲解显示可能过时且保留。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，126 项 API 测试全部通过。",
+        "npm run build 通过；Web 构建仅保留既有大 chunk 警告。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/question-ai-service.ts",
+        "apps/api/src/question-ai-service.test.ts",
+        "apps/api/src/question-ai-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH6-09，执行真实 MySQL、备份恢复以及桌面/390px 浏览器端题库主链路验收。"
+    },
+    {
+      "id": "LOG-090",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-07"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "实现题库统计与错题专项",
+      "action": "扩展完成会话结果摘要和错题来源；新增题库统计服务、统计认证路由和前端统计区；支持本次错题与累计错题会话；补统计、错题、结果和 HTTP 契约测试。",
+      "result": "已完成会话显示总题数、已作答、未作答、正确、错误和一位小数正确率。题库工作区展示总览、章节、题型、背题/检测累计统计和累计错题数。累计错题以每题最近一次已作答完成结果为准，答对后立即移出；未作答不会覆盖既有答题状态。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，122 项 API 测试全部通过。",
+        "npm run build 通过；Web 构建仅保留既有大 chunk 警告。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/practice-service.ts",
+        "apps/api/src/practice-service.test.ts",
+        "apps/api/src/practice-statistics-service.ts",
+        "apps/api/src/practice-statistics-service.test.ts",
+        "apps/api/src/practice-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "PH6-08 实现题目 AI 讲解与版本历史；真实 MySQL、备份恢复和桌面/390px 刷题整体验收留待 PH6-09。"
+    },
+    {
+      "id": "LOG-089",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-06"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "实现背题与检测会话",
+      "action": "新增共享会话契约、PracticeService 和认证路由；持久化题目/版本快照与作答；接入题库范围选择、背题/检测面板、继续和放弃；补服务层及 HTTP 契约测试。",
+      "result": "题库支持整套或章节启动背题、检测。背题提交即时返回正确/错误与解析；检测在完成前不返回正确答案或解析，完成时计算已作答结果并揭示快照答案。未完成会话可继续或放弃，单选/判断自动前进，多选确认后前进。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，120 项 API 测试全部通过。",
+        "npm run build 通过；Web 构建仅保留既有大 chunk 警告。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/practice-service.ts",
+        "apps/api/src/practice-service.test.ts",
+        "apps/api/src/practice-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "PH6-07 实现完成会话统计、正确率和错题专项；PH6-08 实现题目 AI 讲解与版本历史。"
+    },
+    {
+      "id": "LOG-088",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-05"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "实现可视化题目编辑",
+      "action": "新增题目服务、共享契约和认证 API；在题库页接入题目工作区、结构化内容编辑、题型答案控件、题库/章节移动、排序、软删除和恢复。",
+      "result": "题干、选项、解析和知识点均通过可视化节点编辑，选项限制 A-F 连续且最多六项，判断题固定为对/错；保存会严格校验答案并递增题目版本，题目可在同科目题库间移动。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，115 项 API 测试全部通过。",
+        "npm run build 通过。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/question-service.ts",
+        "apps/api/src/question-service.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "PH6-06 实现背题与检测会话；统计、错题专项和题目 AI 继续由 PH6-07、PH6-08 负责。"
+    },
+    {
+      "id": "LOG-087",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-04"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "实现课程科目下的题库目录管理",
+      "action": "新增独立题库目录服务、认证 API 和科目页题库入口；接入三类题库分组、题库与章节的目录操作、回收站恢复，以及带当前课程科目上下文的题库导入页。",
+      "result": "章节题、真题和模拟题在科目下固定分组。空题库可新建、改名、上下排序、软删除和恢复；删除题库会同时软删除其章节和题目。章节题支持新增、改名、上下排序、同科目章节题库间移动、删除约束和恢复，移动时同步题目归属。导入页复用 PH6-03 的 JSON/Excel 模板、预览、取消和原子应用 API。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，113 项 API 测试全部通过。",
+        "npm run test:question-bank:integration 通过真实 MySQL 与 HTTP 回归。",
+        "npm run build 通过。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/question-bank-service.ts",
+        "apps/api/src/question-bank-service.test.ts",
+        "apps/api/test/question-bank-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package.json",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "PH6-05 实现题目可视化编辑及题目级新增、移动、排序和软删除；刷题、统计和题目 AI 继续分别由后续任务承担。"
+    },
+    {
+      "id": "LOG-086",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-03"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "实现题库 JSON/Excel 导入与模板",
+      "action": "新增独立题库 JSON/Excel 模板、原始文件预览、取消和预览令牌应用接口；接入认证门禁、课程科目归属与重名校验；补充单元、HTTP 和真实 MySQL 回归。",
+      "result": "章节题可从 JSON chapters 或 Excel 章节列建立题库章节树，真题和模拟题以整套题库导入且无章节。题干、题型、选项和答案强制非空；选项限 A-F 连续的 2-6 项，判断题固定为 A: 对、B: 错，多选答案会标准化为字母数组。应用使用服务端预览令牌，在一个事务内写入题库、章节和题目，并阻止同科目同类型重名题库。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm --workspace @knowledge-flashcards/api test 通过，110 项测试全部通过。",
+        "npm run test:question-import:integration 通过真实 MySQL 与 HTTP 导入回归。",
+        "npm run db:migrate 通过，题库迁移已保持应用状态。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/question-import-service.ts",
+        "apps/api/src/question-import-service.test.ts",
+        "apps/api/src/question-import-http.test.ts",
+        "apps/api/test/question-import-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "package.json",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "PH6-04 接入题库目录管理及导入页面入口；题目可视化编辑、刷题、统计和 AI 讲解继续分别由后续任务承担。"
+    },
+    {
+      "id": "LOG-085",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-02"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "建立题库数据模型与备份恢复兼容",
+      "action": "新增独立题库迁移与回收站枚举迁移/扩展共享契约/将完整 JSON 导出升级为 v2/兼容 v1 恢复/覆盖题目 AI 版本和作答快照恢复。",
+      "result": "题库数据不复用闪卡表。question_banks、question_chapters、questions、question_ai_explanations、practice_sessions 和 practice_attempts 已可持久化，题目版本和完整快照使后续编辑不篡改旧作答。完整备份 v2 包含题库数据，v1 闪卡备份仍可恢复，且所有路径继续拒绝敏感字段。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm --workspace @knowledge-flashcards/api test 通过，105 项测试全部通过。",
+        "npm run db:migrate 在真实 MySQL 成功执行 005 和 006 迁移。",
+        "npm run test:data-governance:integration 通过。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "database/migrations/005_phase_6_question_bank.sql",
+        "database/migrations/006_phase_6_question_trash.sql",
+        "apps/api/src/migration.test.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "packages/shared/src/api.ts",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "PH6-03 实现章节题、真题和模拟题的 JSON/Excel 模板、预览校验与写入接口。"
+    },
+    {
+      "id": "LOG-084",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-01"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "冻结题库领域协议与阶段拆分",
+      "action": "逐项确认题库层级、导入模板、校验、背题/检测、统计、错题专项、可视化编辑、AI 历史和备份兼容；同步产品、开发、设计和结构化进度源。",
+      "result": "题库固定在课程→科目下的章节题、真题、模拟题三个入口。章节题由导入文件章节建树，真题和模拟题不设章节；题干、题型、连续选项和答案强制校验，解析/知识点可空。刷题、统计、错题、AI 版本和备份均已拆成独立可验收任务，题目与闪卡联动、图片、随机、部分得分和主观题评分明确不在本阶段。",
+      "verification": [
+        "已将确认结论写入 项目产品定位.md、项目开发方案.md 和 DESIGN.md。",
+        "npm run progress:build 通过，生成展示层。",
+        "npm run progress:check 通过，进度真相源引用和状态一致。"
+      ],
+      "affectedFiles": [
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/config.json",
+        "progress/tasks/phase-6.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "PH6-02 先建立题库独立数据模型、共享契约和备份恢复兼容，再开始题库导入或界面实施。"
+    },
+    {
+      "id": "LOG-083",
+      "date": "2026-08-13",
+      "taskIds": ["PH5-14"],
+      "phaseMilestone": "第五阶段 / M3、GA",
+      "step": "修复空白表格单元格不可编辑",
+      "action": "复现空单元格仅显示选中边框/为无子节点单元格渲染输入框/首字符写入 text 节点/类型检查、构建和进度校验",
+      "result": "空白表格单元格现在会显示可直接输入的文字框；输入内容后自动建立 text 子节点，后续编辑和保存沿用既有结构化正文链路。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过；仅有既有 Vite 大 chunk 警告。",
+        "npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "用户可在闪卡编辑态重新点击空白单元格并输入内容；若发现特定合并跨度下的焦点问题，再单独补充交互回归。"
+    },
+    {
+      "id": "LOG-082",
+      "date": "2026-08-13",
+      "taskIds": ["PH5-14"],
+      "phaseMilestone": "第五阶段 / M3、GA",
+      "step": "扩展闪卡编辑表格操作",
+      "action": "登记表格操作边界/实现空白单元格输入、按选中单元格加删行与横纵合并拆分/扩展跨度存储、阅读渲染和恢复校验/服务回归与构建/进度同步",
+      "result": "资料详情的闪卡编辑器中，表格单元格可直接输入；点击单元格后可在紧凑工具区加行、删行、横向合并、纵向合并或拆分。合并内容会保留在起始单元格并以 rowSpan/colSpan 保存，阅读态正确渲染；跨度进入服务端编辑校验和 JSON 恢复白名单。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，102 项测试全部通过，覆盖合并跨度写入和非法跨度拒绝。",
+        "npm run typecheck 通过。",
+        "npm run build 通过；Web 仅有既有 Vite 大 chunk 警告。",
+        "内置浏览器连接仍因 Cannot redefine property: process 无法启动，桌面与 390px 实际交互回归待运行时恢复后补测。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "packages/shared/src/api.ts",
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/data-governance-service.ts",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "待浏览器运行时恢复后，补做表格编辑、保存和阅读态的桌面与 390px 交互回归；Markdown 导出对合并单元格的保真策略另立任务。"
+    },
+    {
+      "id": "LOG-081",
+      "date": "2026-08-13",
+      "taskIds": ["PH5-25"],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "兼容安全 HTML 换行与表格导入",
+      "action": "引入 parse5 白名单转换/扩展共享表格节点表头契约/补充 API 回归与构建检查",
+      "result": "HTML br、p/div 和 table/thead/tbody/tfoot/tr/th/td 会转换为结构化正文；显式表头和单元格对齐信息在复习页保留。脚本、样式、事件属性、链接和其他未支持 HTML 继续阻止导入。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，101 项测试全部通过。",
+        "npm run typecheck 通过。",
+        "npm run build:web 与 npm run build:api 通过；Web 仅有既有 Vite 大 chunk 警告。",
+        "内置浏览器仍因 Cannot redefine property: process 无法启动，页面回归待运行时恢复后补测。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "apps/api/src/review-service.ts",
+        "apps/web/src/App.tsx",
+        "packages/shared/src/api.ts",
+        "apps/api/package.json",
+        "package-lock.json",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "先补做实际页面换行与表格回归；复杂 HTML 合并单元格、样式语义和更多标签另立任务。"
+    },
+    {
+      "id": "LOG-001",
+      "date": "2026-08-10",
+      "taskIds": [
+        "GOV-001"
+      ],
+      "phaseMilestone": "第零阶段 / M0",
+      "step": "完成产品、开发与设计基线",
+      "action": "需求收敛/产品定位/技术方案/交互设计/范围冻结",
+      "result": "已将逐项确认的产品决策落实为项目产品定位、项目开发方案和 DESIGN 设计规范，明确 Markdown 一次性导入、MySQL 主数据、可视化编辑、手动掌握状态、高亮挖空、多 Provider AI、Windows Web 应用和 Cloudflare Tunnel 等边界。",
+      "verification": [
+        "项目产品定位.md 已覆盖目标用户、核心价值、成功标准和第一版非目标。",
+        "项目开发方案.md 已覆盖架构、数据边界、导入、复习、AI、备份、部署和测试策略。",
+        "DESIGN.md 已覆盖桌面/iPhone 布局、主题、字体、高亮、挖空和可视化编辑规则。"
+      ],
+      "affectedFiles": [
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md"
+      ],
+      "next": "按 PH1-01 已确认边界建立 TypeScript Web 工程骨架。"
+    },
+    {
+      "id": "LOG-002",
+      "date": "2026-08-10",
+      "taskIds": [
+        "GOV-001"
+      ],
+      "phaseMilestone": "第零阶段 / M0",
+      "step": "建立 layout3.0 风格结构化进度系统",
+      "action": "Agent 规则/进度真相源/阶段任务/风险技术债/生成校验脚本",
+      "result": "已建立 progress/config.json、分阶段任务卡、风险、技术债和日志作为唯一真相源，并通过脚本生成项目开发进度与当前执行看板。",
+      "verification": [
+        "AGENTS.md 已规定任务边界、状态、日志和自动生成规则。",
+        "npm run progress:build 可生成两份展示文档。",
+        "npm run progress:check 可验证展示层与 JSON 真相源一致。"
+      ],
+      "affectedFiles": [
+        "AGENTS.md",
+        "package.json",
+        "progress/config.json",
+        "progress/tasks/*.json",
+        "progress/risks.json",
+        "progress/tech-debts.json",
+        "progress/logs.json",
+        "scripts/generate-progress.mjs",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "开始 PH1-01 前再次确认具体工程目录和基础依赖，确认后先更新执行边界再改代码。"
+    },
+    {
+      "id": "LOG-003",
+      "date": "2026-08-10",
+      "taskIds": [
+        "GOV-002"
+      ],
+      "phaseMilestone": "第零阶段 / M0",
+      "step": "完成 iOS 风格前端设计规范收口",
+      "action": "文件名纠正/iOS 视觉系统/页面规范/控件规范/文案压缩/进度同步",
+      "result": "已将前端规范文件统一为 DESIGN.md，并补齐 iOS 式页面层级、系统色、排版、分组列表、Sheet、Tab Bar、分段控件、触控尺寸、iPhone 安全区域和响应式规则；同时建立主界面无说明段落、按钮原则上不超过 4 个汉字的硬约束。",
+      "verification": [
+        "DESIGN.md 已提供标准按钮词表和禁止文案清单。",
+        "DESIGN.md 已覆盖复习面板、闪卡、筛选、导入、资料管理和设置页面。",
+        "AGENTS.md 与 progress/config.json 已改为引用 DESIGN.md。",
+        "DSEIGN.md 已移除，避免存在两个设计规范真相源。"
+      ],
+      "affectedFiles": [
+        "DESIGN.md",
+        "DSEIGN.md（已移除）",
+        "AGENTS.md",
+        "progress/config.json",
+        "progress/tasks/phase-0.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "PH1-01 及后续前端任务必须以 DESIGN.md 作为唯一前端设计基线。"
+    },
+    {
+      "id": "LOG-004",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH1-01"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "完成 React + Node.js + TypeScript 工程骨架",
+      "action": "workspace/共享类型/Web/API/环境配置/健康检查/日志/错误处理/最小测试",
+      "result": "已完成可安装、可启动、可类型检查和可构建的 npm workspace。API 仅监听本机回环地址并提供健康检查，Web 提供简体中文工程状态页，前后端通过共享类型包保持契约一致。",
+      "verification": [
+        "npm install 安装成功，审计结果为 0 vulnerabilities。",
+        "npm run typecheck 通过。",
+        "npm test 通过 2 个 API 测试，覆盖健康检查和统一 404 响应。",
+        "npm run build 通过，Vite 和 TypeScript API 构建成功。",
+        "npm run dev 启动后，http://127.0.0.1:8787/api/health、http://localhost:5173/ 和 Web 的 /api/health 代理均返回 200。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "package-lock.json",
+        ".gitignore",
+        ".env.example",
+        "tsconfig.base.json",
+        "scripts/dev.mjs",
+        "packages/shared/package.json",
+        "packages/shared/tsconfig.json",
+        "packages/shared/src/api.ts",
+        "packages/shared/src/index.ts",
+        "apps/api/",
+        "apps/web/"
+      ],
+      "next": "进入 PH1-02，建立 MySQL 数据模型、迁移和路径配置；本步不改变数据库范围。"
+    },
+    {
+      "id": "LOG-005",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH1-02"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "建立 MySQL 数据模型、迁移和路径配置",
+      "action": "数据库连接池/初始迁移/核心表结构/路径读写探针/自动化测试",
+      "result": "已建立 001_initial_schema.sql、迁移版本校验、数据库连接检查和数据/资源/备份路径检查；代码与自动化测试已通过，真实迁移等待本机独立数据库账号凭证。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 4 个测试。",
+        "npm run build 通过。",
+        "npm run storage:check 通过。",
+        "3306 端口正在监听，但默认应用账号和 root 均未提供可用密码；npm run db:check 和 npm run db:migrate 均在连接阶段返回 ER_ACCESS_DENIED_ERROR，未执行建表语句。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/config.ts",
+        "apps/api/src/database.ts",
+        "apps/api/src/migrate.ts",
+        "apps/api/src/storage.ts",
+        "database/migrations/001_initial_schema.sql",
+        "package.json",
+        "package-lock.json",
+        ".env.example"
+      ],
+      "next": "配置本机独立 MySQL 数据库和应用账号后执行 npm run db:migrate，确认 schema_migrations 与 13 张核心表创建成功；随后进入 PH1-03。"
+    },
+    {
+      "id": "LOG-006",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH1-02"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "完成 MySQL 数据模型、迁移和路径配置验收",
+      "action": "本机数据库创建/应用账号授权/索引兼容修正/真实迁移/重复迁移验收",
+      "result": "已创建 knowledge_flashcards 数据库和独立应用账号；修正 utf8mb4 唯一索引长度后，首次迁移和重复迁移均通过。",
+      "verification": [
+        "npm run db:check 通过。",
+        "npm run db:migrate 首次执行成功。",
+        "npm run db:migrate 第二次执行跳过 001_initial_schema.sql。",
+        "数据库包含 14 张表，schema_migrations 已记录 001_initial_schema.sql。"
+      ],
+      "affectedFiles": [
+        "database/migrations/001_initial_schema.sql",
+        "apps/api/src/migration.test.ts",
+        "progress/tasks/phase-1.json",
+        "progress/risks.json"
+      ],
+      "next": "进入 PH1-03，建立 Windows 一键启动与关闭脚本。"
+    },
+    {
+      "id": "LOG-007",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH1-03"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "完成 Windows 启停脚本与受控 Tunnel 集成",
+      "action": "启停脚本/进程托管/端口预检/健康检查/Cloudflare Tunnel 门禁/进度同步",
+      "result": "已建立 start.ps1 和 stop.ps1。启动前检查 MySQL、三类存储路径和共享类型，启动后端与 Web 并记录进程和日志；停止只处理本项目受管进程树。脚本包含 cloudflared tunnel 的配置化启停，但默认关闭，未完成单账号密码保护时强制拒绝公网 Tunnel。",
+      "verification": [
+        "start.ps1 和 stop.ps1 PowerShell 语法解析通过。",
+        "自定义空闲端口实测 API/Web 均返回 200，stop.ps1 成功停止应用进程树且未停止 MySQL。",
+        "默认端口冲突会在启动前报告未受管进程号，不会误杀其他进程。",
+        "CLOUDFLARED_ENABLED=true 且 PUBLIC_ACCESS_READY=false 时拒绝启动 Tunnel。",
+        "npm run typecheck、npm test（4 项）和 npm run build 均通过。"
+      ],
+      "affectedFiles": [
+        "start.ps1",
+        "stop.ps1",
+        ".env.example",
+        ".gitignore",
+        "apps/web/vite.config.ts",
+        "progress/tasks/phase-1.json",
+        "progress/risks.json"
+      ],
+      "next": "进入 PH1-04，实现单 Markdown/ZIP 解析与严格校验；本步不实现导入预览和数据库应用。"
+    },
+    {
+      "id": "LOG-008",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH1-04"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "完成单 Markdown/ZIP 解析与严格校验",
+      "action": "unified/remark/GFM/KaTeX 解析/层级校验/图片资源校验/ZIP 路径安全/自动化测试",
+      "result": "解析器已输出资料、章、节、闪卡和结构化正文节点；严格识别标题层级、未归属内容、公式、表格、图片和 ZIP 路径错误，并返回可供后续导入应用的资源字节。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 13 项测试。",
+        "npm run build 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/package.json",
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "package-lock.json",
+        "progress/tasks/phase-1.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH1-05，实现导入预览、修正和数据库应用；本步解析结果作为预览输入，不在解析器中写入数据库。"
+    },
+    {
+      "id": "LOG-009",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH1-05"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "完成导入预览、修正和数据库应用",
+      "action": "共享导入契约/预览令牌/事务写入/源文件去重/ZIP 资源托管/中文导入页面/自动化验证",
+      "result": "已完成单个 Markdown/ZIP 的选择、预览、错误定位、标题与正文修正、应用和取消闭环；合法资料写入 MySQL 四级层级，ZIP 资源复制到按资料 ID 隔离的受管目录，同源文件默认按 SHA-256 跳过。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 17 项测试，覆盖事务应用、重复跳过、资源清理和解析边界。",
+        "npm run build 通过。",
+        "本地 API 烟测验证健康检查、合法 Markdown 预览和取消预览。",
+        "本地 Web DOM 快照验证导入页面和选择文件入口；Playwright 截图因文件选择器模态状态未执行。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/import-service.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "apps/web/index.html",
+        "progress/tasks/phase-1.json",
+        "progress/risks.json"
+      ],
+      "next": "进入 PH1-06，使用合法和非法样本完成 M1 资料导入主链路验收；重点验证真实 MySQL、源文件不变、资源完整和重复导入行为。"
+    },
+    {
+      "id": "LOG-010",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH1-03"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "补充 Windows 双击启停入口",
+      "action": "CMD 包装/Windows PowerShell 5 UTF-8 BOM 兼容/双击流程回归/进度同步",
+      "result": "已新增启动应用.cmd 和停止应用.cmd，用户可双击启动或停止应用，无需手工打开终端。启动完成后窗口保留访问状态，关闭窗口不会停止后台服务；错误时保留窗口和日志路径。",
+      "verification": [
+        "Windows PowerShell 5 可正确解析带 UTF-8 BOM 的 start.ps1 和 stop.ps1。",
+        "通过启动应用.cmd 以自定义空闲端口启动，API 与 Web 均返回 200。",
+        "通过停止应用.cmd 停止受管应用进程，MySQL 保持运行。"
+      ],
+      "affectedFiles": [
+        "启动应用.cmd",
+        "停止应用.cmd",
+        "start.ps1",
+        "stop.ps1",
+        "progress/tasks/phase-1.json",
+        "progress/logs.json"
+      ],
+      "next": "继续 PH1-06，完成 M1 资料导入主链路验收。"
+    },
+    {
+      "id": "LOG-011",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH1-06"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "完成 M1 资料导入主链路验收",
+      "action": "真实 MySQL/HTTP 集成验收/浏览器文件选择/非法输入/重复跳过/源文件不变/进程内令牌失效/进度同步",
+      "result": "真实 MySQL 与 HTTP 导入闭环通过：合法 Markdown 和含图片 ZIP 完整入库，非法层级、缺图和路径穿越在预览阶段阻止，重复源文件跳过且无新增数据；浏览器导入页的预览、应用、错误定位和取消流程通过。验收夹具只使用随机源 SHA、临时资源目录，并在结束时清理本次资料。",
+      "verification": [
+        "npm run test:import:integration 通过 1 项真实数据库集成测试。",
+        "Playwright 实测合法资料应用成功、非法资料错误定位与应用禁用、取消回到空状态。",
+        "npm run typecheck、npm test（17 项）、npm run build、npm run db:check、npm run storage:check 和 npm run progress:check 均通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/test/import-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "apps/web/src/App.tsx",
+        "package.json",
+        "progress/tasks/phase-1.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH2-01，实现复习面板与继续上次闪卡；本步不提前实现组合筛选、掌握状态、高亮或 AI。"
+    },
+    {
+      "id": "LOG-012",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH2-01"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成复习面板与继续上次闪卡",
+      "action": "复习查询 API/上次位置持久化/默认复习首页/快捷入口/导入导航保留/响应式验收",
+      "result": "复习首页已成为默认入口，展示真实资料数量、闪卡数量和状态数量；全部、未评估、努力和选章节可打开各自的首张闪卡，最近打开卡片通过 app_settings 持久化并在返回面板后显示。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 20 项 API 测试。",
+        "npm run build 通过。",
+        "真实数据库页面显示 1 份资料、99 张闪卡、99 张未评估；点击全部打开首张闪卡，返回后上次闪卡出现。",
+        "Playwright 桌面和 390x844 移动视口快照通过，导入页入口可切换。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH2-02，实现资料、章、节、状态和关键词组合筛选与结果集内顺序切卡。"
+    },
+    {
+      "id": "LOG-013",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH2-02"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成组合筛选、搜索和顺序切卡",
+      "action": "筛选契约/层级筛选 API/稳定结果集/Sheet 交互/前后切卡/移动端溢出修正/自动化验收",
+      "result": "已建立以资料、章、节、掌握状态和关键词为条件的组合筛选。后端按资料层级与排序字段返回稳定结果集，前端在 iOS 风格 Sheet 中联动选择条件，并在卡片页显示位置和前后切换；边界卡片禁用对应方向。移动端长路径经过截断，不再产生横向滚动。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 22 项测试，新增组合筛选、当前结果位置和无效状态测试。",
+        "npm run build 通过。",
+        "真实 MySQL API 组合资料、章、节、未评估和关键词后返回 1 张匹配卡片。",
+        "Playwright 验证筛选联动、1 / 1 边界、1 / 29 到 2 / 29 顺序切卡以及 390x844 移动视口无横向溢出。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH2-03，实现掌握状态、进度和复习记录；本步不提前实现富内容渲染或高亮挖空。"
+    },
+    {
+      "id": "LOG-014",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH2-03"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成掌握状态、进度和复习记录",
+      "action": "状态更新 API/复习记录持久化/三段式控件/自动下一张/自动化与真实数据库验收",
+      "result": "已完成掌握、了解、努力的即时保存，打开或切换闪卡会写入首次查看、最近查看和查看次数。保存状态后自动进入当前结果集的下一张，最后一张不循环；面板统计与筛选结果会同步刷新。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 26 项测试，覆盖状态更新、查看记录、异常输入和 HTTP 路由。",
+        "npm run build 通过。",
+        "真实 MySQL 事务验收确认状态及复习记录字段正确写入，并已回滚验收数据。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/health.test.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH2-04，实现正文、表格、公式、代码和图片安全渲染；本步不提前实现高亮挖空。"
+    },
+    {
+      "id": "LOG-015",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH2-04"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成正文、表格、公式、代码和图片安全渲染",
+      "action": "富内容契约/节点白名单/KaTeX 渲染/资源受限路由/响应式排版/安全与页面验收",
+      "result": "复习卡片已从纯文本升级为安全的结构化阅读态。API 仅传递允许节点和安全属性；原始 HTML、未知节点、javascript 链接和资源路径穿越均被拒绝。图片通过资源 UUID 读取，公式使用 KaTeX 渲染。用户明确要求表格不允许滚动后，移动端改为固定布局和自动换行，页面与表格均无横向滚动。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 30 项测试，覆盖富内容过滤、资源服务和 HTTP 路由。",
+        "npm run build 通过。",
+        "真实 MySQL + HTTP 筛选并打开包含表格、引用和代码的语法闪卡，阅读态正确显示。",
+        "Playwright 桌面及 390x844 移动视口截图通过；移动端 bodyWidth=390，表格及其容器均为 324px，无横向滚动。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/resource-service.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH2-05，验收从面板、筛选、富内容阅读、状态保存到结果集连续切换的完整 M2 主链路。"
+    },
+    {
+      "id": "LOG-016",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH2-05"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 M2 连续复习主链路验收",
+      "action": "真实 MySQL 隔离夹具/HTTP 集成验收/Playwright 桌面与移动端回归/用户设置恢复/进度同步",
+      "result": "M2 复习主链路已闭环：用户可从面板进入，以资料、章、节、状态和关键词组合筛选，阅读安全富内容，保存掌握状态并在结果集内连续切换；末张卡片不会循环。真实数据库验收夹具仅使用随机 UUID 数据，结束后清理并恢复用户原先的上次闪卡设置。",
+      "verification": [
+        "npm run test:review:integration 通过 1 项真实 MySQL + HTTP 测试。",
+        "Playwright 验证桌面筛选、1 / 2 到 2 / 2 连续切换和两端按钮边界；390x844 视口 bodyWidth=390，无横向溢出。",
+        "npm run typecheck、npm test（30 项）、npm run build、npm run db:check、npm run storage:check 和 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "package.json",
+        "output/playwright/ph2-05-desktop.png",
+        "output/playwright/ph2-05-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH3-01，实现普通文本与表格文字高亮及其即时保存；本步不实现挖空、公式遮罩或可视化编辑。"
+    },
+    {
+      "id": "LOG-017",
+      "date": "2026-08-10",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M3",
+      "step": "完成文本、表格和公式重点高亮",
+      "action": "结构化锚点契约/高亮读写 API/阅读态标记/公式整段切换/服务与 HTTP 测试/浏览器验收",
+      "result": "已在阅读态建立可持久化的重点高亮。文本和表格文字以内容节点路径与节点内字符范围保存，跨多个富文本或表格节点的选区会拆为多个高亮即时写入；公式按完整节点标记或取消。服务端校验卡片归属、节点类型和范围，图片及无效位置无法被标记。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 32 项测试，覆盖高亮校验、去重、公式限制、删除和 HTTP 路由。",
+        "npm run build 通过。",
+        "真实 MySQL + Playwright 验证表格选词即时保存与阅读态渲染，验收生成的一条测试高亮已精确删除。",
+        "Playwright 390x844 复测跨两个表格节点的选区；bodyWidth=390、tableWidth=324，无横向溢出，桌面和移动截图已人工检查。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/health.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "output/playwright/ph3-01-desktop.png",
+        "output/playwright/ph3-01-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH3-02，实现基于现有高亮的重点挖空与离开卡片后的揭示重置；本步不实现正文编辑或层级维护。"
+    },
+    {
+      "id": "LOG-018",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH3-02"
+      ],
+      "phaseMilestone": "第三阶段 / M3",
+      "step": "完成重点挖空与揭示重置",
+      "action": "阅读态遮罩渲染/逐项揭示与显示全部/切卡重置/桌面和移动浏览器验收/隔离夹具清理",
+      "result": "复习阅读页现可切换挖空模式：文本和表格文字以原文字占位长度显示灰色可点击遮罩，已高亮公式以完整 KaTeX 布局遮罩。揭示状态只存在当前页面内存；连续切卡时保留挖空模式但重置每张卡的已揭示项，退出闪卡页会关闭模式。",
+      "verification": [
+        "npm test 通过 32 项测试。",
+        "npm run typecheck 和 npm run build 通过。",
+        "Playwright 在真实 MySQL 两卡夹具中验证文本、表格、公式、逐项揭示、显示全部和切卡重置。",
+        "390x844 视口 bodyWidth=390、tableWidth=324、tableContainerWidth=324，无横向溢出；桌面和移动截图已人工检查。",
+        "夹具的 2 张卡、4 条高亮已事务清理，fixtureCount=0，原上次闪卡设置已恢复。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "output/playwright/ph3-02-desktop.png",
+        "output/playwright/ph3-02-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH3-03，实现正文、表格、公式和图片的结构化可视化编辑；本步必须同时设计编辑后的高亮迁移或失效处理。"
+    },
+    {
+      "id": "LOG-019",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH3-03"
+      ],
+      "phaseMilestone": "第三阶段 / M3",
+      "step": "完成结构化可视化卡片编辑",
+      "action": "结构化编辑 API/受管图片上传/MathLive 公式字段/高亮失效处理/真实 MySQL 集成验收/桌面与移动浏览器回归",
+      "result": "用户可在闪卡阅读页原位编辑标题、正文和表格单元格，新增段落、表格、公式或受管图片；公式使用排版数学字段，未出现 Markdown 或 LaTeX 源码编辑态。内容保存以事务同步正文和高亮，未改变节点的高亮保留，可能漂移或损坏的锚点删除并向用户反馈。",
+      "verification": [
+        "npm run typecheck、npm test（36 项）、npm run test:review:integration、npm run build、npm run db:check 和 npm run storage:check 通过。",
+        "真实 MySQL + HTTP 验证结构化正文、表格、公式和受管图片引用的保存与重读；验收夹具和上次位置已清理恢复。",
+        "Playwright 桌面及 390x844 移动端验证编辑入口、表格、公式字段和取消草稿；移动端无横向溢出，浏览器无控制台错误。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/resource-service.ts",
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "apps/web/src/main.tsx",
+        "apps/web/package.json",
+        "package-lock.json",
+        "output/playwright/ph3-03-desktop.png",
+        "output/playwright/ph3-03-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH3-04，实现章、节、闪卡维护和回收站入口；本步不实现多设备编辑锁或协同冲突处理。"
+    },
+    {
+      "id": "LOG-020",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH3-04"
+      ],
+      "phaseMilestone": "第三阶段 / M3",
+      "step": "完成层级维护和回收站入口",
+      "action": "层级维护服务与事务/API 契约/资料树/软删除回收站/真实 MySQL HTTP 验收/桌面与移动浏览器回归",
+      "result": "资料页现可维护章、节和闪卡：新增、改名、移动和同层排序即时持久化；软删除会级联隐藏下级内容并逐项写入回收站。资料树与复习查询只返回活动内容，回收站保持只读。为适配大资料，闪卡默认按节收起，展开后才显示卡片级操作。",
+      "verification": [
+        "npm run typecheck、npm test（40 项）、npm run build、npm run db:check 和 npm run storage:check 通过。",
+        "npm run test:hierarchy:integration 通过 1 项真实 MySQL + HTTP 验收，覆盖新增、重命名、排序、跨章移动、级联软删除和回收站记录读取；随机 UUID 夹具已清理。",
+        "Playwright 桌面与 390x844 移动端验证资料页、按节展开、删除确认与回收站入口；移动端 bodyWidth=390、documentWidth=390，展开 29 张卡后无横向溢出，浏览器无控制台错误。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "apps/api/package.json",
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/hierarchy-service.ts",
+        "apps/api/src/hierarchy-service.test.ts",
+        "apps/api/test/hierarchy-real-mysql-http.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "output/playwright/ph3-04-materials-desktop.png",
+        "output/playwright/ph3-04-materials-collapsed-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH3-05，实现多设备同步和闪卡正文编辑锁；本步不扩展回收站恢复或永久删除。"
+    },
+    {
+      "id": "LOG-021",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH3-06"
+      ],
+      "phaseMilestone": "第三阶段 / M3",
+      "step": "完成 M3 已交付主链路组合回归",
+      "action": "真实 MySQL + HTTP 组合验收/双客户端读取一致性/高亮与编辑回归/层级软删除隔离/全量构建检查",
+      "result": "新增 PH3-06 隔离集成测试，将第三阶段已经完成的标注、编辑和层级能力串联验证。测试确认正文编辑仅清理会漂移的高亮，并让两个独立客户端读取到一致的持久化内容和高亮；层级操作与回收站隔离正常。挖空行为沿用 PH3-02 的浏览器验收结果。正文编辑锁未提前实现。",
+      "verification": [
+        "npm run test:m3:integration 通过 1 项真实 MySQL + HTTP 组合回归，随机 UUID 夹具已清理。",
+        "npm run typecheck、npm test（40 项）、npm run build、npm run db:check 和 npm run storage:check 通过。",
+        "PH3-02 已有的真实 MySQL + Playwright 桌面和 390x844 移动端挖空验收继续有效。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "apps/api/package.json",
+        "apps/api/test/m3-real-mysql-http.test.ts",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH3-05，实现多设备同步和闪卡正文编辑锁；本步不扩展回收站恢复、永久删除、导出或备份。"
+    },
+    {
+      "id": "LOG-022",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH3-05"
+      ],
+      "phaseMilestone": "第三阶段 / M3",
+      "step": "完成多设备正文编辑锁并达成 M3",
+      "action": "编辑租约 API/保存事务校验/浏览器设备标识与续期/真实 MySQL 双客户端验收/桌面与移动浏览器回归",
+      "result": "闪卡正文编辑现由后端 90 秒租约保护。首个设备进入编辑后，其他设备仍能阅读和复习，但无法进入同一闪卡正文编辑；保存、取消、返回和切卡会释放租约，过期后可由另一设备接管。第三阶段全部任务已达到验收标准，M3 标注与编辑主链路完成。",
+      "verification": [
+        "npm run test:edit-lock:integration 通过真实 MySQL + HTTP 验收，覆盖竞争、保存拦截、续期、释放和过期接管；夹具已清理。",
+        "npm test（40 项）、npm run test:m3:integration、npm run test:review:integration、npm run typecheck、npm run build、npm run db:check 和 npm run storage:check 通过。",
+        "Playwright 桌面与 390x844 移动会话验证首端编辑、第二端冲突提示、首端释放后的移动端接管，且无横向溢出。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/test/edit-lock-real-mysql-http.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "output/playwright/ph3-05-desktop.png",
+        "output/playwright/ph3-05-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH4-01，实现多 Provider 与模型配置；本步不得将 API Key 下发浏览器。"
+    },
+    {
+      "id": "LOG-023",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH4-01"
+      ],
+      "phaseMilestone": "第四阶段 / M4",
+      "step": "完成多 Provider 与模型配置",
+      "action": "加密配置服务/API 契约/启用项事务锁/iOS 设置页/真实 MySQL HTTP 验收/桌面与移动浏览器回归",
+      "result": "设置页现可维护 OpenAI、DeepSeek、OpenRouter 或自定义 OpenAI 兼容配置，并切换当前启用项。API Key 只在后端经 AES-256-GCM 加密后保存，任何读取接口仅返回密钥存在状态。未配置本机加密口令时，保存会被安全阻止且不会写入数据库。",
+      "verification": [
+        "npm run test:ai-provider:integration 通过 1 项真实 MySQL + HTTP 验收，随机命名夹具在 finally 中清理。",
+        "npm test 通过 43 项单元测试；npm run typecheck 和 npm run build 通过。",
+        "Playwright 验证桌面设置页、移动端 390x844 设置页和新增表单；documentWidth=390、bodyWidth=390，浏览器无控制台错误。"
+      ],
+      "affectedFiles": [
+        ".env.example",
+        "package.json",
+        "packages/shared/src/api.ts",
+        "apps/api/src/ai-provider-service.ts",
+        "apps/api/test/ai-provider-real-mysql-http.test.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-4.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH4-02，实现 Provider 请求适配、连接测试、卡片 AI 讲解和当前结果保存；本步不得提前实现导出、恢复或备份。"
+    },
+    {
+      "id": "LOG-024",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH4-02"
+      ],
+      "phaseMilestone": "第四阶段 / M4",
+      "step": "完成卡片 AI 讲解与当前结果保存",
+      "action": "OpenAI 兼容请求适配/密钥解密/连接测试/默认与临时提示词/当前结果覆盖/卡片折叠区/HTTP 与浏览器验收/进度同步",
+      "result": "卡片页现可使用设置页当前启用 Provider 生成 AI 讲解，设置页也可对单个 Provider 发起最小连接测试。系统默认提示词与仅本次生效的临时提示词会组成请求，后端解密 API Key 并将当前讲解、Provider、模型、提示词和生成时间保存到 ai_explanations；重新生成覆盖旧结果。讲解结果默认收起且只读，生成失败不会改变正文、标注或复习状态。",
+      "verification": [
+        "npm test 通过 45 项 API 与服务单元测试，覆盖提示词、密钥解密、Provider 请求、错误隔离和覆盖保存。",
+        "npm run test:ai-explanation:integration 通过 2 项 HTTP 契约验收，覆盖卡片讲解和 Provider 连接测试。",
+        "npm run typecheck、npm run build 通过。",
+        "Playwright 使用本地拦截 API 验证桌面与 390x844 移动端折叠、只读、重新生成覆盖和无横向溢出。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/ai-provider-service.ts",
+        "apps/api/src/ai-explanation-service.ts",
+        "apps/api/src/ai-explanation-service.test.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/app.ts",
+        "apps/api/test/ai-explanation-http.test.ts",
+        "apps/api/package.json",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package.json",
+        "output/playwright/ph4-02-card-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-4.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH4-03，实现 Markdown 内容导出与 JSON 完整恢复；本步不扩展每日备份或回收站永久删除。"
+    },
+    {
+      "id": "LOG-025",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH4-03"
+      ],
+      "phaseMilestone": "第四阶段 / M4",
+      "step": "完成 Markdown 内容导出与 JSON 完整恢复",
+      "action": "数据治理服务/结构化 Markdown 序列化/GFM 表格与公式/JSON 资源与学习状态/敏感字段校验/事务恢复/资料页下载与确认 Sheet/HTTP、单元和浏览器验收",
+      "result": "已完成活动资料 Markdown 导出和完整学习状态 JSON 导出/恢复。JSON 保留正文、掌握状态、复习记录、高亮、当前 AI 讲解、回收站、资源元数据和资源内容，不导出 AI Provider 配置及密钥；恢复前校验版本、层级关系、正文节点、资源路径和哈希，事务替换可恢复数据。资料页已提供 Markdown 导出、JSON 导出和带确认的 JSON 恢复入口。",
+      "verification": [
+        "npm run typecheck、npm test（49 项）、npm run build 和 npm run test:data-governance:integration 均通过。",
+        "Playwright 隔离服务验证 Markdown 和 JSON 下载成功；JSON 实测约 4.1MB，包含 2 份资料、603 张闪卡、3 条高亮和 116 条复习记录，敏感字段检查未命中。",
+        "Playwright 桌面及 390x844 移动视口验证资料页导出/恢复入口、恢复确认 Sheet、bodyWidth/documentWidth 无横向溢出，浏览器无控制台错误。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/package.json",
+        "apps/api/src/app.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "apps/api/test/data-governance-http.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package.json",
+        "package-lock.json",
+        "output/playwright/ph4-03-materials-desktop.png",
+        "output/playwright/ph4-03-materials-mobile.png"
+      ],
+      "next": "进入 PH4-04，实现每日备份、恢复和回收站永久删除；本步不扩展账号登录或公网发布。"
+    },
+    {
+      "id": "LOG-026",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH4-06"
+      ],
+      "phaseMilestone": "第四阶段 / M4",
+      "step": "修复本机 AI Provider 加密配置",
+      "action": "本机随机加密口令配置/API 重启/真实 HTTP 新增清理/Provider 集成验收/进度同步",
+      "result": "当前开发机已配置 AI_PROVIDER_KEY_ENCRYPTION_SECRET。API 重启后新增 Provider 请求返回 201 且只返回密钥存在状态，临时夹具已清理；未配置口令时的安全阻断保持有效。",
+      "verification": [
+        "配置冒烟确认读取到长度 64 的口令且未输出口令内容。",
+        "npm run test:ai-provider:integration 通过 1 项真实 MySQL + HTTP 验收。",
+        "真实运行 API 新增 Provider 返回 201，hasApiKey=true，随后删除临时配置。",
+        "npm run progress:check 通过；全量测试、类型检查和构建受 PH4-04 既有编译阻塞影响。"
+      ],
+      "affectedFiles": [
+        ".env",
+        "progress/tasks/phase-4.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "继续 PH4-04，补齐备份与回收站永久删除实现后再进行 PH4-05 M4 全链路验收。"
+    },
+    {
+      "id": "LOG-027",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH4-04"
+      ],
+      "phaseMilestone": "第四阶段 / M4",
+      "step": "完成每日备份、恢复和回收站永久删除",
+      "action": "备份快照与资源副本/保留 7 份/每日调度/恢复前留档/永久删除事务/API 与资料页/真实 MySQL HTTP 与浏览器验收",
+      "result": "资料页现可查看备份、立即备份和恢复备份；API 启动时检查当天备份并按日调度，成功备份默认保留 7 份。恢复 JSON 或备份均先留档当前数据，回收站永久删除会清理层级关联和不再引用的资源文件。",
+      "verification": [
+        "npm test 通过 51 项。",
+        "npm run test:backup:integration 通过真实 MySQL + HTTP 验收，覆盖资源副本和永久删除。",
+        "npm run test:data-governance:integration、npm run typecheck、npm run build、npm run db:check、npm run storage:check 通过。",
+        "Playwright 桌面与 390x844 移动端验证备份 Sheet、成功备份和恢复前确认；bodyWidth/documentWidth=375，控制台无错误。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/package.json",
+        "apps/api/src/app.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/server.ts",
+        "apps/api/test/backup-real-mysql-http.test.ts",
+        "apps/api/test/data-governance-http.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package.json",
+        "output/playwright/ph4-04-backups-desktop.png",
+        "output/playwright/ph4-04-backups-mobile.png"
+      ],
+      "next": "进入 PH4-05，验收 M4 AI 与数据治理主链路；本步不提前实现账号登录或公网发布。"
+    },
+    {
+      "id": "LOG-028",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH4-05"
+      ],
+      "phaseMilestone": "第四阶段 / M4",
+      "step": "完成 M4 AI 与数据治理主链路真实环境验收",
+      "action": "真实 MySQL 与资源目录夹具/本地 OpenAI 兼容假 Provider/AI 讲解与高亮复习/Markdown 与 JSON 导出/JSON 与备份恢复/回收站永久删除/时间格式兼容修复/全量验证/进度同步",
+      "result": "PH4-05 已完成。组合验收验证 Provider 密钥只在后端解密并发送给假 Provider，卡片讲解、当前结果、高亮和复习状态可保存并恢复；Markdown、JSON、资源备份、JSON 恢复、备份恢复和永久删除闭环通过。期间发现 ISO 时间直接写入 MySQL DATETIME(3) 严格模式失败，已统一转换为 MySQL UTC DATETIME 格式。",
+      "verification": [
+        "npm run test:m4:integration 通过 1 项真实 MySQL + 资源目录 + HTTP 组合验收，假 Provider 收到 2 次正确鉴权请求，夹具清理完成。",
+        "npm test 通过 51 项；npm run typecheck、npm run build、npm run db:check 和 npm run storage:check 通过。",
+        "导出内容未命中 API Key、ciphertext、password、tunnel 或 secret；恢复后的卡片正文、AI 讲解与高亮可读，永久删除后卡片和资源文件均不存在。",
+        "npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/test/m4-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "package.json",
+        "progress/config.json",
+        "progress/tasks/phase-4.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH5-01，继续 iPhone Safari 响应式与 PWA 主屏幕安装；本步不扩展 Cloudflare Tunnel、账号登录或 Windows 发布包。"
+    },
+    {
+      "id": "LOG-029",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-01"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "补齐 PWA 安装入口与移动端安全区域布局",
+      "action": "执行边界登记/manifest 与 iPhone 元数据/PNG 图标/静态资源 Service Worker/底部 Tab Bar/dvh 与 safe-area/真实数据库移动浏览器回归/进度同步",
+      "result": "已补齐可安装 PWA 所需的 manifest、iPhone Safari 元数据、PNG 图标和生产环境 Service Worker 注册；移动端主导航改为带安全区域的底部 Tab Bar，表格、公式和正文选词保持在 390x844 视口内。Service Worker 不缓存 /api 数据。真实 iPhone Safari 添加到主屏幕仍待设备验收，因此 PH5-01 保持进行中。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过；生产预览中 manifest、sw.js 和两个 manifest 图标均返回 200，Service Worker 已接管页面。",
+        "Playwright 桌面与 390x844 移动视口验证无横向溢出、底部导航固定位置和无控制台错误。",
+        "真实数据库页面验证表格宽度 324px、公式节点渲染、选中“海因”后高亮按钮可用；截图已保存到 output/playwright。"
+      ],
+      "affectedFiles": [
+        "apps/web/index.html",
+        "apps/web/public/manifest.webmanifest",
+        "apps/web/public/sw.js",
+        "apps/web/public/icon.svg",
+        "apps/web/public/icon-192.png",
+        "apps/web/public/icon-512.png",
+        "apps/web/public/apple-touch-icon.png",
+        "apps/web/src/main.tsx",
+        "apps/web/src/styles.css",
+        "apps/web/src/vite-env.d.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "在真实 iPhone Safari 上完成添加到主屏幕、长按选词浮动工具栏和 Home Indicator 安全区验收；本步不扩展离线业务。"
+    },
+    {
+      "id": "LOG-030",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-02"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "启动 PH5-02 并补齐 Cloudflare Tunnel 运行契约",
+      "action": "配置模板/秘密边界/ingress 预检/启停状态/本地诊断/进度同步",
+      "result": "已提供 review.panspan.cloud 到本机 Web 源站的 cloudflared 配置模板，创建 review-panspan-cloud Tunnel 并将 DNS 路由指向新 Tunnel；启动脚本会在应用启动前校验 HTTPS 地址、凭证文件和 ingress 语法，并在受管状态与输出中记录 Tunnel 公网地址。凭证保留在用户目录，PUBLIC_ACCESS_READY=false 时连接器不会启动，PH5-02 保持进行中。",
+      "verification": [
+        "PowerShell 解析 start.ps1 和 stop.ps1 通过。",
+        "cloudflared tunnel --config cloudflared/config.example.yml ingress validate 返回 OK。",
+        "使用隔离临时配置和空凭证文件运行 npm run tunnel:check 通过，并明确报告 PUBLIC_ACCESS_READY=false；临时文件已清理。",
+        "缺少实际 config.yml、credentials.json 或非 HTTPS 公网地址时 npm run tunnel:check 按预期失败且不输出凭证内容。",
+        "npm run typecheck、npm run build 和 npm run progress:check 通过。",
+        "cloudflared tunnel route dns --overwrite-dns 1aa1536f-878f-4843-ae58-677b5222f68a review.panspan.cloud 成功，review.panspan.cloud 当前返回 530，表明 DNS 已到 Cloudflare 但连接器尚未启动。"
+      ],
+      "affectedFiles": [
+        "cloudflared/config.example.yml",
+        "cloudflared/README.md",
+        "cloudflared/config.yml（本机忽略配置）",
+        ".env.example",
+        ".env.local（本机忽略配置）",
+        ".gitignore",
+        "package.json",
+        "scripts/check-tunnel.mjs",
+        "start.ps1",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "完成 PH5-04 单账号密码门禁后，将 PUBLIC_ACCESS_READY 设为 true，运行启动/停止脚本并验收 review.panspan.cloud HTTPS 稳定访问；在此之前保持连接器关闭。"
+    },
+    {
+      "id": "LOG-031",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-03"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "完成 Windows 固定 Node.js 发布包",
+      "action": "执行边界登记/生产态同源托管/发布目录组装/生产依赖安装/固定 Node.js/配置与迁移入口/包内启动停止验收/进度同步",
+      "result": "已生成 output/windows-release：生产 API 同源托管 Web 静态文件，发布包携带固定 Node.js v24.18.0、167 个 API 生产依赖、共享包产物、.env.example、数据库迁移入口和启停入口。包内启动脚本只依赖 MySQL 外部服务，不复制本机秘密或实际资料。",
+      "verification": [
+        "npm run package:windows 通过。",
+        "npm run typecheck 通过；npm test 通过 54 项。",
+        "使用包内 runtime/node/node.exe 和真实 MySQL 配置启动，/api/health 与首页均返回 200；stop-release.ps1 成功停止服务。",
+        "使用包内 runtime/node/node.exe 执行 migrate-release.ps1，真实 MySQL 已迁移状态下重复执行正常退出。",
+        "发布包根目录未发现 .env、.env.local、Cloudflare 凭证或 PEM 文件。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/app.ts",
+        "apps/api/src/config.ts",
+        "package.json",
+        "scripts/package-windows.ps1",
+        "scripts/run-powershell.mjs",
+        "scripts/start-release.ps1",
+        "scripts/stop-release.ps1",
+        "scripts/migrate-release.ps1",
+        "output/windows-release/",
+        "progress/tasks/phase-5.json"
+      ],
+      "next": "进入 PH5-04 单账号密码登录和公网安全门禁；本步不提前启动 Cloudflare Tunnel。"
+    },
+    {
+      "id": "LOG-032",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-04"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "完成单账号密码门禁和会话恢复",
+      "action": "执行边界登记/scrypt 密码哈希/登录会话 Cookie/失败限速/API 拦截/前端登录与退出/本机凭证哈希配置/HTTP 与自动化回归/进度同步",
+      "result": "PH5-04 已完成。后端使用 scrypt 哈希校验单账号密码，登录成功设置 30 天 HttpOnly、SameSite=Lax 会话 Cookie，失败登录按客户端指纹限速；未登录业务 API 统一返回 401。前端先恢复会话，刷新同一浏览器无需重复登录；密码明文未进入代码、进度源或导出边界。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api run test 通过 54 项，新增认证测试覆盖健康检查例外、401 拦截、Cookie 会话、退出和 429 限速。",
+        "npm run typecheck:api、npm run typecheck:web、npm run build:api、npm run build:web 通过。",
+        "本机 HTTP 冒烟验证正确凭据登录 200、错误凭据 401、带 Cookie 访问业务接口 200；Cookie 含 HttpOnly、SameSite=Lax 和 30 天 Max-Age。",
+        "PUBLIC_ACCESS_READY=true 已写入本机忽略配置，CLOUDFLARED_ENABLED=false 保持连接器关闭。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/auth.ts",
+        "apps/api/src/auth.test.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/config.ts",
+        "apps/api/src/server.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "packages/shared/src/api.ts",
+        ".env.example",
+        ".env.local（本机忽略配置）",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH5-05，执行 GA 全链路发布验收；Cloudflare Tunnel 仍需在已完成门禁基础上单独启动并验证 HTTPS。"
+    },
+    {
+      "id": "LOG-033",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-05"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "修复一键启动补拉 Cloudflare Tunnel",
+      "action": "执行边界登记/复现应用已运行时 Tunnel 未启动/修复受管 Tunnel 补启动/开启本机连接器开关/HTTPS 冒烟验收/进度同步",
+      "result": "发现 start.ps1 在应用已运行时无条件提前退出，导致后续开启 CLOUDFLARED_ENABLED 也无法拉起 Tunnel；本步将补启动逻辑纳入 PH5-05，保持现有凭证、域名和认证门禁不变。",
+      "result": "已修复 start.ps1 在应用已运行时无条件提前退出的问题：当 Tunnel 缺失且 CLOUDFLARED_ENABLED=true 时，脚本会补启动受管 Tunnel、回写进程状态和独立日志；同时将 Vite 源站固定监听 127.0.0.1，消除 cloudflared 访问 IPv4 源站时的 502。",
+      "verification": [
+        "使用已有应用进程执行 start.ps1，成功补启动 Cloudflare Tunnel 并写入 .runtime/process.json。",
+        "停止后重新执行启动脚本，应用和 Tunnel 均成功启动；再次执行启动脚本不会重复拉起进程。",
+        "npm run tunnel:check、npm run typecheck 和 start.ps1 PowerShell 语法解析通过。",
+        "review.panspan.cloud 返回 HTTP 200，页面包含 root；Tunnel 最近日志无源站连接错误。"
+      ],
+      "affectedFiles": [
+        "start.ps1",
+        "apps/web/vite.config.ts",
+        ".env.local（本机忽略配置）",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "继续 PH5-05 的 Windows、iPhone、备份恢复和账号安全完整回归；公网监控和其他 Cloudflare 配置不在本步范围。"
+    },
+    {
+      "id": "LOG-034",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-06"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "确认秋日枫叶皮肤与专注反馈实施边界",
+      "action": "确认全局主题范围、简约回退、浅深色支持、AI 真实取消与无文字反馈、挖空遮罩规则，并写入开发方案、设计规范和任务卡。",
+      "result": "已建立 PH5-06 唯一 P1 任务，状态保持未开始。任务将全局秋日枫叶皮肤、AI 取消与生成反馈、挖空美化作为一个可验收交付，不拆分子任务；尚未开始代码实现。",
+      "verification": [
+        "用户已确认全局范围、简约回退、浅色/深色模式、正文专注边界、AI 真实取消和挖空视觉方向。",
+        "npm run progress:build 已通过，已生成项目开发进度.md 与当前执行看板.md。",
+        "npm run progress:check 已通过，结构化进度源与自动生成展示层一致。"
+      ],
+      "affectedFiles": [
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "在 PH5-06 内一次性实现主题 token、设置持久化、真实取消、无文字生成反馈和挖空遮罩优化；不拆分为子任务。"
+    },
+    {
+      "id": "LOG-035",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "确认课程、科目、资料九宫格与学习趋势开发方案",
+      "action": "逐项确认目录层级/归属/导航/封面/统计/迁移/导出边界，并登记执行边界、风险和后续任务",
+      "result": "已确认课程→科目→资料逐层 URL 导航；课程/科目单列、资料九宫格桌面 3 列与移动 2 列；资料封面可选且无封面透明；资料详情页显示掌握/了解/努力/未评估分布和最近 30 天 Asia/Shanghai 状态快照趋势；课程、科目、封面和状态历史进入 JSON/备份，Markdown 协议保持不变。PH5-07 保持未开始，等待代码实现。",
+      "verification": [
+        "用户已确认 PH5-07 的层级、导入归属、迁移默认值、封面规则、排序/移动/删除、统计历史和响应式边界。",
+        "已更新项目产品定位.md、项目开发方案.md、DESIGN.md、progress/config.json、progress/tasks/phase-5.json 和 progress/risks.json。"
+      ],
+      "affectedFiles": [
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/config.json",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "代码变更前先按 PH5-07 边界完成数据库迁移和共享 API 契约设计；不扩展复习筛选、Markdown 协议或离线能力。"
+    },
+    {
+      "id": "LOG-036",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "完成 PH5-07 数据迁移与共享 API 契约第一小步",
+      "action": "课程/科目表/默认归属回填/资料封面关系/掌握状态历史/旧写入默认值兼容/目录与趋势共享类型/迁移单测/真实 MySQL 验收/进度同步",
+      "result": "已新增课程、科目、资料封面关系和卡片掌握状态历史；旧资料统一归入系统保留的“待整理 / 待整理”，既有卡片写入迁移日初始快照。兼容迁移固定系统默认归属并为 materials.subject_id 配置默认值，使既有写入继续可用。共享契约覆盖目录导航、封面、四状态分布、30 天趋势和导出恢复兼容字段。",
+      "verification": [
+        "npm run typecheck:shared、npm run typecheck:api 和 npm test 通过，共 57 项测试。",
+        "npm run db:migrate 成功应用 002_phase_5_07_catalog.sql 与 003_phase_5_07_legacy_material_default.sql；npm run db:check 通过。",
+        "npm run test:review:integration 通过，确认既有省略 subject_id 的资料写入路径可用。",
+        "真实 MySQL 查询确认固定默认课程/科目、materials.subject_id 默认值、2 份资料、603 条状态历史和 3 个关键外键。",
+        "npm run progress:build 与 npm run progress:check 待本次结构化源更新后执行。"
+      ],
+      "affectedFiles": [
+        "database/migrations/002_phase_5_07_catalog.sql",
+        "database/migrations/003_phase_5_07_legacy_material_default.sql",
+        "packages/shared/src/api.ts",
+        "apps/api/src/catalog-migration.test.ts",
+        "apps/api/src/catalog-legacy-default.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH5-07 下一小步，实现课程/科目目录与资料九宫格读取/维护 API；本步不扩展前端页面、封面上传处理或统计趋势计算。"
+    },
+    {
+      "id": "LOG-037",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-06"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "完成秋日枫叶皮肤、AI 真实取消与挖空反馈",
+      "action": "外观本机持久化/主题 token/静态叶片环境层/Provider 取消信号/无文字进度与停止图标/文本公式遮罩/服务与浏览器验收/进度同步",
+      "result": "PH5-06 已完成。设置页可切换简约和秋日枫叶并保存到本机；秋日浅色/深色将主题限制在环境层，闪卡正文保持纯净高对比。AI 停止图标可取消在途请求，API 将取消传递至 Provider，取消不覆盖旧讲解也不保存半成品；长重点遮罩采用暖灰底、枫棕细描边和叶脉纹理，短词无纹理并以 160ms 淡入揭示。",
+      "verification": [
+        "npm run typecheck、npm --workspace @knowledge-flashcards/api run test（55 项）和 npm run build 通过。",
+        "npm run test:ai-explanation:integration 通过 3 项，服务单测确认 Provider 请求中止且 ai_explanations 未写入。",
+        "Playwright 模拟 API 验证主题 localStorage 持久化、桌面和 390x844 无横向溢出、文本/公式挖空及夜枫阅读面；截图已保存至 output/playwright。",
+        "npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/api.ts",
+        "apps/web/src/styles.css",
+        "apps/api/src/app.ts",
+        "apps/api/src/ai-explanation-service.ts",
+        "apps/api/src/ai-explanation-service.test.ts",
+        "apps/api/test/ai-explanation-http.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "output/playwright/ph5-06-autumn-settings-desktop.png",
+        "output/playwright/ph5-06-autumn-cloze-desktop.png",
+        "output/playwright/ph5-06-autumn-cloze-mobile.png",
+        "output/playwright/ph5-06-autumn-cloze-mobile-dark.png"
+      ],
+      "next": "PH5-06 已完成；GA 剩余验收继续归属 PH5-05，课程与资料导航继续按 PH5-07 任务卡推进。"
+    },
+    {
+      "id": "LOG-038",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "完成课程、科目与资料九宫格读取/维护 API",
+      "action": "目录服务/受保护 HTTP 路由/课程科目新建改名排序移动/空节点删除限制/资料格聚合查询/封面元数据读取/单元 HTTP 真实 MySQL 验收/进度同步",
+      "result": "已提供课程/科目读取、新建、改名、上下排序和科目跨课程移动 API；系统“待整理”和非空节点不能删除。指定科目 API 返回资料格、有效闪卡数量和已有封面原图/缩略图元数据，供后续逐层导航页面直接使用。",
+      "verification": [
+        "npm run typecheck、npm run build 和 npm test 通过，共 64 项测试。",
+        "npm run test:catalog:integration 通过真实 MySQL + HTTP 验收，覆盖课程/科目读取、资料格封面与闪卡数、科目排序/移动、新建和空/非空删除边界。",
+        "HTTP 单测覆盖目录路由成功响应、服务调用和可识别 404；全局账号门禁已覆盖所有 /api/ 业务路由。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/catalog-service.ts",
+        "apps/api/src/catalog-service.test.ts",
+        "apps/api/src/catalog-http.test.ts",
+        "apps/api/test/catalog-real-mysql-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/api/package.json",
+        "package.json",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "将目录 API 接入资料页，实现课程→科目→资料九宫格逐层 URL 导航与桌面/iPhone 布局；不在该步实现封面上传、资料详情统计、导入归属选择或数据治理扩展。"
+    },
+    {
+      "id": "LOG-039",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-08"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "接入本机深浅色显示模式切换",
+      "action": "范围更新/三档分段控件/本机持久化/根元素主题状态/简约与秋日枫叶 token 覆盖/构建验证/进度同步",
+      "result": "已在设置页外观分组加入跟随系统、浅色、深色显示模式，并以本机存储和根元素 data-color-mode 应用于简约及秋日枫叶皮肤。任务因目录页既有 TypeScript 类型错误和浏览器自动化环境故障而保持进行中。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/web exec vite build 通过，生成生产前端产物。",
+        "http://127.0.0.1:5173/ 返回 HTTP 200。",
+        "npm run typecheck:web 被 App.tsx:3217 的既有 MaterialsRoute/manage 类型不匹配阻断。",
+        "浏览器自动化初始化被 process 属性冲突阻断，尚缺桌面与 iPhone 交互回归。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "PH5-07 修复资料目录路由类型后，完成 PH5-08 的桌面与 iPhone 显示模式持久化、皮肤适配和无横向溢出验收。"
+    },
+    {
+      "id": "LOG-040",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-09"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "修复 AI 讲解 Markdown 直出",
+      "action": "执行边界登记/Markdown GFM 数学解析/复用只读内容节点/原始 HTML 抑制/类型构建与解析回归/进度同步",
+      "result": "已将 AI 讲解由按空行拆分的纯文本段落改为安全的 Markdown AST 渲染。标题、强调、列表、分隔线、表格和公式将显示为结构化内容；复用既有链接协议限制，忽略原始 HTML，讲解公式保持只读。浏览器自动化连接被运行时 process 属性冲突阻断，PH5-09 保持进行中，待补页面回归。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过，转换 222 个模块；仅有既有大 chunk 警告。",
+        "Node 解析回归确认三级标题、粗体、分隔线、列表、GFM 表格、公式和 HTML 节点的 AST 类型符合预期。",
+        "浏览器自动化初始化被 Codex 运行时 process 属性冲突阻断，未将该环境问题误记为产品回归。"
+      ],
+      "affectedFiles": [
+        "apps/web/package.json",
+        "package-lock.json",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "在可用浏览器环境完成 AI 讲解面板的结构化 DOM、原始 HTML 抑制和桌面/移动无溢出回归后，更新 PH5-09 验收状态。"
+    },
+    {
+      "id": "LOG-041",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "完成课程、科目与资料九宫格 URL 导航",
+      "action": "执行边界登记/目录读取客户端/Hash URL 路由/课程科目单列/资料九宫格/编辑入口保留/桌面与 iPhone 浏览器验收/进度同步",
+      "result": "资料页已使用 #/materials、课程与科目子路径表达逐层导航。课程与科目以单列呈现，资料以桌面 3 列、390px 2 列九宫格展示名称、闪卡数量和可用缩略图；无封面资料保留透明封面区。既有层级编辑改为 #/materials/manage 低频入口，并可由目录返回。失效目录地址会显示可识别错误并提供返回路径，目录请求失败时会核验会话失效。",
+      "verification": [
+        "npm run typecheck、npm run build 和 npm test 通过；后端回归共 64 项。",
+        "Playwright 临时本机目录数据在桌面和 390x844 视口验证课程→科目→资料格、刷新、浏览器前进/后退、管理入口返回及移动端无横向溢出；documentElement.scrollWidth 与 clientWidth 均为 390。",
+        "目录页面浏览器控制台无错误；用于验收的本地 mock/Vite 进程和临时脚本已停止、移除。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "output/playwright/ph5-07-catalog-desktop.png",
+        "output/playwright/ph5-07-catalog-mobile.png"
+      ],
+      "next": "进入 PH5-07 下一小步，补齐资料详情读取 API 与详情页四状态分布、最近 30 天趋势；不实现封面上传、资料改名/跨科目移动、导入归属选择或数据治理扩展。"
+    },
+    {
+      "id": "LOG-042",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-09"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "补齐 AI 讲解中文引号强调兼容",
+      "action": "复现 CommonMark 边界行为/任务范围更新/中文引号强调节点转换/截图语法回归/类型构建验证/进度同步",
+      "result": "发现模型输出 `**“不符合规定”**` 时，CommonMark 会因强调符紧贴中文引号而将整段视为普通文本。AI Markdown 渲染器现仅对这类未解析文本补充转换，生成保留中文引号的 strong/emphasis 节点，不改变已合法解析的 Markdown 或安全规则。PH5-09 仍待浏览器环境恢复后完成页面回归。",
+      "verification": [
+        "截图同构语法 `事故隐患的本质是**“不符合规定”**——即生产经营活动中。` 经解析和转换后为 text + strong + text，strong 内容为 `“不符合规定”`。",
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过，转换 2000 个模块；仅有既有大 chunk 警告。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "在可用浏览器环境完成 AI 讲解面板的结构化 DOM、原始 HTML 抑制和桌面/移动无溢出回归后，更新 PH5-09 验收状态。"
+    },
+    {
+      "id": "LOG-043",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "实现资料详情读取与四状态分布、30 天趋势",
+      "action": "执行边界登记/详情读取 API/上海自然日快照/详情 Hash 路由/分布与趋势可视化/服务和真实 MySQL HTTP 验收/构建验证/进度同步",
+      "result": "已新增 GET /api/catalog/materials/:materialId，返回资料信息、有效章/节/单卡层级、当前掌握/了解/努力/未评估分布及按 Asia/Shanghai 每日结束状态计算的连续 30 天快照。资料格可进入详情 URL，详情页按资料信息、横向堆叠分布、30 天趋势和内容层级单列展示，并提供图表无障碍摘要；无闪卡和无章节均有空状态。浏览器自动化连接初始化受运行时 process 属性冲突阻断，尚未完成页面交互和 390px 无溢出回归，当前步骤保持进行中。",
+      "verification": [
+        "npm run typecheck:api、npm run typecheck:web、npm run build 和 npm test 通过；后端单测共 70 项。",
+        "npm run test:catalog:integration 通过真实 MySQL + HTTP 验收，详情接口返回有效层级、当前四状态分布和最后一天快照；状态历史夹具已按外键顺序清理。",
+        "本机 API 健康检查返回 HTTP 200，现有 Vite 前端返回 HTTP 200；无会话访问业务目录端点返回 401。",
+        "Codex 内置浏览器初始化报 Cannot redefine property: process，无法执行桌面与 390x844 页面回归。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/catalog-service.ts",
+        "apps/api/src/catalog-service.test.ts",
+        "apps/api/src/catalog-http.test.ts",
+        "apps/api/test/catalog-real-mysql-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "待 Codex 内置浏览器连接恢复后，补做资料格进入详情、刷新、返回、失效 URL、桌面和 390x844 无横向溢出以及图表摘要回归；未通过前保持本步骤进行中。"
+    },
+    {
+      "id": "LOG-044",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-10"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "完成 JSON、Excel 内容导入与模板下载的代码及自动化验收",
+      "action": "执行边界登记/JSON 与 Excel 解析/模板下载 API/导入页分段选择/安全与回归测试/类型构建与进度同步",
+      "result": "已在保留 Markdown/ZIP 链路的前提下，新增单资料 JSON 与 Excel 导入。JSON 使用固定 format/version/层级协议，Excel 只读取“闪卡”工作表及五列；两种正文均进入原有安全 Markdown 解析、预览、重复哈希检测和应用事务。前端导入页支持三种格式选择，并可直接下载 JSON/Excel 模板。完整 JSON 备份未被接入普通导入。浏览器连接环境仍阻塞交互验收，PH5-10 保持进行中。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api run test 通过，70 项测试全部通过，覆盖 JSON/Excel、模板端点、完整备份拦截、上传原始 JSON 与既有 Markdown 回归。",
+        "npm run typecheck 和 npm run build 通过；生产构建仅有既有 Vite 大 chunk 警告。",
+        "npm run progress:build 与 npm run progress:check 通过。",
+        "Codex 内置浏览器初始化报 Cannot redefine property: process，暂不能完成格式切换、模板下载和桌面/390x844 页面回归。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/ingestion.test.ts",
+        "apps/api/src/health.test.ts",
+        "apps/api/src/xlsx-populate.d.ts",
+        "packages/shared/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/api.ts",
+        "apps/web/src/styles.css",
+        "apps/api/package.json",
+        "apps/web/package.json",
+        "package-lock.json",
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "待浏览器连接恢复后完成前端导入路径与移动布局验收；未通过前不提前完成 PH5-10。"
+    },
+    {
+      "id": "LOG-045",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "完成资料详情、状态历史与趋势回归",
+      "action": "独立浏览器验收/状态写入事务/上海日界修复/服务与真实 MySQL 回归/进度同步",
+      "result": "已完成资料格进入详情、刷新、浏览器前进/后退、失效地址返回，以及桌面三列和 390px 两列资料格、详情无横向溢出的页面验收。发现当前状态分布与当天趋势不一致后，补齐状态更新的 review_status_history 事务写入；趋势读取保留 MySQL DATETIME 墙上时间并按 Asia/Shanghai 计算，当前和最新快照现一致。PH5-07 总任务仍进行中，封面管理、导入归属及 JSON/备份兼容留待后续小步。",
+      "verification": [
+        "npm run typecheck、npm run build 和 npm test 通过，后端单测共 70 项。",
+        "npm run test:catalog:integration 通过真实 MySQL + HTTP 验收，确认状态事件、当天趋势与当前分布一致，且夹具已清理。",
+        "独立 Playwright 在 1440x900 与 390x844 验证详情 URL、返回、刷新、前进/后退、失效地址、3/2 列网格、图表摘要和无横向溢出；截图保存至 output/playwright。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/catalog-service.ts",
+        "apps/api/src/catalog-service.test.ts",
+        "apps/api/test/catalog-real-mysql-http.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "output/playwright/ph5-07-detail-desktop.png",
+        "output/playwright/ph5-07-detail-mobile.png"
+      ],
+      "next": "待确认 PH5-07 下一小步：实现资料名称和封面 Sheet 管理、封面缩略图及资源清理；不扩展导入归属、JSON/备份兼容或资料跨科目移动。"
+    },
+    {
+      "id": "LOG-046",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "补齐资料目录的课程与科目新增入口",
+      "action": "执行边界登记/目录新增请求封装/课程与科目名称 Sheet/桌面和手机夹具浏览器验收/构建验证/进度同步",
+      "result": "资料首页现提供“新增课程”图标，进入课程后提供“新增科目”图标。两处均以名称 Sheet 调用既有目录 API，空名称不可提交；成功后关闭 Sheet、刷新当前列表并显示简短反馈。手机 Sheet 层级高于底部导航，不会遮挡取消或添加操作。PH5-07 总任务仍进行中，资料封面、导入归属及 JSON/备份兼容留待后续小步。",
+      "verification": [
+        "npm run typecheck、npm run build 和 npm test 通过；后端单测共 70 项。",
+        "独立 Playwright 使用本地响应夹具验证课程、科目新增按钮、空名称禁用、名称提交、成功反馈与当前列表刷新；未向真实资料库写入测试课程或科目。",
+        "390x844 视口验证 Sheet 层级为 40、高于底部导航 30，documentElement.scrollWidth 与 clientWidth 均为 390；截图保存至 output/playwright。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "output/playwright/ph5-07-catalog-create-desktop.png",
+        "output/playwright/ph5-07-catalog-create-mobile.png"
+      ],
+      "next": "待确认 PH5-07 下一小步：实现资料名称和封面 Sheet 管理、封面缩略图及资源清理；不扩展导入归属、JSON/备份兼容或资料跨科目移动。"
+    },
+    {
+      "id": "LOG-047",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-11"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "临时屏蔽本机账号密码登录",
+      "action": "登记安全边界/停用公网开关/保留本机哈希注释/重启受管服务/本机与公网状态验证/进度同步",
+      "result": "本机已切换为免登录查看模式：AUTH_USERNAME 和 AUTH_PASSWORD_HASH 不再生效，PUBLIC_ACCESS_READY 与 CLOUDFLARED_ENABLED 均为 false；原有哈希未写入进度源，仍仅在忽略的本机配置中以注释保留。受管 Tunnel 已停止，公网域名返回 502。认证实现和所有业务数据均未修改。",
+      "verification": [
+        "/api/auth/session 返回 authenticated=true，未携带 Cookie 的 /api/catalog/courses 返回 200。",
+        "本机 Web 首页返回 200；.runtime/process.json 不含 Tunnel PID 或公网 URL。",
+        "review.panspan.cloud 返回 502，未再提供本机应用。"
+      ],
+      "affectedFiles": [
+        ".env.local（本机忽略配置）",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "恢复登录时先取消 PH5-11 的本机配置注释并重启服务；恢复公网前必须重新执行 PH5-05 账号安全和 HTTPS 回归。"
+    },
+    {
+      "id": "LOG-048",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-11",
+        "PH5-12"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "恢复公网账号门禁与 Tunnel",
+      "action": "按新增对外提供要求回退本机免登录配置/重启受管服务/本机未登录拦截与公网首页验收/进度同步",
+      "result": "用户确认必须对外提供后，已恢复本机认证配置、PUBLIC_ACCESS_READY 和 CLOUDFLARED_ENABLED；项目 Tunnel 正在运行。免登录模式未保留为当前配置，未登录业务接口恢复为 401，公网首页与登录表单均可访问。",
+      "verification": [
+        "/api/auth/session 未登录返回 authenticated=false，/api/catalog/courses 未携带 Cookie 返回 401。",
+        "项目 Tunnel PID 已写入运行记录且对应进程正在运行；review.panspan.cloud 返回 200、text/html 且包含 root 容器。",
+        "Playwright 公网首页快照显示用户名、密码和登录按钮。"
+      ],
+      "affectedFiles": [
+        ".env.local（本机忽略配置）",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "继续 PH5-05 其余 GA 回归。本机免登录查看需先设计不绕过公网认证的独立安全模型。"
+    },
+    {
+      "id": "LOG-049",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "完成资料详情名称与封面管理",
+      "action": "登记边界/资料改名与封面 API/原图和缩略图存储/资源生命周期修复/深色可读性修复/桌面和手机浏览器验收/真实 MySQL 回归/进度同步",
+      "result": "资料详情页现提供 iOS 风格编辑 Sheet，可改名并上传、替换或移除本地 PNG、JPEG、GIF、WebP 封面。服务端校验 5MB 上限与文件签名，保留原图并生成最长边 512px 的 WebP 缩略图；替换、移除和资料永久删除均会清理封面专属资源，永久删除也会删除关联状态历史。简约深色模式下封面字段标签采用系统辅助文字色，Sheet 内保持可读。PH5-07 总任务仍进行中，课程/科目低频操作、导入归属与 JSON/备份兼容留待后续小步。",
+      "verification": [
+        "npm run typecheck、npm run build 和 npm test 通过，后端单测共 74 项。",
+        "npm run test:catalog:integration 通过真实 MySQL + HTTP + 临时资源目录验收，覆盖资料改名、封面原图与缩略图写入、详情读取和移除后的数据库及文件清理。",
+        "独立 Playwright 在桌面和 390x844 视口验证资料详情编辑 Sheet、无封面透明区域、文件选择入口与无横向溢出；移动端 Sheet 层级为 40，控制台无错误。",
+        "npm run package:windows 通过，Windows 发布包使用固定 Node.js v24.18.0 并安装 178 个生产依赖，包含封面缩略图所需的 sharp。",
+        "手动深色模式复核确认资料编辑 Sheet 中封面字段标签计算色为 rgb(152, 152, 157)，与系统深色表面保持可读。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/catalog-service.ts",
+        "apps/api/src/catalog-service.test.ts",
+        "apps/api/src/catalog-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "apps/api/test/catalog-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package-lock.json",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "output/playwright/ph5-07-material-editor-desktop.png",
+        "output/playwright/ph5-07-material-editor-mobile.png",
+        "output/windows-release/"
+      ],
+      "next": "待确认 PH5-07 下一小步：在课程与科目单列中接入现有低频改名、排序、科目移动和删除操作；不扩展资料跨科目移动、导入归属或 JSON/备份兼容。"
+    },
+    {
+      "id": "LOG-050",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "完成课程与科目低频管理",
+      "action": "登记边界/前端目录 API 封装/课程和科目更多操作 Sheet/科目移动选择/删除确认和阻止反馈/深色与桌面手机浏览器验收/进度同步",
+      "result": "课程和科目单列行右侧新增带无障碍名称的更多操作入口。课程可改名、上移、下移和删除；科目额外可在 Sheet 选择其他课程移动。删除均经确认，服务端拒绝系统或非空节点时，Sheet 保持打开并显示明确原因；成功操作会刷新当前列表。PH5-07 总任务仍进行中，导入归属、资料跨科目移动和 JSON/备份兼容留待后续小步。",
+      "verification": [
+        "npm run typecheck、npm run build 和 npm test 通过，后端单测共 74 项。",
+        "独立 Playwright 在桌面和 390x844 视口验证课程/科目更多入口、操作 Sheet、科目移动候选、排序边界和删除确认；非空课程删除返回 409 后 Sheet 保持并显示阻止原因。",
+        "390x844 视口 documentElement.scrollWidth 与 clientWidth 均为 390；手动深色模式下操作项计算色为 rgb(242, 242, 247)，遮罩层级为 40。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "待确认 PH5-07 下一小步：导入应用前强制选择课程和科目，并支持选择器内新增；不扩展资料跨科目移动、JSON/备份兼容或复习筛选。"
+    },
+    {
+      "id": "LOG-051",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-01"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "完成移动端页首与账号入口压缩",
+      "action": "登记边界/移除全局账号工具栏/设置页账号管理/页首图标化/深浅色可读性回归/构建与浏览器验收/进度同步",
+      "result": "已移除已登录状态下每页顶部的账号与退出条，将当前账号和退出操作放入设置页的账号分组。复习、资料、设置、管理与导入页首的常用操作已使用带 Tooltip 和无障碍名称的 Lucide 图标；移动端标题缩小为 22px，页首保持 44px 高度且标题与操作区同一行。深色模式下账号信息保持高对比可读。认证接口、会话、密码策略和主导航业务均未改动。",
+      "verification": [
+        "npm run typecheck:web 与 npm run build:web 通过；生产构建仅有既有大 chunk 警告。",
+        "隔离 Playwright 在 390x844 模拟已登录会话下验证全局账户工具栏不存在、设置账号分组可见、页首高度为 44px、图标按钮具有 aria-label 与 Tooltip，documentElement 宽度与滚动宽度均为 390。",
+        "深色模式视觉截图复核通过，账号名称计算色为 rgb(242, 242, 247)。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "output/playwright/ph5-01-mobile-header-settings.png",
+        "output/playwright/ph5-01-mobile-header-settings-dark.png"
+      ],
+      "next": "PH5-01 继续完成真实 iPhone Safari 的添加到主屏幕、长按选词和 Home Indicator 安全区验收；本次不扩展认证或离线业务。"
+    },
+    {
+      "id": "LOG-052",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "完成导入归属选择与选择器内新增",
+      "action": "登记边界/导入归属契约/事务内课程科目校验/归属 Sheet 与内置新增/真实 MySQL 导入回归/桌面和移动浏览器验收/进度同步",
+      "result": "导入应用请求现强制携带课程和科目，服务端在同一事务内确认所选科目属于课程后才写入 materials.subject_id，缺失或错配归属均返回 400。导入预览新增归属 Sheet，可逐级选择并在 Sheet 内新增课程或当前课程下的科目，创建后立即选中；每次新文件、格式切换、取消或应用完成均清空归属，避免旧选择使后续文件绕过必选门槛。PH5-07 总任务仍进行中，JSON/备份恢复兼容留待下一小步。",
+      "verification": [
+        "npm run typecheck:shared、npm run typecheck:api、npm run typecheck:web、npm run build、npm test 通过，后端单测共 75 项。",
+        "npm run test:import:integration 通过真实 MySQL + HTTP 回归，确认导入资料的 subject_id 等于请求指定科目。",
+        "隔离 Playwright 在桌面验证初始应用禁用，选择器内新增课程和科目后自动选中，应用请求包含 courseId=course-new 与 subjectId=subject-new。",
+        "390x844 视口复验新文件会清空归属、Sheet 选择后才启用应用，documentElement.scrollWidth 与 clientWidth 均为 390，控制台无错误；截图已保存。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/import-service.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/api/test/import-real-mysql-http.test.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "output/playwright/ph5-07-import-destination-desktop.png",
+        "output/playwright/ph5-07-import-destination-mobile.png"
+      ],
+      "next": "待确认 PH5-07 下一小步：补齐 JSON 导出、每日备份和恢复中的课程、科目、排序、封面资源与状态历史兼容；不扩展资料跨科目移动或复习筛选。"
+    },
+    {
+      "id": "LOG-053",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-07"
+      ],
+      "phaseMilestone": "第五阶段 / M5",
+      "step": "完成 JSON 与备份恢复兼容",
+      "action": "登记边界/完整 JSON 快照/目录与封面恢复校验/旧 JSON 默认归属/资源哈希写回/真实 MySQL 备份回归/进度同步",
+      "result": "完整 JSON、手动备份和每日备份现在包含课程、科目、排序、资料归属、封面关联和掌握状态历史。恢复会先校验秘密字段、路径和资源哈希，再在同一事务中按课程、科目、资料、资源、封面和状态历史顺序写入；旧 JSON 缺少目录字段时自动补入不可删除的“待整理 / 待整理”。封面原图与缩略图会随资源正文写回。PH5-07 的全部验收项已满足。",
+      "verification": [
+        "npm run typecheck、npm run build 和 npm test 通过，后端单测共 76 项。",
+        "npm run test:backup:integration 通过真实 MySQL、HTTP 和受管资源目录验收，课程、科目排序、资料归属、封面原图/缩略图和状态历史均存在于 data.json 与资源归档。",
+        "数据治理单测验证新快照的事务写入顺序、旧 JSON 默认目录回退，以及封面原图和缩略图的实际文件恢复。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "apps/api/test/backup-real-mysql-http.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "PH5-07 已完成。发布主线继续由 PH5-01、PH5-02 和 PH5-05 验收；资料跨科目移动、按课程/科目筛选复习和长期趋势交互需另立任务。"
+    },
+    {
+      "id": "LOG-054",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-14"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "实现资料详情逐卡内容编辑与同节排序",
+      "action": "登记执行边界/独立闪卡编辑卡/复用正文编辑锁和资源上传/接入同节上下排序/主题适配/构建与进度校验",
+      "result": "资料详情的单行闪卡标题已替换为独立编辑卡。用户可展开一张卡，直接使用既有结构化正文编辑器修改标题、正文、表格、公式与受管图片；编辑卡取得、续期并释放已有 90 秒租约。每张卡提供上移和下移图标，复用既有排序接口后按返回层级立即更新顺序。全量类型和浏览器交互回归仍受 PH5-13 未收敛的续读迁移阻塞，PH5-14 保持进行中。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/web exec vite build 通过，完成 2000 个模块转换与生产产物生成；仅有既有大 chunk 警告。",
+        "http://127.0.0.1:5173/ 返回 HTTP 200 且包含 root 容器。",
+        "npm run progress:build 与 npm run progress:check 通过。",
+        "npm run typecheck 被 PH5-13 的共享 Review 类型与旧复习页不一致阻塞；本机服务日志同时显示续读迁移 SQL 的 setting_value 列歧义。",
+        "应用内浏览器连接初始化报 Cannot redefine property: process，无法补做桌面与 390px 逐卡交互回归。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "由 PH5-13 修复共享 Review 契约与续读 SQL 后，重新执行全量 typecheck/build，并补做资料详情逐卡编辑、保存、排序和移动端无横向溢出回归。"
+    },
+    {
+      "id": "LOG-055",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-13"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "完成按资料续读与复习资料选择收敛",
+      "action": "登记边界/资料进度映射/旧设置迁移/筛选契约收敛/JSON 备份兼容/真实 MySQL 回归/构建与进度同步",
+      "result": "复习续读从全局单张卡片改为按资料保存。打开、切卡和状态自动前进均会保存当前资料的最后卡片；面板逐项显示资料及可继续卡片，进入资料会直接恢复保存位置。筛选仅保留资料与掌握状态，章节、节和关键词选择已从共享契约、服务和页面移除。完整 JSON 导出与恢复支持资料进度映射，并兼容读取旧的全局位置。PH5-13 另有背默模式范围尚未实现，因此任务保持进行中。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 76 项 API 与服务测试，包含资料进度导出与恢复。",
+        "npm run test:review:integration 通过真实 MySQL + HTTP 验收，验证两份随机资料的续读位置互不覆盖，清理夹具后恢复原有进度设置。",
+        "npm run build 通过，只有既有 Vite 大 chunk 警告。",
+        "独立 Playwright 确认本机登录页可达；未读取本机凭证，登录后桌面和 390px 页面回归继续受 RISK-021 限制。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "apps/api/test/m4-real-mysql-http.test.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/api.ts",
+        "apps/web/src/styles.css",
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/config.json",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "继续 PH5-13 的背默模式和已登录浏览器回归；不改写已完成的资料续读与筛选契约。"
+    },
+    {
+      "id": "LOG-056",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-13"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "完成复习首页背默模式",
+      "action": "登记边界/首页背默 Switch/复用重点挖空/自动启用与切卡重置/类型构建与进度同步",
+      "result": "复习首页新增背默模式 Switch。开启后，进入任意资料的闪卡会自动启用既有挖空模式，当前及后续闪卡的全部已标注重点均会隐藏；点击遮罩可逐项显示，“显示全部”可展示当前卡的所有标注，切换卡片后重新遮挡。关闭开关后闪卡正常显示。该模式不会持久化，也不改动重点高亮、闪卡内容、API 或数据库。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm --workspace @knowledge-flashcards/web exec vite build 通过；仅有既有大 chunk 警告。",
+        "独立 Playwright 可打开本机登录页；未读取账号凭证，已登录复习页面的桌面和 390px 交互回归仍受 RISK-021 限制。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续 PH5-13 的已登录桌面与 390px 页面交互回归；不扩展背默模式为持久化设置或修改既有重点挖空。"
+    },
+    {
+      "id": "LOG-057",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-13"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "优化背默模式开关视觉",
+      "action": "登记边界/专用 Switch 样式/主题覆盖隔离/黑橙状态/滑块过渡与减少动态效果/类型构建与进度同步",
+      "result": "背默模式控件改为紧凑的 iOS 风格设置行。关闭时为近黑轨道，开启时为橙色轨道；白色滑块以 180ms 缓动位移，并补齐悬停、按压和键盘焦点状态。专用选择器覆盖了通用 input 的主题样式，避免深浅色模式下轨道形态或色彩错乱；用户启用减少动态效果时不播放切换动画。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm --workspace @knowledge-flashcards/web exec vite build 通过；仅有既有大 chunk 警告。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续 PH5-13 的已登录桌面与 390px 页面交互回归；不扩展背默模式为持久化设置或修改既有重点挖空。"
+    },
+    {
+      "id": "LOG-058",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-13"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "收紧背默模式开关比例",
+      "action": "登记边界/压缩设置行/长条轨道与方形滑块/保持黑橙状态与过渡/类型构建与进度同步",
+      "result": "背默模式的设置行收紧为 44px 高，轨道调整为 68 x 24px 的扁平圆角矩形，滑块缩为 18 x 18px 小圆角方块，开启位移同步为 44px。关闭近黑、开启橙色、按压反馈和减少动态效果逻辑保持不变。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm --workspace @knowledge-flashcards/web exec vite build 通过；仅有既有大 chunk 警告。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续 PH5-13 的已登录桌面与 390px 页面交互回归；不扩展背默模式为持久化设置或修改既有重点挖空。"
+    },
+    {
+      "id": "LOG-059",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-13"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "将背默模式轨道与滑块等高",
+      "action": "登记边界/轨道高度收紧/滑块垂直对齐/开启位移与阴影同步/类型构建与进度同步",
+      "result": "背默模式轨道高度由 24px 调整为与 18px 滑块相同的高度，滑块取消上下留白并以 50px 横向位移完成开启状态；阴影同步减弱以保持扁平观感。轨道长度、黑橙状态、动画时长和 44px 触控行高保持不变。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm --workspace @knowledge-flashcards/web exec vite build 通过；仅有既有大 chunk 警告。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续 PH5-13 的已登录桌面与 390px 页面交互回归；不扩展背默模式为持久化设置或修改既有重点挖空。"
+    },
+    {
+      "id": "LOG-060",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-13"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "修复背默模式轨道被主题输入样式放大",
+      "action": "根据截图定位 CSS 层叠/提升主题专用选择器优先级/重置高度与内边距/类型构建与进度同步",
+      "result": "定位到秋日主题后段的通用 input 规则以相同优先级覆盖了开关轨道的 height、min-height 和 padding，导致实际容器仍高于滑块。开关规则现绑定 data-appearance 主题范围并显式重置最小高度、内边距和边框，优先级高于通用规则；轨道与滑块将实际同为 18px 高。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm --workspace @knowledge-flashcards/web exec vite build 通过；仅有既有大 chunk 警告。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续 PH5-13 的已登录桌面与 390px 页面交互回归；不扩展背默模式为持久化设置或修改既有重点挖空。"
+    },
+    {
+      "id": "LOG-061",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-13"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "收紧背默模式开关宽度",
+      "action": "登记边界/将轨道宽度调整为 30px/同步滑块行程/前端类型检查与构建",
+      "result": "背默模式开关保持 18px 轨道与滑块等高，视觉轨道由 68px 收紧至 30px；滑块开启状态的横向位移同步调整为 12px，仍可准确停靠在右端。黑橙色状态、180ms 过渡和 44px 触控行高均保持不变。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm --workspace @knowledge-flashcards/web exec vite build 通过；仅有既有大 chunk 警告。",
+        "npm run progress:build 与 npm run progress:check 均因既有 PH5-15 引用未知 catalog-navigation 模块失败；本次未改动 PH5-15 或自动生成的 Markdown 展示层。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "progress/risks.json"
+      ],
+      "next": "继续 PH5-13 的已登录桌面与 390px 页面交互回归；不扩展背默模式为持久化设置或修改既有重点挖空。"
+    },
+    {
+      "id": "LOG-062",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-13"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "实现当前学习资料选择与局部统计",
+      "action": "登记边界/资料级状态汇总/当前资料名称选择器/快捷入口收敛/类型服务浏览器回归/进度同步",
+      "result": "复习首页以只显示资料名称的当前资料选择器替换原资料列表。每份资料返回闪卡、掌握、未评估和努力数量；选择资料后，顶部统计与全部、未评估、努力快捷入口均只使用该资料数据。资料刷新后会保留有效选择，失效时回退到首份资料。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm --workspace @knowledge-flashcards/api run test 通过 76 项。",
+        "npm run build:web 通过；仅有既有大 chunk 警告。",
+        "npm run test:review:integration 通过真实 MySQL + HTTP 验收。",
+        "独立 Playwright 使用本地认证与 Dashboard 响应桩验证资料名称选择、统计/快捷入口切换、390x844 无横向溢出和零控制台错误。",
+        "npm run progress:build 与 npm run progress:check 均因 PH5-15 引用未知 catalog-navigation 模块失败，详见 RISK-024；未手改自动生成 Markdown。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "待 PH5-15 恢复进度生成器后，重新执行 progress:build 和 progress:check；不扩展当前资料选择、续读或筛选范围。"
+    },
+    {
+      "id": "LOG-063",
+      "date": "2026-08-11",
+      "taskIds": [
+        "PH5-15"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "实现资料九宫格长按拖入回收站",
+      "action": "登记边界/Pointer Events 长按/顶部垃圾桶目标区/复用软删除/键盘替代入口/桌面与移动端回归/进度同步",
+      "result": "科目页资料九宫格支持长按拖动。触发后显示固定顶部垃圾桶，资料跟随指针；进入目标区时垃圾桶切换危险态，松开后调用既有资料软删除并将资料即时移出网格。目标区外松开不改变资料，短按仍进入详情；Delete 键提供无障碍替代入口。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build 通过；仅有既有 Vite 大 chunk 警告。",
+        "独立 Playwright 使用隔离认证与资料接口夹具验证桌面长按、顶部垃圾桶激活、DELETE /api/hierarchy/material/:id、删除反馈、目标区外取消与短按详情跳转；未读取账户凭证或写入业务资料。",
+        "独立 Playwright 在 390x844 视口验证长按删除前后 body 与 document 宽度均为 390。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "资料排序、跨科目移动和批量删除如有需求，须以独立任务评估。"
+    },
+    {
+      "id": "LOG-064",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-10"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "回收箱资料不参与导入去重",
+      "action": "登记边界/过滤软删除资料/来源哈希索引迁移/单元与真实 MySQL 回归/进度同步",
+      "result": "导入预览和应用阶段的来源哈希去重现仅匹配未删除资料。移入回收箱的同源资料不会触发重复跳过，可保留原记录并重新导入为新资料；活动资料的重复跳过行为保持不变。",
+      "verification": [
+        "npm run typecheck:api 通过。",
+        "导入服务单元测试 6 项通过，覆盖活动资料重复跳过与回收箱同源资料重新导入。",
+        "npm run db:check 与 npm run db:migrate 通过，004_allow_reimport_trashed_materials.sql 已执行。",
+        "npm run test:import:integration 通过真实 MySQL + HTTP 验收；软删除资料后重新导入同一 ZIP 成功。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/import-service.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/api/test/import-real-mysql-http.test.ts",
+        "database/migrations/004_allow_reimport_trashed_materials.sql",
+        "项目开发方案.md",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续 PH5-10 既有的导入页浏览器验收；不改动回收箱恢复、永久删除或资料移动流程。"
+    },
+    {
+      "id": "LOG-065",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-09"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "生成完成后展开 AI 讲解",
+      "action": "登记最小边界/调整成功回调面板状态/前端类型与生产构建验证/进度同步",
+      "result": "AI 讲解请求成功保存并刷新当前卡片后，讲解折叠区会保持展开，新结果可立即阅读。首次进入和切换卡片仍默认折叠；用户手动切换、生成失败和停止生成均不改变现有折叠状态。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过，转换 2000 个模块；仅有既有大 chunk 警告。",
+        "成功回调仅将 setExplanationOpen 状态设为 true；失败与取消分支没有面板状态更新。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续 PH5-09 既有的 AI 讲解页面浏览器回归；不扩展自动展开到首次进入、切卡、失败或取消场景。"
+    },
+    {
+      "id": "LOG-066",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-16"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "支持 JSON 内容级高亮导入",
+      "action": "登记协议边界/解析文本与公式声明/自动生成结构化锚点/应用时二次校验并事务写入/更新模板/全量验证/进度同步",
+      "result": "内容级 JSON 已支持卡片级 highlights。文本高亮先收集当前卡片完整 body 中按正文从前到后的匹配，再按 occurrence 选择第 N 次出现，计数跨普通文本、粗体等节点但单条 text 不跨节点；公式按完整公式节点匹配。未匹配、重复未指定序号或修正正文后失配均会阻止应用，成功导入在 cards 写入后于同一事务写入 highlights。JSON 模板现自带中文规则说明和可直接导入的同段多项、重复 occurrence、公式及重叠高亮示例。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过 83 项测试，覆盖有效文本/公式匹配、body 全局 occurrence 顺序、跨节点计数、重复歧义、模板、数据库写入及修正后事务回滚。",
+        "npm run test:import:integration 通过真实 MySQL + HTTP 验收，JSON 文本与公式高亮均写入 highlights，夹具数据在测试结束后清理。",
+        "JSON 模板可被自身完整解析，覆盖同段多项、重复文本 occurrence、公式和重叠高亮示例。",
+        "npm run typecheck 通过。",
+        "npm run build 通过；仅有既有 Vite 大 chunk 警告。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/import-service.ts",
+        "apps/api/src/ingestion.test.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/api/test/import-real-mysql-http.test.ts",
+        "项目开发方案.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "跨节点匹配、批量标注及外部学习状态迁移需要根据实际数据来源另立任务；完整 JSON 备份保持现有恢复流程。"
+    },
+    {
+      "id": "LOG-067",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-17"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "明确 JSON 高亮重复匹配判定标准",
+      "action": "登记模板说明边界/补充连续子串与包含关系规则/加入 occurrence 示例/模板解析与 API 测试/进度同步",
+      "result": "JSON 模板已明确：重复按单张卡片 body 内的连续文本子串计数，目标被更长文本包含时仍算一次；普通正文、列表与表格单元格均参与计数，卡片之间独立。示例以“10人以下”分别独立出现和包含在“3人以上10人以下”中的两次匹配，演示 occurrence: 1、occurrence: 2。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，83 项测试全部通过。",
+        "模板断言确认重复规则包含连续文本子串与包含关系说明，并由解析器直接通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "导入错误若要列出匹配次数、位置和上下文，需作为新的诊断反馈任务实施。"
+    },
+    {
+      "id": "LOG-068",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-18"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "将 JSON 高亮去重要求改为模型可执行指令",
+      "action": "登记最小边界/补充模型逐卡搜索与自检规则/加入禁止性约束/模板解析与 API 测试/进度同步",
+      "result": "JSON 模板新增面向生成模型的硬性高亮流程：每张卡独立逐字搜索目标文本并统计全部连续子串命中；唯一时才省略 occurrence，重复时先扩展为唯一的完整原文语义短语，仍重复才填写实际 occurrence。明确禁止根据 highlights 数组下标猜测序号、默认选择首个匹配，并要求输出前逐条复查。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，83 项测试全部通过。",
+        "模板断言覆盖逐字搜索、唯一短语优先、禁止数组下标猜测和输出前逐条复查；模板可由解析器直接通过。",
+        "npm run typecheck、npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "自动展示匹配上下文或自动修复 occurrence 需要作为独立导入诊断任务评估。"
+    },
+    {
+      "id": "LOG-069",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-19"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "固化 JSON 高亮重复判定算法与反例",
+      "action": "登记最小边界/写入结构化命中单位与编号算法/补充短数字、包含、重叠、跨节点和公式反例/模板测试与类型检查/进度同步",
+      "result": "模板现明确与解析器一致的重复标准：text 只在单个解析后普通文本节点内按连续子串命中，包含与重叠均计数；formula 按完整 math/inlineMath 节点值匹配；occurrence 按正文节点深度优先和节点内字符起点编号，不是 highlights 数组下标。补充了 1、10、1000 短数字、跨 Markdown 节点不可匹配及公式包装符号不计入等反例。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，83 项测试全部通过。",
+        "模板断言覆盖连续子串、occurrence 顺序、唯一匹配门槛、短数字、跨节点和公式反例；模板可由解析器直接通过。",
+        "npm run typecheck 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "导入预览展示节点路径、字符位置和上下文属于后续诊断反馈任务。"
+    },
+    {
+      "id": "LOG-070",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-20"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "支持 JSON body 内联高亮标记导入",
+      "action": "沿用已确认边界/实现内联标记解析与剥离/保留精确锚点并限制正文修正重定位/模板切换主协议/兼容旧 highlights/单元与真实 MySQL 集成验收/进度同步",
+      "result": "JSON body 可直接用 [[hl:原文]] 标记文本位置，同一词每个目标位置独立包裹即可，无需 occurrence。导入解析后正文自动恢复为无标记文本并生成结构化 text 锚点；预览正文未修改时沿用精确位置，修改后仅在目标唯一时重新定位，重复或缺失会阻止写入。highlights 数组继续支持公式和旧 text/occurrence 文件，下载模板已以内联文本标记为主、formula 数组声明为兼容示例。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，86 项测试全部通过。",
+        "npm run test:import:integration 通过真实 MySQL + HTTP 验收，内联文本与公式高亮均写入 highlights。",
+        "npm run typecheck 通过。",
+        "JSON 模板可由解析器直接通过，正文示例包含两处 [[hl:危险源]]，解析结果不保留协议标记。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "apps/api/src/import-service.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/api/test/import-real-mysql-http.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "公式内联标记、预览命中定位和旧 occurrence 文件批量迁移需要另立协议或交互任务。"
+    },
+    {
+      "id": "LOG-071",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-21"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "兼容表格单元格内联高亮标记",
+      "action": "复现实际 JSON 表格报错/定位内部令牌与 GFM 预校验冲突/替换安全令牌/补充表格单元格与跨单元格回归/真实文件解析与集成验收/进度同步",
+      "result": "修复了 [[hl:...]] 内部转换令牌含连字符，触发表格分隔行预校验误报的问题。现在单个 GFM 表格单元格中的普通文本标记可被移除并生成正确锚点；未转义管道符、跨单元格、粗体等跨 Markdown 节点标记继续被拒绝，原有错误表格分隔行检测保持有效。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，88 项测试全部通过。",
+        "实际解析 deepseek_json_20260812_23f9dc.json 通过：3 张表格闪卡、21 个表格高亮、0 个问题，正文无协议标记。",
+        "npm run test:import:integration 与 npm run typecheck 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "公式内联标记、跨节点高亮和预览逐次命中定位需要另立任务。"
+    },
+    {
+      "id": "LOG-074",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-10"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "移除表格分隔行猜测式预校验",
+      "action": "确认正文误报范围/登记边界/删除基于字符的表格预检/保留解析后表格结构校验/补充 Markdown 与 JSON body 回归",
+      "result": "导入解析不再根据 -、:、| 等字符猜测表格分隔行。只有 remark-gfm 实际解析出的 table 节点才会进入既有列数一致性校验，不能组成 GFM 表格的文本完整保留为正文。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api run typecheck 通过。",
+        "npm --workspace @knowledge-flashcards/api run test 通过，90 项测试全部通过，覆盖 Markdown 和 JSON body 中含 -、:、| 的普通正文。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "待浏览器验收环境恢复后，继续 PH5-10 的导入页格式切换、模板下载、合法文件预览与桌面和 390x844 无横向溢出回归。"
+    },
+    {
+      "id": "LOG-073",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-10"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "补全无效表格分隔行定位信息",
+      "action": "登记诊断边界/在解析器统计正文表格序号/输出表头和分隔行原文/覆盖多个表格回归/类型检查与单元测试",
+      "result": "Markdown 与 JSON body 的无效表格分隔行报错现在显示正文内第几个表格、表头、分隔行原文和既有资料层级上下文，仍保留精确源文件行列位置。合法表格同样纳入序号，因此大量表格中可按正文出现顺序准确定位；未改变 GFM 表格校验标准或导入协议。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api run typecheck 通过。",
+        "npm --workspace @knowledge-flashcards/api run test 通过，90 项测试全部通过；新增覆盖 Markdown 与 JSON body 中合法表格后的多个无效分隔行序号、所属闪卡、表头和原文。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "待浏览器验收环境恢复后，继续 PH5-10 的导入页格式切换、模板下载、合法文件预览与桌面和 390x844 无横向溢出回归。"
+    },
+    {
+      "id": "LOG-075",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-22"
+      ],
+      "phaseMilestone": "第五阶段 / M2、GA",
+      "step": "优化复习闪卡切换性能",
+      "action": "登记单卡导航边界/移除前端完整卡片列表状态/单卡响应提供前后 ID 和位置/保持状态后跳转与资料续读/服务和真实 MySQL 回归/构建与进度同步",
+      "result": "普通上一张、下一张不再请求当前筛选集，也不传输其他闪卡的正文、公式、标注或 AI 讲解。单卡响应只附带前后卡片 ID、当前序号和总数；前端直接使用 nextCardId 或 previousCardId 请求目标卡。单卡打开不再在写入浏览记录前后两次完整读取相同正文，改为轻量定位后只完整读取一次。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm --workspace @knowledge-flashcards/api run test 通过，91 项测试全部通过。",
+        "npm run test:review:integration 通过真实 MySQL + HTTP 验收，覆盖 nextCardId 直达下一张、相邻 ID 回指、状态变更、编辑和按资料续读。",
+        "npm run build 通过；Web 构建仅保留既有大 Chunk 警告。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/api/src/app.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "正文、表格或公式本身的渲染性能问题需在实际设备复现后另立任务。"
+    },
+    {
+      "id": "LOG-076",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-13"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "补齐复习界面的了解状态统计",
+      "action": "登记最小边界/扩展资料摘要契约/聚合了解状态/展示五项统计/补充服务与真实 MySQL 回归/构建和进度同步",
+      "result": "复习首页当前资料统计已显示“了解”。资料摘要新增 familiarCount，服务端按当前资料聚合 mastery_status=familiar；统计同时保留闪卡、掌握、未评估和努力，未新增复习入口或改变筛选、续读和状态写入语义。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm run build 通过；Web 构建仅保留既有大 Chunk 警告。",
+        "npm run test:review:integration 通过真实 MySQL + HTTP 验收，覆盖卡片改为了解后当前资料 familiarCount 为 1。",
+        "npm run progress:build 通过。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "PH5-13 继续按既有验收范围推进；不在本步增加了解状态的快捷复习入口或新的筛选语义。"
+    },
+    {
+      "id": "LOG-072",
+      "date": "2026-08-12",
+      "taskIds": [
+        "PH5-10"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "扩展 JSON 模板多章节示例",
+      "action": "登记最小边界/新增第二章示例/补充双章节解析断言/进度同步",
+      "result": "JSON 下载模板现在以同级“第一章”和“第二章”展示多章节填写结构；第二章包含独立的第一节和示例闪卡，保持单资料内容导入协议不变。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api run test 通过，88 项测试全部通过。",
+        "JSON 模板测试断言两个章节的标题和顺序，并确认第二章示例闪卡可被解析器直接读取。",
+        "npm run typecheck:api 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "待浏览器验收环境恢复后，继续 PH5-10 的导入页格式切换和模板下载交互回归。"
+    }
+    ,{
+      "id": "LOG-077",
+      "date": "2026-08-13",
+      "taskIds": [
+        "PH5-23"
+      ],
+      "phaseMilestone": "第五阶段 / M2、M3、GA",
+      "step": "降低深色模式闪卡高亮刺眼度",
+      "action": "登记边界/覆盖深色文本与公式高亮色/同步设计 token/前端构建与进度校验",
+      "result": "深色模式普通阅读高亮（含公式整段高亮）改用低饱和深色背景与柔和的高对比正文色；秋日枫叶深色模式使用独立暖色背景，跟随系统且系统为深色时同样生效。浅色高亮、挖空遮罩、高亮持久化和交互行为保持不变。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过；仅有既有 Vite 大 chunk 警告。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/styles.css",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "若真实设备仍存在特定屏幕的对比度或色觉适配问题，另立无障碍视觉校准任务。"
+    },
+    {
+      "id": "LOG-078",
+      "date": "2026-08-13",
+      "taskIds": [
+        "PH5-24"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "完成导入正文格式 AI 逐条并发修正",
+      "action": "登记逐条边界/改为单问题单卡 Provider 请求/保留其他卡片诊断/加入并发版本合并与前端独立状态/补 JSON 语法和正文保真回归/构建与进度同步",
+      "result": "需要处理列表中的每条可修正正文格式问题均有独立优化格式按钮；并发点击时每个请求只包含对应的一条 issue 和一张 card，服务端按预览修订合并结果，其他卡片错误不会被清除。AI 只能修正 Markdown、GFM 表格或 LaTeX 格式，正文文字、公式实质内容和既有高亮不变；JSON 读取、语法和 Schema 错误不显示入口且不创建预览令牌。",
+      "verification": [
+        "npm test 通过，96 项测试全部通过。",
+        "npm run typecheck 通过。",
+        "npm run build 通过；仅有既有 Vite 大 Chunk 警告。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/import-service.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/api/src/health.test.ts",
+        "apps/web/src/App.tsx",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "真实 Provider 的特定模型兼容和同一卡片并发冲突提示另立任务；本步不自动重试、不整合全部错误、不润色正文。"
+    },
+    {
+      "id": "LOG-079",
+      "date": "2026-08-13",
+      "taskIds": [
+        "PH5-24"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "修复导入 AI 响应未更新预览的问题",
+      "action": "兼容 JSON 代码围栏与单项 cards 响应/将失败原因显示在对应问题行/补预览正文更新回归/进度同步",
+      "result": "Provider 返回 JSON 代码围栏或旧版单项 cards 时仍可解析并写回服务端预览；成功响应会同步问题列表和下方闪卡正文，拒绝或请求失败会显示在对应问题下方，便于区分 Provider 输出无效、正文改写和格式未减少。",
+      "verification": [
+        "新增测试确认代码围栏和单项 cards 响应后问题清零、预览有效且闪卡正文已更新。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/import-service.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "真实 Provider 仍返回非 JSON 或格式错误未减少时，优先查看对应问题行的失败原因；不自动润色正文。"
+    },
+    {
+      "id": "LOG-080",
+      "date": "2026-08-13",
+      "taskIds": [
+        "PH5-24"
+      ],
+      "phaseMilestone": "第五阶段 / M5、GA",
+      "step": "移除 AI 修正高亮匹配拦截",
+      "action": "保留既有高亮数据/移除 AI 路径高亮重定位校验/增加修正后直接应用回归/同步进度",
+      "result": "AI 格式修正仍会重新解析正文并确认点击的问题类型减少，但不再因正文变化或既有高亮无法在新节点中重新定位而阻断预览写回；系统提示词要求 Provider 保留正文措辞、公式及既有高亮对应内容，应用时对 AI 修正卡片原样保留原高亮数据。普通手工编辑导入的高亮匹配校验保持不变。",
+      "verification": [
+        "npm test 通过，99 项测试全部通过。",
+        "npm run typecheck 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/import-service.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/api/src/ingestion.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "继续观察真实 Provider 的格式修正输出；非 JSON 或格式问题未减少时仅在对应问题行提示失败，不自动重试或润色正文。"
+    }
+  ]
+}

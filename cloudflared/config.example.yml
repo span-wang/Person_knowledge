@@ -1,0 +1,12 @@
+# 复制为 config.yml 后，替换 tunnel 和 credentials-file 的本机值。
+# 本文件不包含 Tunnel Token、证书或 API 凭证，可以提交到版本库。
+tunnel: replace-with-tunnel-uuid
+credentials-file: ./cloudflared/tunnel-credentials.json
+
+ingress:
+  - hostname: review.panspan.cloud
+    service: http://127.0.0.1:5173
+    originRequest:
+      httpHostHeader: localhost:5173
+      connectTimeout: 10s
+  - service: http_status:404

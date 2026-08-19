@@ -1,0 +1,392 @@
+{
+  "phaseId": "phase-3",
+  "tasks": [
+    {
+      "id": "PH3-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "实现文本、表格和公式重点高亮",
+      "priority": "P0",
+      "moduleIds": [
+        "annotation-cloze"
+      ],
+      "milestoneIds": [
+        "M3"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "acceptance": "多高亮即时保存，公式按完整元素标记，图片不可标记。",
+      "result": "闪卡阅读页已支持多处文本和表格文字高亮：浏览器将选区拆为结构化文本节点内的字符范围并即时保存，跨富文本或表格单元格的选区会逐节点保留。整段公式可点击标记或取消标记；图片没有高亮锚点和操作入口。服务端只接受当前闪卡真实存在的文本或公式节点路径及合法范围，读取时返回已校验高亮并在阅读态渲染。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 32 项测试，覆盖高亮锚点校验、重复锚点去重、公式节点限制、删除接口与 HTTP 契约。",
+        "npm run build 通过，Web、API 与共享类型均构建成功。",
+        "真实 MySQL + 浏览器验证表格单元格选词后的保存和读取渲染；验收生成的一条精确测试高亮已删除，未保留标注数据。",
+        "Playwright 复测跨两个表格文字节点的选区，高亮操作可用；390x844 视口 bodyWidth=390、表格宽度=324，无横向溢出，并已人工检查桌面和移动截图。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/health.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "output/playwright/ph3-01-desktop.png",
+        "output/playwright/ph3-01-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "在既有结构化阅读页中，为文本、表格文字和整段公式提供可重复保存的重点高亮。",
+        "inScope": [
+          "为闪卡读取结果返回受校验的高亮记录，并提供新增、删除高亮的受校验 API。",
+          "以结构化内容节点路径和节点内字符范围保存文本高亮；表格文字沿用同一定位模型。",
+          "让阅读页可选择单个文本节点范围后即时保存，并可点击公式标记或取消整段公式重点。",
+          "在阅读态呈现已有高亮，拒绝图片、无效节点路径、空范围与不安全锚点，并补充 API 和服务测试。"
+        ],
+        "outOfScope": [
+          "不实现重点挖空、遮罩揭示或离开卡片后的揭示重置。",
+          "不实现正文、表格、公式或图片的可视化编辑。",
+          "不改变既有复习筛选、掌握状态、复习记录、层级结构或资源访问权限。"
+        ],
+        "deferredTo": [
+          "重点挖空与揭示状态归属 PH3-02。",
+          "结构化内容编辑、编辑后的高亮迁移归属 PH3-03。",
+          "层级维护和编辑锁分别归属 PH3-04、PH3-05。"
+        ]
+      }
+    },
+    {
+      "id": "PH3-02",
+      "sequence": "2",
+      "order": 20,
+      "title": "实现重点挖空与揭示重置",
+      "priority": "P0",
+      "moduleIds": [
+        "annotation-cloze"
+      ],
+      "milestoneIds": [
+        "M3"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-11",
+      "acceptance": "遮罩保留原长度，可逐项揭示，离开卡片后恢复遮罩。",
+      "result": "阅读页已基于既有持久化高亮提供挖空模式：文本与表格文字遮罩保留原文字占位长度，整段公式保留 KaTeX 布局并整体遮罩。点击遮罩可逐项揭示，显示全部会揭示当前卡片所有重点；揭示 ID 仅保存在前端内存，切换闪卡时清空，连续复习保留挖空模式并使新卡片重新遮罩，退出卡片页后关闭该模式。",
+      "verification": [
+        "npm test 通过 32 项现有 API 与服务测试。",
+        "npm run typecheck 通过。",
+        "npm run build 通过，Web、API 与共享类型均构建成功。",
+        "Playwright 使用真实 MySQL 的两张隔离验收卡，验证文本、表格文字和公式遮罩、单项揭示、显示全部，以及切至下一张和返回后均恢复遮罩。",
+        "390x844 移动视口检查 bodyWidth=390、tableWidth=324、tableContainerWidth=324，无页面或表格横向溢出；桌面和移动截图已人工检查。",
+        "验收夹具已在事务中精确删除（2 张卡、4 条高亮），复核 fixtureCount=0，并恢复验收前的上次闪卡设置。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "output/playwright/ph3-02-desktop.png",
+        "output/playwright/ph3-02-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "在既有闪卡阅读页中，基于已持久化的文本、表格文字和公式高亮实现仅当前会话有效的重点挖空与逐项揭示。",
+        "inScope": [
+          "复用当前闪卡返回的有效高亮，在挖空模式将文本高亮范围按原文字数显示为可点击遮罩，并将公式高亮按完整公式显示为遮罩。",
+          "支持逐项揭示和显示全部；遮罩状态仅保存在当前阅读页内存中，不写入数据库。",
+          "在当前闪卡切换、重新进入闪卡或挖空模式关闭后重置揭示状态，并适配现有桌面与 390x844 移动阅读布局。",
+          "补充可验证的前端单元测试或页面自动化验收，覆盖文本、表格、公式、无高亮卡片、逐项揭示和切卡重置。"
+        ],
+        "outOfScope": [
+          "不改变高亮锚点模型、已有高亮读写 API 或数据库结构。",
+          "不实现正文、表格、公式或图片的可视化编辑，也不处理编辑后的高亮迁移。",
+          "不改变复习筛选、顺序切卡、掌握状态、复习记录或资料层级维护。"
+        ],
+        "deferredTo": [
+          "结构化内容编辑和高亮迁移归属 PH3-03。",
+          "章、节、闪卡维护与回收站入口归属 PH3-04。",
+          "多设备编辑锁归属 PH3-05。",
+          "M3 标注与编辑整体验收归属 PH3-06。"
+        ]
+      }
+    },
+    {
+      "id": "PH3-03",
+      "sequence": "3",
+      "order": 30,
+      "title": "实现结构化可视化卡片编辑",
+      "priority": "P0",
+      "moduleIds": [
+        "visual-editor"
+      ],
+      "milestoneIds": [
+        "M3"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "正文、表格、公式和图片可视化编辑并应用，前端不出现 Markdown/LaTeX 源码。",
+      "result": "闪卡阅读页已提供原位结构化编辑：标题、段落和表格单元格可直接修改，可新增段落、表格和受管图片，公式使用 MathLive 排版字段而非 LaTeX 源码输入。服务端以白名单校验节点结构、公式、链接与图片资源，并在 MySQL 事务中更新内容和高亮；仅原节点内容完全未变的高亮保留，正文改动、公式改动和损坏锚点对应的高亮会删除并反馈数量。图片上传只接受经文件签名校验的 PNG、JPEG、GIF、WebP，最大 5MB，写入受管资源目录。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 36 项测试，覆盖编辑 API、受管图片上传、节点校验，以及高亮保留、失效和损坏记录清理。",
+        "npm run test:review:integration 通过 1 项真实 MySQL + HTTP 验收；结构化正文、表格、公式和图片引用在更新后重新读取保持一致，夹具和上次位置均已清理恢复。",
+        "npm run build、npm run db:check、npm run storage:check 通过；MathLive 仅在公式编辑时动态加载，常规主包为约 493KB。",
+        "Playwright 桌面和 390x844 移动端验证原位编辑、表格单元格、公式数学字段、取消草稿和新增图片入口；移动端 bodyWidth=375、documentWidth=375，无横向溢出，浏览器无控制台错误。"
+      ],
+      "affectedFiles": [
+        "package-lock.json",
+        "apps/web/package.json",
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/resource-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/resource-service.test.ts",
+        "apps/api/src/health.test.ts",
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/main.tsx",
+        "apps/web/src/styles.css",
+        "output/playwright/ph3-03-desktop.png",
+        "output/playwright/ph3-03-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "在既有闪卡阅读页中编辑受限的结构化内容节点，并在保存时保留可验证的高亮、清理无法继续精确定位的高亮。",
+        "inScope": [
+          "提供闪卡标题和正文结构化节点的读取、校验和应用 API，正文仅接收白名单内的安全节点属性。",
+          "在阅读页原位提供段落、表格单元格、公式和图片替换信息的可视化编辑，不显示 Markdown 或 LaTeX 源码。",
+          "编辑后在同一事务中更新正文及高亮：仍指向同类型节点且范围有效的高亮保留，其余高亮删除并向前端反馈数量。",
+          "补充服务、HTTP 与浏览器验收，覆盖持久化、表格/公式/图片编辑，以及编辑后高亮保留和失效。"
+        ],
+        "outOfScope": [
+          "不实现章、节、闪卡的新增、重命名、移动、排序或软删除。",
+          "不实现多设备编辑锁、协同编辑、冲突合并或版本历史。",
+          "不改动复习筛选、顺序切卡、掌握状态、AI 讲解、导出备份或资源目录迁移。"
+        ],
+        "deferredTo": [
+          "章、节、闪卡维护和回收站入口归属 PH3-04。",
+          "多设备同步和卡片编辑锁归属 PH3-05。",
+          "M3 标注与编辑整体验收归属 PH3-06。"
+        ]
+      }
+    },
+    {
+      "id": "PH3-04",
+      "sequence": "4",
+      "order": 40,
+      "title": "实现章、节、闪卡维护和回收站入口",
+      "priority": "P0",
+      "moduleIds": [
+        "visual-editor",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M3"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "可新增、重命名、移动、排序和软删除层级内容。",
+      "result": "资料页已提供章、节、闪卡的新增、改名、跨父级移动、同层排序和软删除。服务端以事务校验父级有效性并维护同层连续顺序；删除父级会级联软删除下级内容，并为每个对象写入回收站记录。资料树和复习查询均继续排除已删除内容；回收站现提供只读入口，恢复与永久删除仍未提前实现。闪卡按节默认收起，避免资料量大时在移动端堆积大量操作按钮。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 40 项测试，新增资料树、新增排序位置、级联软删除和输入校验覆盖。",
+        "npm run test:hierarchy:integration 通过 1 项真实 MySQL + HTTP 验收，覆盖新增、重命名、卡片排序、跨章移动、级联软删除和回收站读取；随机 UUID 夹具已清理。",
+        "npm run build、npm run db:check 和 npm run storage:check 通过。",
+        "Playwright 桌面与 390x844 移动端验证资料导航、按节展开、删除确认和回收站入口；移动端 bodyWidth=390、documentWidth=390，展开 29 张卡后仍无横向溢出，浏览器无控制台错误。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "apps/api/package.json",
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/hierarchy-service.ts",
+        "apps/api/src/hierarchy-service.test.ts",
+        "apps/api/test/hierarchy-real-mysql-http.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "output/playwright/ph3-04-materials-desktop.png",
+        "output/playwright/ph3-04-materials-collapsed-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "在资料管理页维护章、节和闪卡的层级、顺序与软删除，并提供只读的回收站入口。",
+        "inScope": [
+          "提供资料树读取、章/节/闪卡新增与重命名、同层排序、跨父级移动及软删除的受校验 API，并在事务中维护连续排序。",
+          "资料管理页使用既有 iOS 分组列表展示层级内容，提供新增、重命名、移动、排序和删除操作，以及删除确认。",
+          "将软删除对象写入既有回收站记录，并提供可查看的回收站入口；复习与资料树均不再返回已删除内容。",
+          "补充服务、HTTP 与浏览器验收，覆盖层级变更、排序一致性、软删除隔离和移动端布局。"
+        ],
+        "outOfScope": [
+          "不实现回收站恢复、永久删除、导出、备份或恢复流程。",
+          "不实现多设备编辑锁、协同编辑、冲突合并或版本历史。",
+          "不改变既有正文可视化编辑、高亮挖空、复习筛选、掌握状态、AI 讲解或资源目录迁移。"
+        ],
+        "deferredTo": [
+          "多设备同步和卡片编辑锁归属 PH3-05。",
+          "M3 标注与编辑整体验收归属 PH3-06。",
+          "回收站恢复、永久删除、导出、备份和恢复归属 PH4-03、PH4-04。"
+        ]
+      }
+    },
+    {
+      "id": "PH3-05",
+      "sequence": "5",
+      "order": 50,
+      "title": "实现多设备同步和卡片编辑锁",
+      "priority": "P1",
+      "moduleIds": [
+        "visual-editor",
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "M3"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "电脑和手机可同时打开，同一张卡片只允许一个设备进入正文编辑。",
+      "result": "已使用既有 sync_locks 表实现 90 秒编辑租约：浏览器为本机持久化设备标识，进入编辑时取得后端随机令牌，编辑中每 30 秒续期，取消、保存、返回或切卡时释放。正文保存必须同时匹配设备标识、令牌和未过期租约；其他设备会收到 409 冲突，过期或释放后可接管。阅读、标注、挖空、掌握状态和层级操作不受锁限制。",
+      "verification": [
+        "npm run test:edit-lock:integration 通过 1 项真实 MySQL + HTTP 验收，覆盖同设备重入、跨设备冲突、无效保存拦截、续期、释放和过期接管；随机 UUID 夹具已清理。",
+        "npm test 通过 40 项单元测试；npm run test:m3:integration 和 npm run test:review:integration 均通过。",
+        "npm run typecheck、npm run build、npm run db:check 和 npm run storage:check 通过。",
+        "Playwright 使用桌面与独立 390x844 移动会话验证：首端进入编辑显示本机状态，第二端显示锁冲突；首端取消后移动端可进入编辑。两种视口 documentWidth 与 bodyWidth 均等于 viewportWidth。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/health.test.ts",
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "apps/api/test/m3-real-mysql-http.test.ts",
+        "apps/api/test/edit-lock-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package.json",
+        "output/playwright/ph3-05-desktop.png",
+        "output/playwright/ph3-05-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "为闪卡正文编辑增加基于设备标识和后端租约令牌的单卡编辑锁，并在浏览器编辑流程中自动获取、续期和释放。",
+        "inScope": [
+          "提供获取、续期、释放编辑锁的受校验 API；同一闪卡已有其他设备有效租约时返回冲突，过期租约可被新设备接管。",
+          "正文保存必须校验设备标识、锁令牌和租约有效期，并在同一事务内与正文、高亮失效处理保持一致。",
+          "浏览器为每个设备生成并持久化本地设备标识，进入编辑前获取锁，编辑期间定时续租，保存、取消、返回和切卡时释放。",
+          "补充服务、HTTP、真实 MySQL 和桌面/390x844 移动端验收，验证双客户端竞争、续租、释放和保存拦截。"
+        ],
+        "outOfScope": [
+          "不实现正文冲突合并、版本历史、离线写入队列或协同光标。",
+          "不限制阅读、挖空、标注、掌握状态和资料层级操作。",
+          "不实现账号登录、权限模型或跨用户设备管理。"
+        ],
+        "deferredTo": [
+          "M3 完整回归由 PH3-06 持续覆盖；公网账号保护归 PH5-04。"
+        ]
+      }
+    },
+    {
+      "id": "PH3-06",
+      "sequence": "6",
+      "order": 60,
+      "title": "验收 M3 标注与编辑主链路",
+      "priority": "P0",
+      "moduleIds": [
+        "annotation-cloze",
+        "visual-editor"
+      ],
+      "milestoneIds": [
+        "M3"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "标注、挖空、编辑、层级维护和双设备访问均通过回归。",
+      "result": "新增了覆盖第三阶段已交付能力的真实 MySQL + HTTP 组合回归：文本、表格文字和公式高亮可重读；编辑正文后失效高亮被清理，未改变的表格和公式锚点继续保留；两个独立客户端可同时读取相同卡片并看到一致的持久化正文与高亮；层级新增、改名、跨父级移动、同层排序、级联软删除和回收站隔离保持一致。挖空的浏览器行为复用 PH3-02 已完成的桌面和移动端验收。同步正文编辑锁尚未实现，仍由 PH3-05 负责。",
+      "verification": [
+        "npm run test:m3:integration 通过 1 项真实 MySQL + HTTP 组合回归；随机 UUID 夹具在 finally 中清理。",
+        "npm run typecheck 通过。",
+        "npm test 通过 40 项 API 与服务单元测试。",
+        "npm run build、npm run db:check 和 npm run storage:check 通过。",
+        "挖空交互继续沿用 PH3-02 的真实 MySQL + Playwright 桌面和 390x844 移动端验收结果。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "apps/api/package.json",
+        "apps/api/test/m3-real-mysql-http.test.ts",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "用真实 MySQL、HTTP 和两个独立客户端请求，对第三阶段已经交付的标注、挖空所需数据、可视化编辑、层级维护和软删除隔离做一次组合回归。",
+        "inScope": [
+          "验证文本、表格文字和公式高亮可通过 HTTP 保存、重读，并在正文编辑后正确清理失效锚点、保留未改变锚点。",
+          "验证两个独立客户端可同时读取同一张卡片，并在一次编辑后看到一致的正文和高亮结果；本步不引入设备身份协议。",
+          "验证章、节、闪卡新增、改名、移动、排序、级联软删除和回收站隔离在组合流程中保持一致。",
+          "保留 PH3-02 的浏览器挖空验收作为本步回归证据，并补充可重复的真实 MySQL + HTTP 自动化测试。"
+        ],
+        "outOfScope": [
+          "不实现 sync_locks 的获取、续期、释放、过期和编辑接口拦截。",
+          "不实现回收站恢复、永久删除、导出、备份或恢复。",
+          "不改变 AI 讲解、复习筛选、资源目录迁移或账号安全。"
+        ],
+        "deferredTo": [
+          "多设备正文编辑锁和设备身份归属 PH3-05。",
+          "M3 完成后的 AI 与数据治理归属 PH4。"
+        ]
+      }
+    }
+  ]
+}

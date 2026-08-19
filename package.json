@@ -1,0 +1,48 @@
+{
+  "name": "knowledge-flashcards",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "个人知识点闪卡复习工具",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "npm run build:shared && node scripts/dev.mjs",
+    "dev:web": "npm run build:shared && npm --workspace @knowledge-flashcards/web run dev",
+    "dev:api": "npm run build:shared && npm --workspace @knowledge-flashcards/api run dev",
+    "build": "npm run build:shared && npm run build:web && npm run build:api",
+    "build:shared": "npm --workspace @knowledge-flashcards/shared run build",
+    "build:web": "npm --workspace @knowledge-flashcards/web run build",
+    "build:api": "npm --workspace @knowledge-flashcards/api run build",
+    "typecheck": "npm run build:shared && npm run typecheck:web && npm run typecheck:api",
+    "typecheck:shared": "npm --workspace @knowledge-flashcards/shared run typecheck",
+    "typecheck:web": "npm --workspace @knowledge-flashcards/web run typecheck",
+    "typecheck:api": "npm --workspace @knowledge-flashcards/api run typecheck",
+    "db:migrate": "npm --workspace @knowledge-flashcards/api run migrate",
+    "db:check": "npm --workspace @knowledge-flashcards/api run db:check",
+    "storage:check": "npm --workspace @knowledge-flashcards/api run storage:check",
+    "test": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test",
+    "test:import:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:import:integration",
+  "test:review:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:review:integration",
+  "test:hierarchy:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:hierarchy:integration",
+  "test:m3:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:m3:integration",
+  "test:edit-lock:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:edit-lock:integration",
+  "test:ai-provider:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:ai-provider:integration",
+  "test:ai-explanation:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:ai-explanation:integration",
+  "test:data-governance:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:data-governance:integration",
+    "test:backup:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:backup:integration",
+    "test:m4:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:m4:integration",
+  "test:catalog:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:catalog:integration",
+  "test:question-import:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:question-import:integration",
+  "test:question-bank:integration": "npm run build:shared && npm --workspace @knowledge-flashcards/api run test:question-bank:integration",
+    "tunnel:check": "node scripts/check-tunnel.mjs",
+    "package:windows": "node scripts/run-powershell.mjs scripts/package-windows.ps1",
+    "progress:build": "node scripts/generate-progress.mjs",
+    "progress:check": "node scripts/generate-progress.mjs --check"
+  }
+}

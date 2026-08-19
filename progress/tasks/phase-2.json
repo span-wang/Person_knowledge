@@ -1,0 +1,316 @@
+{
+  "phaseId": "phase-2",
+  "tasks": [
+    {
+      "id": "PH2-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "实现复习面板与继续上次闪卡",
+      "priority": "P0",
+      "moduleIds": [
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "acceptance": "首页展示核心数量、快捷入口和上次离开闪卡。",
+      "result": "已建立复习面板 API 与默认复习首页，展示资料/闪卡/未评估/努力数量，支持全部、未评估、努力和选章节起点；打开闪卡后将最后位置保存到 app_settings，并可从上次闪卡返回。导入入口保留为独立导航视图。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 20 项测试，新增复习面板数量、上次闪卡、入口保存和不存在卡片错误测试。",
+        "npm run build 通过，Web 与 API 构建成功。",
+        "真实 MySQL + HTTP 页面加载显示 1 份资料、99 张闪卡和快捷入口；点击全部打开首张卡片，返回后上次闪卡出现。",
+        "Playwright 桌面和 390x844 移动视口快照通过，复习/导入导航可切换。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "项目开发进度.md",
+        "当前执行看板.md",
+        "progress/logs.json"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "建立以复习为默认入口的最小面板，并仅持久化最后停留的闪卡位置。",
+        "inScope": [
+          "提供已导入资料的核心数量、快捷起点和上次闪卡查询接口。",
+          "提供复习首页、继续/全部/状态预设入口、单章起点和最小安全文本卡片视图。",
+          "使用 app_settings 保存最后停留的闪卡 ID，不修改 review_records。",
+          "保留现有导入入口，且前端默认进入复习面板。"
+        ],
+        "outOfScope": [
+          "不实现资料、章、节、状态和关键词的组合筛选、搜索或结果集内前后切换。",
+          "不更新掌握状态、首次/最近查看、查看次数或状态变更时间。",
+          "不实现表格、公式、代码、图片的正式富内容渲染。",
+          "不实现高亮、挖空、可视化编辑、AI 讲解或登录。"
+        ],
+        "deferredTo": [
+          "组合筛选、搜索和顺序切卡归属 PH2-02。",
+          "掌握状态、进度和复习记录归属 PH2-03。",
+          "正文、表格、公式、代码和图片安全渲染归属 PH2-04。",
+          "高亮挖空、内容编辑、AI 和登录分别归属 PH3、PH4、PH5 任务。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-02",
+      "sequence": "2",
+      "order": 20,
+      "title": "实现组合筛选、搜索和顺序切卡",
+      "priority": "P0",
+      "moduleIds": [
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "acceptance": "资料、章、节、状态和关键词可组合，左右按钮只在结果集内移动。",
+      "result": "已提供层级化筛选选项和筛选结果集 API；复习页可在 Sheet 中组合选择资料、章、节、多个掌握状态和关键词，进入结果首张卡片后以前后按钮按固定结果集顺序切换。快捷入口与上次闪卡也会建立对应结果集，不会越过当前范围。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 22 项测试，新增组合筛选、当前结果位置和无效状态拒绝覆盖。",
+        "npm run build 通过，Web、API 与共享类型均构建成功。",
+        "真实 MySQL API 以资料、章、节、未评估和关键词组合查询，返回 1 张匹配卡片及 currentIndex=0。",
+        "Playwright 实测筛选 Sheet 的层级联动、精确筛选的 1 / 1 禁用边界、章节结果 1 / 29 到 2 / 29 的顺序切换；390x844 视口未出现横向溢出。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "在现有复习面板上建立可组合的结果集筛选，并让卡片页按当前结果集顺序前后切换。",
+        "inScope": [
+          "提供资料、章、节、掌握状态和关键词筛选参数。",
+          "返回稳定顺序的筛选结果集及当前卡片位置。",
+          "前端提供筛选入口、结果数量和上一张/下一张切卡。",
+          "筛选为空或卡片不存在时返回可识别错误，并补充自动化测试。"
+        ],
+        "outOfScope": [
+          "不修改掌握状态、首次/最近查看、查看次数或状态变更时间。",
+          "不实现表格、公式、代码、图片的正式安全渲染。",
+          "不实现高亮、挖空、可视化编辑、AI 讲解、备份或登录。"
+        ],
+        "deferredTo": [
+          "掌握状态、进度和复习记录归属 PH2-03。",
+          "正文、表格、公式、代码和图片安全渲染归属 PH2-04。",
+          "高亮与编辑归属 PH3，AI 与数据治理归属 PH4，登录与发布归属 PH5。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-03",
+      "sequence": "3",
+      "order": 30,
+      "title": "实现掌握状态、进度和复习记录",
+      "priority": "P0",
+      "moduleIds": [
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "acceptance": "未评估及三种状态即时保存，首次/最近查看和查看次数正确记录。",
+      "result": "已完成掌握状态与复习记录闭环：查看卡片会持久化首次/最近查看和查看次数，掌握、了解、努力可即时保存并同步面板统计；保存成功后自动打开当前结果集的下一张，末张保持当前卡片且不循环。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 26 项测试，覆盖查看记录、状态更新、非法状态、不存在卡片与 HTTP 路由契约。",
+        "npm run build 通过，Web、API 与共享类型均构建成功。",
+        "真实 MySQL 事务验收通过：状态更新、首次/最近查看、状态变更时间和查看次数均正确写入；验收事务已回滚，未修改已有学习数据。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/health.test.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "在既有筛选结果集与闪卡页上，补齐单卡掌握状态的即时保存及复习记录。",
+        "inScope": [
+          "提供受校验的掌握状态更新 API，并返回保存后的闪卡状态与复习记录。",
+          "打开或切换到有效闪卡时记录首次查看、最近查看和查看次数。",
+          "在闪卡页提供掌握、了解、努力三段式状态控件；保存后同步当前结果集与复习面板数量，并自动进入当前结果集的下一张闪卡。",
+          "覆盖状态校验、已删除或不存在闪卡、复习记录的首次与重复查看，以及前端可见状态。"
+        ],
+        "outOfScope": [
+          "不实现正文、表格、公式、代码或图片的正式安全渲染。",
+          "不实现高亮、挖空、可视化编辑、AI 讲解、备份或登录。",
+          "不改变既有筛选条件、结果集排序或资料层级结构。"
+        ],
+        "deferredTo": [
+          "富内容安全渲染归属 PH2-04。",
+          "M2 主链路整体验收归属 PH2-05。",
+          "高亮挖空、内容编辑、AI 和登录分别归属 PH3、PH4、PH5 任务。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-04",
+      "sequence": "4",
+      "order": 40,
+      "title": "实现正文、表格、公式、代码和图片安全渲染",
+      "priority": "P0",
+      "moduleIds": [
+        "document-rendering"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "acceptance": "桌面和 iPhone Safari 均可正确阅读复杂卡片，危险 HTML/脚本被过滤。",
+      "result": "复习 API 已安全返回结构化正文节点，阅读页可渲染段落、标题、列表、引用、表格、行内/块级代码、链接、受管图片和 KaTeX 公式；原始 HTML、未知节点与不安全链接协议不会进入可执行渲染路径。图片仅按资源 UUID 从受限目录读取。表格按用户要求压缩换行适配视口，不允许页面或表格产生横向滚动。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 30 项测试，覆盖富内容节点白名单、危险链接剥离、资源路径穿越拒绝和资源 HTTP 路由。",
+        "npm run build 通过，Web、API 与共享类型均构建成功。",
+        "真实 MySQL + HTTP 页面以关键词筛选打开“1. be 动词的形式与主谓搭配”，确认段落、表格、引用、加粗和行内代码均正确渲染。",
+        "Playwright 桌面截图通过；390x844 移动视口复测 bodyWidth=390、表格容器宽度=324、表格宽度=324，无页面或表格横向滚动。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "package-lock.json",
+        "apps/web/package.json",
+        "packages/shared/src/api.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/resource-service.ts",
+        "apps/api/src/resource-service.test.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/health.test.ts",
+        "apps/web/src/main.tsx",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "output/playwright/ph2-04-desktop-table.png",
+        "output/playwright/ph2-04-mobile-table.png",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "在现有闪卡阅读页中，将导入时保存的结构化正文安全渲染为适合桌面与 iPhone 阅读的富内容。",
+        "inScope": [
+          "为段落、标题、列表、引用、表格、行内/块级代码、链接、图片和数学公式提供安全的阅读态渲染。",
+          "在阅读 API 与前端渲染层执行节点和链接协议白名单，拒绝原始 HTML、脚本和不安全资源地址。",
+          "处理正文排版、无横向滚动的表格换行适配、公式布局、代码可读性与移动端适配。",
+          "补充内容安全与渲染契约测试，并在桌面和 iPhone 尺寸验证实际页面。"
+        ],
+        "outOfScope": [
+          "不实现正文、表格或公式的可视化编辑。",
+          "不实现文本高亮、重点挖空或揭示状态。",
+          "不实现 AI 讲解、备份、登录或改变既有筛选和掌握状态逻辑。"
+        ],
+        "deferredTo": [
+          "高亮与挖空归属 PH3 任务。",
+          "可视化正文和层级编辑归属 PH3 任务。",
+          "M2 主链路整体验收归属 PH2-05。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-05",
+      "sequence": "5",
+      "order": 50,
+      "title": "验收 M2 连续复习主链路",
+      "priority": "P0",
+      "moduleIds": [
+        "review-experience",
+        "document-rendering"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "acceptance": "用户能从面板进入、筛选、阅读、评估并连续切换完整结果集。",
+      "result": "已通过 M2 端到端验收：隔离夹具在真实 MySQL 中创建三张有序闪卡，经 HTTP 验证面板、资料/章/节/状态/关键词组合筛选、富内容、状态保存、查看记录与末张边界；浏览器验证了桌面和 390x844 手机视口下的筛选与连续切换。验收结束后夹具、用户原有上次闪卡设置均已恢复。",
+      "verification": [
+        "npm run test:review:integration 通过 1 项真实 MySQL 与 HTTP 集成测试，覆盖组合筛选、富内容节点、状态变更、查看记录、结果集移出和末张无下一项。",
+        "Playwright 实测从复习面板进入、关键词加未评估筛选返回 2 张闪卡、1 / 2 切至 2 / 2，首张禁用上一张、末张禁用下一张。",
+        "Playwright 390x844 视口检查 bodyWidth=390、viewportWidth=390、reviewCardWidth=366，无横向溢出；桌面和手机截图已人工检查。",
+        "npm run typecheck、npm test（30 项）、npm run build、npm run db:check、npm run storage:check 和 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "package.json",
+        "output/playwright/ph2-05-desktop.png",
+        "output/playwright/ph2-05-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "对既有复习能力执行 M2 端到端验收，确认用户可在真实数据上完成从面板进入到连续复习的闭环。",
+        "inScope": [
+          "使用隔离的真实 MySQL 验收资料，覆盖复习面板进入、资料/章/节/状态/关键词组合筛选、富内容阅读和结果集内前后切换。",
+          "验证掌握、了解、努力状态即时保存、查看记录更新、结果集与面板统计同步，以及末张卡片不循环的行为。",
+          "以 HTTP 和浏览器自动化验证桌面与 390x844 移动视口的完整主链路，并运行类型检查、单元测试、构建和进度校验。",
+          "补齐仅为主链路验收所必需的测试夹具、测试脚本或已发现缺陷的最小修复。"
+        ],
+        "outOfScope": [
+          "不实现文本高亮、重点挖空、可视化编辑或 AI 讲解。",
+          "不实现导出、备份恢复、PWA、Cloudflare Tunnel 配置或账号登录。",
+          "不改动既有资料导入协议、层级排序规则和产品范围。"
+        ],
+        "deferredTo": [
+          "高亮、挖空与可视化编辑归属 PH3 任务。",
+          "AI 讲解、导出、恢复和每日备份归属 PH4 任务。",
+          "PWA、Tunnel、账号密码和公网验收归属 PH5 任务。"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.vite/
+.env
+.env.local
+cloudflared/config.yml
+cloudflared/*.json
+cloudflared/*.pem
+data/
+resources/
+backups/
+.runtime/
+.playwright-cli/
+output/
+*.tsbuildinfo

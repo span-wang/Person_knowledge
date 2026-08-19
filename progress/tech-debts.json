@@ -1,0 +1,32 @@
+{
+  "items": [
+    {
+      "id": "DEBT-001",
+      "debt": "第一版不直接解析 PDF、扫描件或 OCR",
+      "sourcePhase": "产品范围",
+      "status": "暂缓",
+      "repaymentPlan": "核心复习链路稳定后，再独立设计 PDF 解析预览、AI 拆分和人工确认流程。"
+    },
+    {
+      "id": "DEBT-002",
+      "debt": "第一版不支持离线复习和离线编辑",
+      "sourcePhase": "发布范围",
+      "status": "暂缓",
+      "repaymentPlan": "未来若验证存在刚需，再设计缓存范围、写入队列和冲突合并策略。"
+    },
+    {
+      "id": "DEBT-003",
+      "debt": "第一版只保存当前 AI 讲解，不保留历史版本",
+      "sourcePhase": "AI 范围",
+      "status": "暂缓",
+      "repaymentPlan": "出现版本回溯需求后再增加历史表和清理策略。"
+    },
+    {
+      "id": "DEBT-004",
+      "debt": "第一版不提供自定义标签、提醒、随机复习和间隔重复算法",
+      "sourcePhase": "复习范围",
+      "status": "暂缓",
+      "repaymentPlan": "以真实使用数据确认价值后分别拆分，不合并为一个大功能。"
+    }
+  ]
+}

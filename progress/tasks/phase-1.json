@@ -1,0 +1,372 @@
+{
+  "phaseId": "phase-1",
+  "tasks": [
+    {
+      "id": "PH1-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "建立 React + Node.js + TypeScript 工程骨架",
+      "priority": "P0",
+      "moduleIds": [
+        "runtime-foundation"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "前后端可安装、启动、类型检查和构建，共享类型边界清晰。",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "result": "已建立 npm workspace、React + Vite Web、Express API 和共享 TypeScript 类型包；前端工程状态页可通过 Vite 代理连接后端健康检查。",
+      "verification": [
+        "npm install 安装 157 个依赖且审计无漏洞。",
+        "npm run typecheck 通过。",
+        "npm test 通过 2 个 API 测试。",
+        "npm run build 通过，Web 和 API 均生成构建产物。",
+        "开发服务实测：API 直连、Web 页面和 Vite /api 代理均返回 200。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "package-lock.json",
+        ".gitignore",
+        ".env.example",
+        "tsconfig.base.json",
+        "scripts/dev.mjs",
+        "packages/shared/",
+        "apps/api/",
+        "apps/web/"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "先建立可运行的 TypeScript Web 工程和配置骨架，不提前实现产品功能。",
+        "inScope": [
+          "建立前端、后端和共享类型目录。",
+          "建立开发环境变量与本机私有配置加载规则。",
+          "建立基础健康检查、日志和错误处理入口。",
+          "建立类型检查、构建和最小测试命令。"
+        ],
+        "outOfScope": [
+          "不实现 Markdown 导入、复习界面、高亮、AI 或登录。",
+          "不接入 Cloudflare Tunnel，不制作最终发布包。"
+        ],
+        "deferredTo": [
+          "MySQL 数据模型归属 PH1-02。",
+          "Windows 启停脚本归属 PH1-03。",
+          "资料导入归属 PH1-04 和 PH1-05。"
+        ]
+      }
+    },
+    {
+      "id": "PH1-02",
+      "sequence": "2",
+      "order": 20,
+      "title": "建立 MySQL 数据模型、迁移和路径配置",
+      "priority": "P0",
+      "moduleIds": [
+        "runtime-foundation",
+        "content-ingestion"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "独立数据库用户可完成迁移，数据/资源/备份路径可以配置并验证可读写。",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "建立可重复执行的 MySQL 初始迁移、后端数据库连接配置和三类存储路径读写检查，为资料导入提供稳定数据边界。",
+        "inScope": [
+          "建立覆盖产品核心实体的 MySQL 初始迁移和迁移命令。",
+          "建立数据库连接参数读取与连接检查，不把密码写入代码或进度文件。",
+          "建立数据、资源、备份路径配置，并提供创建、写入、读取和清理验证。",
+          "为配置解析、路径检查和迁移基础能力补充自动化测试。"
+        ],
+        "outOfScope": [
+          "不实现 Markdown/ZIP 解析、导入预览或资料写入业务 API。",
+          "不实现 Windows 启停脚本、每日备份/恢复、回收站或账号登录。",
+          "不在本步启动 MySQL 服务或提交任何本机密码、密钥和凭证。"
+        ],
+        "deferredTo": [
+          "Windows 服务检查和进程启停归属 PH1-03。",
+          "Markdown/ZIP 解析与严格校验归属 PH1-04。",
+          "导入预览和数据库应用归属 PH1-05。",
+          "备份执行、恢复和 JSON 完整恢复归属 PH4-03 和 PH4-04。"
+        ]
+      },
+      "result": "已建立 MySQL 连接池、可重复执行且带校验和的迁移命令、覆盖核心实体的初始表结构，以及数据/资源/备份路径的读写检查命令；已创建项目数据库和独立应用账号并完成真实迁移。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 4 个 API/基础设施测试，覆盖健康检查、迁移实体清单和三类路径读写。",
+        "npm run build 通过，Web、API 和共享类型均可构建。",
+        "npm run storage:check 通过，三类默认目录均可创建、写入和读取。",
+        "npm run db:check 通过，独立应用账号可以连接目标数据库。",
+        "npm run db:migrate 首次执行成功，第二次执行跳过已记录的 001_initial_schema.sql。",
+        "数据库实际包含 14 张表：13 张核心表和 schema_migrations，迁移记录已写入。"
+      ],
+      "affectedFiles": [
+        "apps/api/package.json",
+        "apps/api/src/config.ts",
+        "apps/api/src/database.ts",
+        "apps/api/src/database-check.ts",
+        "apps/api/src/migrate.ts",
+        "apps/api/src/migration.test.ts",
+        "apps/api/src/storage.ts",
+        "apps/api/src/storage-check.ts",
+        "apps/api/src/storage.test.ts",
+        "database/migrations/001_initial_schema.sql",
+        "package.json",
+        "package-lock.json",
+        ".env.example",
+        ".gitignore"
+      ]
+    },
+    {
+      "id": "PH1-03",
+      "sequence": "3",
+      "order": 30,
+      "title": "建立 Windows 一键启动与关闭脚本",
+      "priority": "P0",
+      "moduleIds": [
+        "runtime-foundation"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "脚本可检查 MySQL、启动/停止本项目进程、输出状态且不自动打开浏览器。",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "reopenedOn": "2026-08-10",
+      "reopenedReason": "补充用户确认的双击启动入口，使 Windows 用户无需打开终端即可启动应用。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "建立 Windows 本机开发环境的一键启停入口，用可双击的 CMD 包装 PowerShell 脚本，并用受管进程记录确保停止操作只影响本项目。",
+        "inScope": [
+          "在启动前检查 Node.js、MySQL 应用连接和三类存储路径。",
+          "构建共享类型后启动本项目 API 与 Web 开发服务，记录启动进程和日志路径。",
+          "轮询 API 与 Web 健康状态，输出本地访问地址和失败日志位置，不自动打开浏览器。",
+          "根据受管进程记录停止本项目进程树，并输出停止后的状态。",
+          "集成受配置控制的 cloudflared tunnel 启动与停止，并记录独立日志和进程。",
+          "提供可双击的启动和停止 CMD 入口，错误时保留窗口以便查看结果。"
+        ],
+        "outOfScope": [
+          "不启动、停止或配置 MySQL 服务。",
+          "不在未完成单账号密码保护前开放公网 Tunnel。",
+          "不配置域名、Tunnel 凭证或最终公网发布验收。",
+          "不制作固定 Node.js 运行时或 Windows 发布包。",
+          "不实现 Markdown/ZIP 导入、备份恢复或账号登录。"
+        ],
+        "deferredTo": [
+          "Cloudflare Tunnel 的域名稳定性、凭证管理和公网验收归属 PH5-02。",
+          "固定 Node.js 运行时和 Windows 发布包归属 PH5-03。",
+          "资料导入主链路归属 PH1-04、PH1-05 和 PH1-06。",
+          "账号密码与公网安全门禁归属 PH5-04。"
+        ]
+      },
+      "result": "已建立 Windows 启停脚本和可双击的 CMD 入口：启动前检查 MySQL、三类存储路径和共享类型，使用受管进程记录启动 API/Web，轮询健康状态并输出本地地址；配置开启时可拉起 cloudflared tunnel，停止脚本按进程标识停止 Tunnel 与应用进程树，默认关闭且未通过公网安全门禁时拒绝启动。",
+      "verification": [
+        "start.ps1 和 stop.ps1 PowerShell 语法解析通过。",
+        "使用 API_PORT=18787、WEB_PORT=15173 实测启动成功，API 与 Web 均返回 200；stop.ps1 成功停止应用进程树且未停止 MySQL。",
+        "默认端口被未受管进程占用时，启动前报告 API 端口和进程号，不停止占用进程。",
+        "CLOUDFLARED_ENABLED=true 且 PUBLIC_ACCESS_READY=false 时立即拒绝启动 Tunnel。",
+        "通过启动应用.cmd 和停止应用.cmd 实测双击入口可启动和停止应用；自定义端口下 API 与 Web 均返回 200。",
+        "npm run typecheck、npm test（4 项）和 npm run build 均通过。"
+      ],
+      "affectedFiles": [
+        "start.ps1",
+        "stop.ps1",
+        ".env.example",
+        ".gitignore",
+        "apps/web/vite.config.ts",
+        "启动应用.cmd",
+        "停止应用.cmd"
+      ]
+    },
+    {
+      "id": "PH1-04",
+      "sequence": "4",
+      "order": 40,
+      "title": "实现单 Markdown/ZIP 解析与严格校验",
+      "priority": "P0",
+      "moduleIds": [
+        "content-ingestion"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "acceptance": "标题层级、未归属内容、公式、表格、图片和 ZIP 路径错误可精确定位。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "建立单 Markdown/ZIP 导入包的解析与严格校验能力，为后续预览和数据库应用提供稳定的结构化结果与可定位错误；本步只处理解析边界，不进入导入应用链路。",
+        "inScope": [
+          "解析单个 Markdown 文件，识别资料、章、节、闪卡四级标题层级。",
+          "把正文转换为可供后续预览/写库使用的结构化节点，保留公式、GFM 表格和图片引用。",
+          "对空标题、缺失层级、标题外正文和无法归属内容生成文件名、行号、上下文和修复建议。",
+          "解析单个 ZIP 资料包，校验恰好一个 Markdown 文件、相对图片引用和路径穿越风险。",
+          "补充纯函数与 ZIP 解析自动化测试。"
+        ],
+        "outOfScope": [
+          "不实现导入预览界面、卡片标题/正文修正或数据库写入。",
+          "不复制资源到正式资源目录，不做重复文件哈希检测。",
+          "不解析 PDF、HTML 或多个 Markdown 文件，不实现前端导入页面。"
+        ],
+        "deferredTo": [
+          "导入预览、修正和数据库应用归属 PH1-05。",
+          "资源复制、重复跳过和合法资料完整入库验收归属 PH1-06。",
+          "正文安全渲染与可视化编辑归属 PH2/PH3 内容渲染与编辑任务。"
+        ]
+      },
+      "result": "已建立单 Markdown/ZIP 解析器：识别资料、章、节、闪卡四级层级，输出保留公式、GFM 表格、代码和图片引用的结构化正文；对空标题、缺父级、标题外正文、原始 HTML、公式/表格语法、缺失图片和 ZIP 路径穿越生成带文件名、行号、上下文与修复建议的错误；ZIP 严格要求恰好一个 Markdown 文件，并返回待后续应用的资源字节。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 13 项测试，覆盖四级层级、未归属正文、空标题、第五级标题、重复资料、原始 HTML、公式、表格、图片路径、ZIP 路径穿越、合法 ZIP 资源和不支持扩展名。",
+        "npm run build 通过，Web、API 和共享类型均生成构建产物。"
+      ],
+      "affectedFiles": [
+        "apps/api/package.json",
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "package-lock.json",
+        "progress/tasks/phase-1.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ]
+    },
+    {
+      "id": "PH1-05",
+      "sequence": "5",
+      "order": 50,
+      "title": "实现导入预览、修正和数据库应用",
+      "priority": "P0",
+      "moduleIds": [
+        "content-ingestion",
+        "document-rendering"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "acceptance": "用户可修正单份资料后应用，资源进入受管目录，重复文件默认跳过。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "完成单个 Markdown/ZIP 文件从选择、预览、修正到应用的最小闭环；预览使用短期令牌保存解析结果，应用时事务写入 MySQL 并安全托管 ZIP 资源。",
+        "inScope": [
+          "建立导入预览 API：接收单个 .md/.zip，返回层级预览、结构错误、资源摘要和源文件哈希重复状态。",
+          "建立短期预览令牌与应用 API，允许在不展示 Markdown 源码的前提下修正资料、章、节和闪卡标题及卡片正文文本。",
+          "将合法且确认应用的资料、章、节、闪卡写入 MySQL；同源文件默认按 SHA-256 跳过重复导入。",
+          "将 ZIP 资源复制到受管资源目录，写入资源元数据，并保证数据库事务或文件复制失败时不留下不可追踪的半成品。",
+          "建立中文导入页面，支持选择文件、查看层级与错误、修正可编辑字段、应用/取消和结果反馈。",
+          "为预览令牌、事务应用、重复跳过、资源托管和 HTTP 错误补充自动化测试。"
+        ],
+        "outOfScope": [
+          "不实现既有资料编辑、复习面板、掌握状态、高亮挖空或 AI 讲解。",
+          "不实现最终正文安全渲染、公式/表格可视化编辑和资源访问接口；预览只展示结构化节点摘要。",
+          "不支持 PDF、HTML、多个文件批量导入，不开放公网 Tunnel，不实现账号登录。"
+        ],
+        "deferredTo": [
+          "真实 MySQL、合法与非法样本的完整主链路验收归属 PH1-06。",
+          "正文安全渲染与可视化结构编辑归属 PH2/PH3 内容渲染与编辑任务。",
+          "资源访问、替换、回收站、导出和备份归属 PH3/PH4 数据治理任务。",
+          "单账号密码保护和公网发布归属 PH5-04 及后续发布验收。"
+        ]
+      },
+      "result": "已完成单个 Markdown/ZIP 导入闭环：预览接口返回结构化层级、错误、资源摘要和重复状态；中文导入页支持标题与正文修正；应用接口使用 SHA-256 默认跳过重复源文件，以事务写入资料层级和卡片，并将 ZIP 资源复制到按资料 ID 隔离的受管目录。",
+      "verification": [
+        "npm run typecheck 通过，Web、API 和共享类型均通过检查。",
+        "npm test 通过 17 项测试，覆盖预览、修正入库、重复跳过、资源托管、事务回滚清理和既有解析边界。",
+        "npm run build 通过，Web 和 API 均生成生产构建产物。",
+        "本地 API 烟测：/api/health 返回 200；合法 Markdown 预览返回 valid=true、issues=0；取消预览返回 204。",
+        "本地 Web DOM 快照显示中文导入页、选择文件按钮和空状态；favicon 请求不再产生 404。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/import-service.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "apps/web/index.html",
+        "progress/tasks/phase-1.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ]
+    },
+    {
+      "id": "PH1-06",
+      "sequence": "6",
+      "order": 60,
+      "title": "验收 M1 资料导入主链路",
+      "priority": "P0",
+      "moduleIds": [
+        "runtime-foundation",
+        "content-ingestion"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-10",
+      "completedOn": "2026-08-10",
+      "acceptance": "合法资料完整入库，非法资料被准确阻止，源文件保持不变。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-10",
+        "summary": "用隔离的真实 MySQL、受管资源目录和真实 HTTP 导入流程完成 M1 验收；只补足验收自动化与阻碍验收的缺陷，不新增产品能力。",
+        "inScope": [
+          "建立受控的真实 MySQL 验收夹具，走 /api/import/preview 到 /api/import/apply 的完整 HTTP 链路，并在结束后仅清理本次生成的数据和资源。",
+          "验证合法 Markdown 与含相对图片的 ZIP 可完整写入资料、章、节、闪卡和资源记录，并核验顺序、正文、资源字节和 SHA-256。",
+          "验证非法层级、缺失图片和 ZIP 路径穿越在预览阶段被阻止，且不会留下数据库或资源副作用。",
+          "验证重复源文件默认跳过，导入前后源文件的字节、SHA-256 和修改时间保持不变。",
+          "验证取消预览及 API 重启后的预览令牌失效提示，确认 RISK-009 当前的进程内令牌边界。",
+          "通过浏览器文件选择流程检查中文导入页的预览、错误定位、应用和取消交互。"
+        ],
+        "outOfScope": [
+          "不新增 PDF、多文件批量导入、解析协议或导入后的资料编辑能力。",
+          "不实现正文安全渲染、公式/表格/图片的可视化无损修正、高亮挖空、复习、AI 或登录。",
+          "不将预览令牌改为跨进程持久化，也不改变公网 Tunnel 安全门禁。"
+        ],
+        "deferredTo": [
+          "正文安全渲染、复杂正文无损修正和资源访问归属 PH2-04、PH3-03 与 PH3-04。",
+          "预览令牌跨重启恢复如有需要，作为后续可靠性任务另行评估。",
+          "复习、标注、AI、备份与账号安全按 PH2 至 PH5 的既定任务推进。"
+        ]
+      },
+      "result": "已完成 M1 资料导入主链路验收：真实 MySQL 与 HTTP 预览/应用、合法 Markdown/ZIP、图片资源托管、非法输入阻止、重复跳过、取消和 API 重启后的预览失效均有受控证据；浏览器导入页的预览、错误定位、应用和取消流程通过验收。",
+      "verification": [
+        "npm run test:import:integration 通过 1 项真实 MySQL + HTTP 集成验收，夹具核验 schema、资料层级顺序、正文 JSON、资源字节与 SHA-256，并在结束时清理本次数据和临时目录。",
+        "合法 Markdown 与含图片 ZIP 均完成 preview -> apply；ZIP 资源写入临时受管目录，重复导入返回 skipped 且未增加资料或资源行。",
+        "非法层级、缺失图片和 ZIP 路径穿越均返回 previewId=null、定位到文件/行号的错误，未产生数据库或资源副作用。",
+        "导入前后源文件字节、SHA-256 和修改时间保持不变；取消预览及新建 ImportService 后旧令牌均返回“导入预览已失效”。",
+        "Playwright 实测 Windows 文件选择流程：合法资料预览与应用成功，非法资料显示文件/行号/建议且应用禁用，取消后回到空状态。",
+        "npm run typecheck、npm test（17 项）、npm run build、npm run db:check、npm run storage:check 和 npm run progress:check 均通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/test/import-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "apps/web/src/App.tsx",
+        "package.json",
+        "progress/tasks/phase-1.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ]
+    }
+  ]
+}

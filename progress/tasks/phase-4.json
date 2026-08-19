@@ -1,0 +1,369 @@
+{
+  "phaseId": "phase-4",
+  "tasks": [
+    {
+      "id": "PH4-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "实现多 Provider 与模型配置",
+      "priority": "P0",
+      "moduleIds": [
+        "ai-service"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "设置页可维护多套配置并切换当前启用项，密钥只在后端保存。",
+      "result": "已完成多套 AI Provider 配置管理。后端提供新增、编辑、删除、列表和启用切换接口；启用变更通过 app_settings 行锁串行化，任意时刻只保留一个启用项。API Key 仅在写入时从浏览器提交，使用本机环境变量派生的 AES-256-GCM 密钥加密后存入 ai_provider_profiles；所有读取响应仅返回 hasApiKey。设置页新增第四个主导航入口，以 iOS 分组列表和确认 Sheet 管理 OpenAI、DeepSeek、OpenRouter 或自定义 OpenAI 兼容配置。",
+      "verification": [
+        "npm run test:ai-provider:integration 通过 1 项真实 MySQL + HTTP 验收，覆盖新增两套配置、密文不含原始 Key、启用切换、留空密钥更新保留原密文和清理夹具。",
+        "npm test 通过 43 项 API 与服务单元测试；npm run typecheck 和 npm run build 通过。",
+        "Playwright 验证桌面设置页、配置新增 Sheet、390x844 移动端设置页和表单；documentWidth 与 bodyWidth 均为 390，浏览器无控制台错误。未配置 AI_PROVIDER_KEY_ENCRYPTION_SECRET 时，页面会阻止保存且不写入配置。"
+      ],
+      "affectedFiles": [
+        ".env.example",
+        "package.json",
+        "packages/shared/src/api.ts",
+        "apps/api/package.json",
+        "apps/api/src/config.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/ai-provider-service.ts",
+        "apps/api/src/ai-provider-service.test.ts",
+        "apps/api/test/ai-provider-real-mysql-http.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "output/playwright/ph4-01-settings-desktop.png",
+        "output/playwright/ph4-01-settings-mobile.png",
+        "output/playwright/ph4-01-settings-form-mobile.png",
+        "progress/config.json",
+        "progress/tasks/phase-4.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "实现 AI Provider 配置的后端安全存储、维护接口和设置页管理流程。",
+        "inScope": [
+          "复用 ai_provider_profiles 表，提供配置列表、新增、编辑、删除和当前启用项切换；同一时刻最多一套配置处于启用状态。",
+          "配置列表和所有浏览器响应只返回是否已配置密钥，API Key 仅提交至后端并使用本机环境变量派生的密钥加密后存储。",
+          "新增设置主导航与 iOS 分组列表中的 AI 配置管理界面，支持 Provider、接口地址、模型、密钥和启用项维护。",
+          "补充服务、HTTP、真实 MySQL 以及桌面和 390x844 移动端的验收，并同步进度真相源。"
+        ],
+        "outOfScope": [
+          "不向任意 AI Provider 发起请求，不实现测试连接。",
+          "不实现卡片 AI 讲解、默认或临时提示词、讲解持久化或覆盖逻辑。",
+          "不实现 Markdown 导出、JSON 恢复、每日备份、回收站恢复或永久删除。"
+        ],
+        "deferredTo": [
+          "Provider 请求适配、连接测试和卡片讲解归属 PH4-02。",
+          "导出与恢复归属 PH4-03；备份、恢复和永久删除归属 PH4-04。"
+        ]
+      }
+    },
+    {
+      "id": "PH4-02",
+      "sequence": "2",
+      "order": 20,
+      "title": "实现卡片 AI 讲解与当前结果保存",
+      "priority": "P0",
+      "moduleIds": [
+        "ai-service"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "默认/临时提示词可生成讲解，结果默认收起、只读且重新生成覆盖旧内容。",
+      "result": "已完成卡片 AI 讲解闭环和 Provider 连接测试。后端读取唯一启用 Provider，解密 API Key 后调用 OpenAI 兼容 chat completions；设置页可对单个配置发起最小连接测试，系统默认模板与仅本次请求生效的临时提示词会合并到请求并保存。讲解以卡片当前唯一记录写入 ai_explanations，重新生成覆盖旧结果；卡片查询返回讲解文本、Provider、模型、提示词和生成时间，不返回密钥。复习卡片页新增默认收起的只读讲解区，支持展开、临时提示词、生成和覆盖反馈。",
+      "verification": [
+        "npm test 通过 45 项 API 与服务单元测试，覆盖默认/临时提示词、AES-GCM 解密、OpenAI 兼容请求、响应错误隔离和重新生成覆盖。",
+        "npm run test:ai-explanation:integration 通过 2 项 HTTP 契约验收，确认卡片讲解和 Provider 连接测试响应结构正确。",
+        "npm run typecheck 和 npm run build 通过。",
+        "Playwright 使用本地 Vite 与拦截 API 验证桌面和 390x844 移动端：讲解默认收起，展开后结果只读，重新生成后覆盖结果并重新收起；documentWidth 与 bodyWidth 均为 390。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/ai-provider-service.ts",
+        "apps/api/src/ai-explanation-service.ts",
+        "apps/api/src/ai-explanation-service.test.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/app.ts",
+        "apps/api/test/ai-explanation-http.test.ts",
+        "apps/api/package.json",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package.json",
+        "output/playwright/ph4-02-card-mobile.png"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "实现当前启用 AI Provider 的请求适配、单配置连接测试、默认/临时提示词、卡片当前讲解覆盖保存，以及卡片页默认收起的只读讲解区。",
+        "inScope": [
+          "后端读取唯一启用的 Provider 配置，解密 API Key，并调用 OpenAI 兼容的 chat completions 接口。",
+          "设置页可对指定 Provider 发起最小连接测试，成功或失败均只返回短状态，不向浏览器返回 API Key。",
+          "支持系统默认讲解模板和仅本次请求生效的临时提示词；校验响应并将当前讲解、Provider、模型和提示词保存到 ai_explanations。",
+          "提供卡片讲解查询与生成 API；重新生成覆盖同一卡片的旧讲解，浏览器响应不返回 API Key。",
+          "复习卡片页增加默认收起、只读的 AI 讲解区，支持展开、临时提示词、生成和覆盖反馈。",
+          "补充 Provider 请求适配、讲解保存和 HTTP/API 前端契约测试。"
+        ],
+        "outOfScope": [
+          "不实现 Markdown 内容导出、JSON 完整恢复、每日备份、恢复或回收站永久删除。",
+          "不保存 AI 历史版本，不增加多卡批量生成、流式输出或离线队列。",
+          "不实现账号登录、权限模型或公网发布。"
+        ],
+        "deferredTo": [
+          "导出与完整恢复归属 PH4-03；备份、恢复和永久删除归属 PH4-04。",
+          "历史版本、批量生成和流式输出作为后续独立需求评估。"
+        ]
+      }
+    },
+    {
+      "id": "PH4-03",
+      "sequence": "3",
+      "order": 30,
+      "title": "实现 Markdown 内容导出与 JSON 完整恢复",
+      "priority": "P0",
+      "moduleIds": [
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "已完成",
+      "acceptance": "Markdown 只导出内容，JSON 可恢复完整学习状态且不包含秘密。",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "result": "已完成活动资料 Markdown 导出和 JSON 完整学习状态导出/恢复。Markdown 按资料、章、节、闪卡输出结构化正文并支持 GFM 表格和公式；JSON 包含正文、掌握状态、复习记录、高亮、当前 AI 讲解、回收站、资源元数据与资源内容，恢复前校验版本、层级、引用、路径和资源哈希后事务替换可恢复数据。AI Provider 配置表不参与导出恢复，避免密钥和密文进入文件。资料页已提供 Markdown 导出、JSON 导出、JSON 恢复确认入口。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 49 项 API 与服务测试，覆盖 Markdown 层级/公式/图片、JSON 资源内容、敏感字段拒绝和恢复事务。",
+        "npm run test:data-governance:integration 通过 1 项 HTTP 契约测试，覆盖三条数据治理接口且响应不包含秘密。",
+        "npm run build 通过，Web、API 和共享类型均可构建。",
+        "隔离开发服务 5180/8880 上 Playwright 验证资料页 Markdown 与 JSON 下载成功，JSON 实测约 4.1MB、包含 2 份资料、603 张闪卡、3 条高亮和 116 条复习记录；恢复入口显示确认 Sheet。",
+        "Playwright 390x844 验证 bodyWidth=375、documentWidth=375、无横向溢出且无控制台错误；桌面视口 bodyWidth=1388、documentWidth=1388。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/package.json",
+        "apps/api/src/app.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "apps/api/test/data-governance-http.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package.json",
+        "package-lock.json",
+        "output/playwright/ph4-03-materials-desktop.png",
+        "output/playwright/ph4-03-materials-mobile.png"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "建立数据导出与替换式恢复闭环，Markdown 面向内容迁移，JSON 面向完整学习状态恢复。",
+        "inScope": [
+          "提供活动资料的 Markdown 导出，包含资料、章、节、闪卡层级和当前结构化正文，不改写数据库源数据。",
+          "提供 JSON 导出，包含资料层级、卡片正文、掌握状态、复习记录、高亮、当前 AI 讲解、回收站记录、资源元数据与资源内容。",
+          "提供事务化 JSON 恢复，恢复前校验版本、结构、ID、层级关系和资源路径，并替换当前可恢复数据。",
+          "导出和恢复响应、文件名与页面反馈不包含 API Key、密文、MySQL 密码或 Tunnel 凭证。",
+          "补充服务/API 契约测试和资料页桌面、390x844 移动端导出/恢复入口验收。"
+        ],
+        "outOfScope": [
+          "不实现每日自动备份、备份保留策略、备份恢复前留档或回收站永久删除。",
+          "不导出或恢复 AI Provider 配置及其 API Key 密文，不实现账号登录、权限模型或公网发布。",
+          "不新增 Markdown 源码编辑态，导出文件仅作为下载结果，不写回原始导入文件。"
+        ],
+        "deferredTo": [
+          "每日备份、手动备份、恢复前自动留档和回收站永久删除归属 PH4-04。",
+          "AI Provider 配置历史或无密钥配置迁移作为后续独立需求评估。",
+          "真实 MySQL、资源目录与浏览器组合验收归属 PH4-05。"
+        ]
+      }
+    },
+    {
+      "id": "PH4-04",
+      "sequence": "4",
+      "order": 40,
+      "title": "实现每日备份、恢复和回收站永久删除",
+      "priority": "P0",
+      "moduleIds": [
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "每天备份数据库和资源，默认保留 7 份，恢复和永久删除具有安全确认。",
+      "result": "已完成每日备份、手动备份、恢复前自动留档、备份列表与恢复，以及回收站永久删除。备份目录保存结构化 JSON 快照、资源副本和 manifest，成功备份默认保留最近 7 份；API 启动时检查当天备份并按 24 小时周期调度。JSON 恢复和备份恢复都会先完成当前数据留档；永久删除在事务内清理层级、复习、标注、讲解、锁和回收站关联，仅删除不再被其他卡片引用的资源文件。资料页新增备份 Sheet、恢复确认和永久删除确认。",
+      "verification": [
+        "npm test 通过 51 项 API 与服务单元测试，新增备份文件写入和永久删除资源清理覆盖。",
+        "npm run test:backup:integration 通过 1 项真实 MySQL + HTTP 验收，确认备份包含 data.json 与资源副本，永久删除后卡片和资源文件均不存在；夹具和临时备份目录已清理。",
+        "npm run test:data-governance:integration 通过，备份列表、导出和恢复 HTTP 契约正常且不下发秘密。",
+        "npm run typecheck、npm run build、npm run db:check、npm run storage:check 通过。",
+        "Playwright 验证资料页备份 Sheet、成功备份列表和恢复前确认 Sheet；桌面与 390x844 移动视口无横向溢出，bodyWidth=375、documentWidth=375，控制台无错误。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/package.json",
+        "apps/api/src/app.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/server.ts",
+        "apps/api/test/backup-real-mysql-http.test.ts",
+        "apps/api/test/data-governance-http.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package.json",
+        "output/playwright/ph4-04-backups-desktop.png",
+        "output/playwright/ph4-04-backups-mobile.png"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "补齐备份记录、数据库与资源归档、保留策略、恢复前自动留档，以及回收站永久删除的后端和资料页操作入口。",
+        "inScope": [
+          "提供手动备份服务并复用同一流程作为每日备份入口：生成结构化 JSON 快照、资源归档和清单，写入 backup_records。",
+          "增加每日备份调度配置与启动时触发检查；默认保留最近 7 份成功备份并清理更早备份目录及记录。",
+          "JSON 恢复前自动生成一份当前数据备份，备份失败时阻止恢复；恢复成功后保留恢复前留档。",
+          "提供备份列表、备份触发、指定备份恢复和回收站永久删除 API；永久删除同步清理层级关联数据、资源文件和回收站记录。",
+          "资料页增加备份/恢复列表与永久删除确认 Sheet，危险操作明确反馈并保持移动端无横向溢出。",
+          "补充服务、HTTP、真实 MySQL/资源目录和桌面/390x844 移动端验收。"
+        ],
+        "outOfScope": [
+          "不实现账号登录、权限模型、Cloudflare Tunnel 或公网发布。",
+          "不改变 Markdown 导出和 JSON 文件格式，不导出或恢复 AI Provider 配置和密钥。",
+          "不实现跨版本迁移、备份加密或多用户并发恢复。"
+        ],
+        "deferredTo": [
+          "账号安全门禁归属 PH5-04；公网启动与 Tunnel 归属 PH5-02。",
+          "真实环境下 M4 全链路组合验收归属 PH4-05。"
+        ]
+      }
+    },
+    {
+      "id": "PH4-05",
+      "sequence": "5",
+      "order": 50,
+      "title": "验收 M4 AI 与数据治理主链路",
+      "priority": "P0",
+      "moduleIds": [
+        "ai-service",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "AI、导出、恢复、备份和回收站在真实 MySQL/资源目录环境中通过验证。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "用隔离的真实 MySQL、资源目录和本地 OpenAI 兼容假 Provider 串联验收 M4 主链路。",
+        "inScope": [
+          "创建带结构化正文、图片资源、复习状态、高亮和 AI Provider 的最小真实夹具。",
+          "通过 HTTP 验证 AI 讲解保存与读取、Markdown 导出、JSON 导出敏感字段排除、备份资源副本、JSON 恢复和回收站永久删除。",
+          "验证 ISO 时间导出值可在 MySQL DATETIME(3) 严格模式下恢复。",
+          "验证临时资源目录、备份目录和数据库夹具在测试结束后清理。"
+        ],
+        "outOfScope": [
+          "不扩展 AI Provider、讲解、导出、恢复、备份或永久删除的业务能力；仅修复本次真实恢复验收暴露的时间格式兼容问题。",
+          "不新增账号登录、Cloudflare Tunnel、PWA 或公网发布能力。",
+          "不把真实 API Key、数据库密码或其他凭证写入测试输出和进度文档。"
+        ],
+        "deferredTo": [
+          "恢复过程中的磁盘异常与数据库/资源目录一致性改进继续归属 RISK-012 后续治理。",
+          "iPhone、Tunnel、发布包和账号安全归属 PH5-01 至 PH5-05。"
+        ]
+      },
+      "result": "已完成 M4 AI 与数据治理主链路真实环境验收。组合脚本使用唯一资料、图片资源、备份目录和本地 OpenAI 兼容假 Provider，验证 Provider 密钥只在上游请求中使用、卡片讲解与当前结果保存、高亮和复习状态、Markdown/JSON 导出、资源备份、JSON 恢复、备份恢复及回收站永久删除。验收期间发现 JSON 导出的 ISO 时间直接写入 MySQL DATETIME(3) 会在严格模式失败，已在恢复写入前统一转换为 MySQL UTC DATETIME 格式。",
+      "verification": [
+        "npm run test:m4:integration 通过 1 项真实 MySQL + 资源目录 + HTTP 组合验收；假 Provider 收到 2 次请求且均带正确 Authorization，数据库和临时目录夹具已清理。",
+        "npm test 通过 51 项 API 与服务单元测试。",
+        "npm run typecheck、npm run build、npm run db:check 和 npm run storage:check 通过。",
+        "组合验收确认导出文本不含 API Key、ciphertext、password、tunnel 或 secret；JSON 恢复和备份恢复后的卡片正文、AI 讲解与高亮可读，永久删除后卡片和资源文件均不存在。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/test/m4-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "package.json",
+        "progress/tasks/phase-4.json",
+        "progress/config.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ]
+    },
+    {
+      "id": "PH4-06",
+      "sequence": "6",
+      "order": 60,
+      "title": "修复本机 AI Provider 加密配置",
+      "priority": "P0",
+      "moduleIds": [
+        "ai-service",
+        "runtime-foundation"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "本机 API 具备长度符合要求的 AI Provider 加密口令，新增 Provider 可正常写入，且口令不进入代码库、Markdown 或 JSON 导出。",
+      "result": "已为当前开发机配置随机生成的 64 字符 AI_PROVIDER_KEY_ENCRYPTION_SECRET。重启 API 后，新增自定义 Provider 的真实 HTTP 冒烟请求返回 201，响应仅返回 hasApiKey 状态，测试配置已清理；AES-256-GCM 安全阻断逻辑保持不变。",
+      "verification": [
+        "配置冒烟检查确认 API 读取到长度 64 的加密口令，未输出口令内容。",
+        "npm run test:ai-provider:integration 通过 1 项真实 MySQL + HTTP Provider 验收。",
+        "重启后的 http://127.0.0.1:8787 真实 POST 新增 Provider 返回 201 且 hasApiKey=true，随后删除临时配置。",
+        "npm run progress:check 通过。npm test、npm run typecheck 和 npm run build 仍受 PH4-04 既有未完成实现影响，详见 RISK-012。"
+      ],
+      "affectedFiles": [
+        ".env",
+        "progress/tasks/phase-4.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-11",
+        "summary": "补齐当前开发机缺失的 AI Provider 密钥加密口令，并验证新增配置流程。",
+        "inScope": [
+          "在本机 .env 配置随机生成且长度不少于 32 个字符的 AI_PROVIDER_KEY_ENCRYPTION_SECRET。",
+          "验证 API 配置加载和新增 Provider 的加密写入流程。",
+          "同步必要的进度验证记录。"
+        ],
+        "outOfScope": [
+          "不修改 AES-256-GCM 加密实现或移除未配置时的安全阻断。",
+          "不把真实口令写入代码、Markdown、JSON 备份或测试夹具。",
+          "不扩展 Provider 类型、模型发现或公网安全能力。"
+        ],
+        "deferredTo": [
+          "M4 全链路真实环境组合验收归属 PH4-05。",
+          "生产环境密钥轮换和账号安全门禁归属后续发布与安全任务。"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,1606 @@
+{
+  "phaseId": "phase-5",
+  "tasks": [
+    {
+      "id": "PH5-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "完成 iPhone Safari 响应式与 PWA 主屏幕安装",
+      "priority": "P0",
+      "moduleIds": [
+        "delivery-security",
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "进行中",
+      "startedOn": "2026-08-11",
+      "acceptance": "iPhone 可添加到主屏幕，选词、高亮、表格、公式和底部安全区域通过验收。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "为现有复习 Web 应用补齐 iPhone Safari 的 PWA 安装入口和移动端阅读适配，并以真实移动视口验证选词、高亮、表格、公式、顶部空间与底部安全区域。",
+        "inScope": [
+          "补齐 Web App Manifest、iPhone Safari 元数据、图标资源和受控的 Service Worker 注册/缓存策略。",
+          "调整移动端页面、导航、复习卡片、状态操作和 Sheet 的响应式布局，确保正文与底部安全区域不被遮挡。",
+          "移除已登录状态下占用全局顶部空间的账户工具栏，在设置页账号分组提供当前账号和退出操作。",
+          "将移动端常用页首操作收敛为带 Tooltip 与无障碍名称的图标按钮，标题与操作区同一基线并压缩标题尺寸。",
+          "验证 iPhone Safari 视口下文本选词、高亮、表格换行或滚动、公式展示和页面无横向溢出。",
+          "补充可重复执行的构建与浏览器验收证据。"
+        ],
+        "outOfScope": [
+          "不实现离线复习、离线编辑、后台同步或缓存 API 数据。",
+          "不接入 Cloudflare Tunnel、review.panspan.cloud、公网发布、账号登录或 Windows 发布包。",
+          "不修改账号、密码哈希、认证接口、会话 Cookie、失败限速或主导航业务规则。",
+          "不扩展复习、导入、编辑、AI、备份和恢复业务规则。"
+        ],
+        "deferredTo": [
+          "Cloudflare Tunnel 与域名接入归属 PH5-02。",
+          "固定 Node.js Windows 发布包归属 PH5-03。",
+          "单账号密码门禁归属 PH5-04；GA 全链路验收归属 PH5-05。"
+        ]
+      },
+      "lastProgressOn": "2026-08-19",
+      "result": "已补齐可安装 PWA 所需的 manifest、iPhone Safari 元数据、PNG 图标和生产环境 Service Worker 注册；移动端主导航改为带安全区域的底部 Tab Bar，并用 dvh、safe-area 和可选词正文规则收敛移动阅读布局。已移除已登录状态下的全局账户工具栏，在设置页账号分组展示当前账号和退出操作；常用页首操作改为带 Tooltip 与无障碍名称的 Lucide 图标，390px 视口下标题、操作区同一基线且页首高度为 44px。Service Worker 只处理页面与静态资源，不缓存 /api 数据。终端 Playwright 在 390x844 视口下确认页面宽度无溢出、底部导航固定且正文拖选后高亮操作可用；真实 iPhone Safari 添加到主屏幕、原生长按浮动工具栏和 Home Indicator 仍待设备验收。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过，Vite 生产产物包含 manifest.webmanifest、sw.js 和三个 PNG 图标；仅有既有大 chunk 警告。",
+        "Playwright 390x844 验证 bodyWidth/documentWidth=390、底部导航 position=fixed 且无控制台错误。",
+        "生产预览验证 manifest 返回 200 且 MIME 为 application/manifest+json，Service Worker 返回 200 并接管页面，manifest 中两个 PNG 图标均返回 200。",
+        "真实数据库移动页面验证表格宽度 324px、文档宽度 390px；公式节点可渲染且无横向溢出；选中“海因”后“高亮”按钮可用。",
+        "隔离 Playwright 390x844 视口模拟已登录会话，验证全局账户工具栏不存在、设置页账号分组可见、标题与图标操作位于 44px 页首且 documentElement 无横向溢出；深色模式下账号名称计算色为 rgb(242, 242, 247)。",
+        "npm run typecheck:web 与 npm run build:web 通过；生产构建仅有既有大 chunk 警告。",
+        "已保存桌面、移动、表格、公式、PWA 和本次账户管理移动端截图作为人工检查证据。",
+        "终端 Playwright 390x844 回归：viewportWidth=390、bodyWidth=390、documentWidth=390；底部导航 position=fixed，height=61px，padding-bottom=8px，主内容 padding-bottom=96px；Manifest、apple-mobile-web-app-capable=yes 和 viewport-fit=cover 均存在。",
+        "终端 Playwright 拖选正文得到“生产经营单位”等文本，随后复习页“高亮”按钮由 disabled 变为可用；截图保存为 output/playwright/ph5-01-mobile-20260819.png。",
+        "真实 iPhone Safari 添加到主屏幕、长按选词原生浮动工具栏和 Home Indicator 安全区仍未完成，任务保持进行中。"
+      ],
+      "affectedFiles": [
+        "apps/web/index.html",
+        "apps/web/public/manifest.webmanifest",
+        "apps/web/public/sw.js",
+        "apps/web/public/icon.svg",
+        "apps/web/public/icon-192.png",
+        "apps/web/public/icon-512.png",
+        "apps/web/public/apple-touch-icon.png",
+        "apps/web/src/main.tsx",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "apps/web/src/vite-env.d.ts",
+        "output/playwright/ph5-01-desktop.png",
+        "output/playwright/ph5-01-mobile.png",
+        "output/playwright/ph5-01-card-mobile-bottom.png",
+        "output/playwright/ph5-01-table-mobile.png",
+        "output/playwright/ph5-01-formula-mobile-top.png",
+        "output/playwright/ph5-01-pwa-mobile.png",
+        "output/playwright/ph5-01-mobile-header-settings.png",
+        "output/playwright/ph5-01-mobile-header-settings-dark.png",
+        "output/playwright/ph5-01-mobile-20260819.png"
+      ],
+      "next": "在真实 iPhone Safari 上完成添加到主屏幕、长按选词浮动工具栏和 Home Indicator 安全区验收；若发现设备差异，仅在本任务范围内修正移动布局，不扩展离线业务。"
+    },
+    {
+      "id": "PH5-02",
+      "sequence": "2",
+      "order": 20,
+      "title": "接入 Cloudflare Tunnel 与 review.panspan.cloud",
+      "priority": "P0",
+      "moduleIds": [
+        "delivery-security",
+        "runtime-foundation"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "进行中",
+      "startedOn": "2026-08-11",
+      "acceptance": "项目脚本可启动/关闭 cloudflared，域名 HTTPS 稳定访问且凭证不入库。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "为 Windows 启停流程接入专用 Cloudflare Tunnel 和 review.panspan.cloud DNS 路由，补齐源站诊断及受控生命周期，保留 PH5-04 公网安全门禁。",
+        "inScope": [
+          "提供不含秘密的 cloudflared 配置模板，固定 review.panspan.cloud 到本机 Web 源站的 ingress 规则。",
+          "使用现有 Cloudflare 登录材料创建 review-panspan-cloud Tunnel，并将 review.panspan.cloud 路由到该 Tunnel。",
+          "启动前校验 cloudflared 可执行文件、配置文件、凭证路径、源站地址和配置语法，并输出可定位的错误。",
+          "启动脚本记录 Tunnel 独立日志、进程状态和公网访问地址；停止脚本可靠停止 Tunnel 与应用进程树。",
+          "提供可重复执行的本地配置诊断和 cloudflared ingress 校验命令。",
+          "验证凭证与本机敏感配置不会被提交或写入进度导出。"
+        ],
+        "outOfScope": [
+          "不创建新的 Cloudflare 账户，不复制或提交 Tunnel 凭证，不修改其他域名或 Tunnel。",
+          "不在 PH5-04 完成前启动公网连接器或开放未登录访问，不修改 PUBLIC_ACCESS_READY 的安全门禁语义。",
+          "不制作固定 Node.js 运行时或 Windows 发布包。",
+          "不实现单账号密码登录、Cloudflare Access 或其他身份认证。"
+        ],
+        "deferredTo": [
+          "连接器启动、review.panspan.cloud HTTPS 稳定性和公网页面验收待 PH5-04 账号密码门禁完成后进行。",
+          "单账号密码门禁归属 PH5-04；Windows 固定运行时发布包归属 PH5-03；GA 全链路归属 PH5-05。"
+        ]
+      },
+      "result": "已创建 review-panspan-cloud Tunnel（ID 1aa1536f-878f-4843-ae58-677b5222f68a），将 review.panspan.cloud DNS 路由强制指向新 Tunnel，并在项目本机配置中绑定凭证路径；凭证仍保存在用户目录。初始阶段按 PUBLIC_ACCESS_READY=false 保持连接器关闭；账号门禁完成后由 PH5-05 启动现有连接器并进入 HTTPS 验收，PH5-02 继续进行中。",
+      "verification": [
+        "npm run tunnel:check 通过，报告项目 config.yml、凭证路径和 ingress 规则有效，并明确公网安全门禁未开启。",
+        "cloudflared tunnel route dns --overwrite-dns 1aa1536f-878f-4843-ae58-677b5222f68a review.panspan.cloud 成功，回显新 Tunnel ID。",
+        "cloudflared tunnel list 可读取 review-panspan-cloud，凭证 JSON 位于用户目录，不在项目目录。",
+        "PUBLIC_ACCESS_READY=false 且临时开启 CLOUDFLARED_ENABLED=true 时，start.ps1 按预期拒绝启动 Tunnel。",
+        "初始阶段 review.panspan.cloud 返回 HTTP 530，原因是连接器尚未启动；启动被 PH5-04 安全门禁主动阻断。",
+        "PH5-04 完成后，PH5-05 已使用现有配置启动连接器，review.panspan.cloud HTTPS 冒烟返回 HTTP 200。"
+      ]
+    },
+    {
+      "id": "PH5-03",
+      "sequence": "3",
+      "order": 30,
+      "title": "制作包含固定 Node.js 运行时的 Windows 发布包",
+      "priority": "P0",
+      "moduleIds": [
+        "delivery-security",
+        "runtime-foundation"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "进行中",
+      "startedOn": "2026-08-11",
+      "acceptance": "目标 Windows 电脑无需开发环境即可配置并启动应用。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "制作可复制到目标 Windows 电脑的生产包：使用编译后的 API 同源托管 Web 静态文件，携带生产依赖和固定 Node.js 可执行文件，并提供配置模板及一键启停入口。",
+        "inScope": [
+          "建立生产态 API 入口，在同一端口托管编译后的 Web dist 和 /api 请求。",
+          "建立 Windows 发布包脚本，执行共享类型、Web、API 构建并组装生产目录。",
+          "将 API 生产依赖、共享包产物、固定 Node.js 运行时和版本信息复制到发布包。",
+          "提供不含秘密的 .env.example、数据库迁移入口、启动/停止 PowerShell 与可双击 CMD 入口。",
+          "在当前 Windows 机器上用真实 MySQL、HTTP 健康检查和静态首页完成发布包冒烟验收。"
+        ],
+        "outOfScope": [
+          "不打包或安装 MySQL，不自动创建数据库账号，不改变现有迁移和存储路径规则。",
+          "不启动 Cloudflare Tunnel，不实现 review.panspan.cloud 公网访问或账号密码登录。",
+          "不实现离线复习、离线编辑、后台同步或固定 Node.js 之外的系统依赖安装。"
+        ],
+        "deferredTo": [
+          "单账号密码门禁和公网安全开放归属 PH5-04。",
+          "Tunnel 连接器启动、HTTPS 稳定性和发布安全归属 PH5-04 与 PH5-05。",
+          "Windows 本机、iPhone、MySQL、Tunnel、备份恢复和账号安全完整验收归属 PH5-05。"
+        ]
+      },
+      "completedOn": "2026-08-11",
+      "status": "已完成",
+      "result": "已建立生产态单进程入口：API 在配置 WEB_DIST_DIR 时同源托管 Web 静态资源和 SPA 回退；Windows 发布脚本会构建共享类型、Web、API，组装 API 生产依赖、共享包、数据库迁移 SQL、固定 Node.js 可执行文件、配置模板和启停入口，输出到 output/windows-release。发布包不复制本机 .env、实际数据、资源、备份或 Cloudflare 凭证。",
+      "verification": [
+        "npm run package:windows 通过，使用固定 Node.js v24.18.0 完成共享类型、Web、API 构建并安装 167 个生产依赖。",
+        "npm run typecheck 通过。",
+        "npm test 通过 54 项，0 failed。",
+        "使用发布包内 runtime/node/node.exe 启动真实 MySQL 配置，/api/health 返回 200，首页静态 HTML 返回 200 且包含 root 容器；stop-release.ps1 成功停止受管进程，MySQL 未被停止。",
+        "使用发布包内 runtime/node/node.exe 执行 migrate-release.ps1，真实 MySQL 已迁移状态下重复执行正常退出。",
+        "发布包 manifest 记录 Node.js v24.18.0；发布包根目录不存在 .env、.env.local、Cloudflare 凭证或 PEM 文件。",
+        "PowerShell 语法检查覆盖 package-windows.ps1、start-release.ps1、stop-release.ps1 和 migrate-release.ps1。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/app.ts",
+        "apps/api/src/config.ts",
+        "package.json",
+        "scripts/package-windows.ps1",
+        "scripts/run-powershell.mjs",
+        "scripts/start-release.ps1",
+        "scripts/stop-release.ps1",
+        "scripts/migrate-release.ps1",
+        "output/windows-release/"
+      ],
+      "next": "进入 PH5-04 单账号密码登录和公网安全门禁；本步不提前启动 Cloudflare Tunnel。"
+    },
+    {
+      "id": "PH5-04",
+      "sequence": "4",
+      "order": 40,
+      "title": "实现单账号密码登录和公网安全门禁",
+      "priority": "P0",
+      "moduleIds": [
+        "delivery-security"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "安全哈希、会话 Cookie、失败限速和未登录访问拦截通过安全测试。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "为单账号发布环境建立后端密码门禁和前端登录入口，使用安全哈希、受限失败重试和 HttpOnly 会话 Cookie；配置完成后 PUBLIC_ACCESS_READY 允许进入后续公网连接器验收。",
+        "inScope": [
+          "通过 AUTH_USERNAME 和 AUTH_PASSWORD_HASH 配置单账号，密码只保存为 scrypt 哈希，不写入代码、进度记录或导出文件。",
+          "提供登录、会话检查和退出接口，成功登录返回带 HttpOnly、SameSite=Lax、Max-Age 的会话 Cookie。",
+          "对登录失败按客户端指纹限速，达到阈值返回 429 和 Retry-After；未登录请求拦截全部受保护 /api 业务接口。",
+          "保留健康检查和认证接口公开访问，前端启动先恢复会话，未登录显示登录表单，登录后刷新不重复登录并提供退出操作。",
+          "PUBLIC_ACCESS_READY=true 时强制要求账号门禁配置，保持 Cloudflare Tunnel 是否启动由既有脚本单独控制。"
+        ],
+        "outOfScope": [
+          "不实现多用户、注册、角色权限、二步验证或 Cloudflare Access。",
+          "不在本步启动 Cloudflare Tunnel 或完成 review.panspan.cloud HTTPS 稳定性验收。",
+          "不把登录凭证写入 JSON 备份、Markdown 导出、发布包或进度展示层。"
+        ],
+        "deferredTo": [
+          "Cloudflare Tunnel 连接器启动和公网 HTTPS 验收归属 PH5-05。",
+          "Windows 发布包中的实际环境账号初始化与公网 cookie 安全配置归属发布验收。",
+          "多账号与更细权限模型不纳入第一版。"
+        ]
+      },
+      "result": "已完成单账号密码门禁：使用 scrypt 哈希校验密码，登录会话使用 HttpOnly、SameSite=Lax、30 天 Max-Age Cookie；失败登录按客户端指纹限速，未登录业务 API 返回 401；前端支持会话恢复和退出。当前环境账号为 panshimao，密码仅以本机 .env.local 中的哈希配置存在。",
+      "verification": [
+        "npm run build:shared、npm run typecheck:api、npm run typecheck:web、npm run build:api 和 npm run build:web 通过。",
+        "npm --workspace @knowledge-flashcards/api run test 通过 54 项，新增认证测试覆盖未登录拦截、登录 Cookie、退出和失败限速。",
+        "当前本机 API HTTP 冒烟验证：/api/auth/session 未登录返回 authenticated=false，错误密码返回 401，正确凭据返回 200，Cookie 含 HttpOnly 和 SameSite=Lax，带 Cookie 的复习接口返回 200。",
+        "PUBLIC_ACCESS_READY=true 时配置校验要求 AUTH_USERNAME 与 AUTH_PASSWORD_HASH 同时存在；CLOUDFLARED_ENABLED 仍为 false，未启动公网连接器。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/auth.ts",
+        "apps/api/src/auth.test.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/config.ts",
+        "apps/api/src/server.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "packages/shared/src/api.ts",
+        ".env.example",
+        ".env.local（本机忽略配置）",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH5-05，进行 Windows、本机、iPhone、MySQL、Tunnel 和账号安全的 GA 全链路验收；本步不扩展多用户权限。"
+    },
+    {
+      "id": "PH5-05",
+      "sequence": "5",
+      "order": 50,
+      "title": "完成 GA 全链路验收",
+      "priority": "P0",
+      "moduleIds": [
+        "delivery-security",
+        "runtime-foundation",
+        "content-ingestion",
+        "review-experience",
+        "annotation-cloze",
+        "visual-editor",
+        "ai-service",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "进行中",
+      "startedOn": "2026-08-11",
+      "acceptance": "Windows 本机、iPhone、MySQL、Tunnel、备份恢复和账号安全完整通过发布验收。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "修复 Windows 一键启动在应用已运行时无法补拉 Cloudflare Tunnel 的生命周期缺口，并在账号门禁已完成后验收 review.panspan.cloud HTTPS。",
+        "inScope": [
+          "修复 start.ps1 在应用进程已运行但 Tunnel 未记录时的补启动逻辑，并同步更新受管进程状态与独立日志。",
+          "开启本机 CLOUDFLARED_ENABLED，使用现有 config.yml、用户目录凭证和已完成的账号门禁启动连接器。",
+          "运行 tunnel:check、本机健康检查和 review.panspan.cloud HTTPS 冒烟验证。"
+        ],
+        "outOfScope": [
+          "不修改 Cloudflare Tunnel、DNS 路由、ingress 规则或凭证内容。",
+          "不改变账号认证、Cookie 安全属性、MySQL、资料业务和移动端范围。",
+          "不把本机 .env.local、Tunnel 凭证或密码写入进度源、导出文件或发布包。"
+        ],
+        "deferredTo": [
+          "iPhone Safari、备份恢复和其余 GA 回归继续归属 PH5-05 后续验收。",
+          "公网长期可用性和连接器故障告警不在本最小修复内。"
+        ]
+      },
+      "result": "已修复 Windows 一键启动的受管生命周期：应用已运行但 Tunnel 缺失时会补启动并回写 Tunnel 进程和日志状态；Vite 源站统一监听 127.0.0.1，避免 cloudflared 访问 IPv4 时因 Web 仅监听 IPv6 返回 502。当前本机连接器已运行。",
+      "verification": [
+        "使用已有应用进程执行 start.ps1，成功补启动 Cloudflare Tunnel 并写入 .runtime/process.json。",
+        "停止并重新执行启动脚本后，Tunnel 进程与应用进程均成功启动；再次执行启动脚本只报告已运行，不重复创建进程。",
+        "npm run tunnel:check 通过，PowerShell start.ps1 语法解析通过，npm run typecheck 通过。",
+        "review.panspan.cloud HTTPS 冒烟返回 200，内容类型为 text/html 且包含 root；Tunnel 最近日志无源站连接错误。"
+      ],
+      "affectedFiles": [
+        "start.ps1",
+        "apps/web/vite.config.ts",
+        ".env.local（本机忽略配置）",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "继续 PH5-05 的 Windows、iPhone、备份恢复和账号安全完整回归；本步不扩展公网监控或其他 Cloudflare 配置。"
+    },
+    {
+      "id": "PH5-06",
+      "sequence": "6",
+      "order": 60,
+      "title": "实现全局秋日枫叶皮肤与专注复习反馈",
+      "priority": "P1",
+      "moduleIds": [
+        "review-experience",
+        "annotation-cloze",
+        "ai-service"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "可在设置页切换并本机保存简约/秋日枫叶皮肤；浅色和深色模式下闪卡正文保持专注可读；AI 生成显示无文字进度与真实取消；文本和公式挖空按主题视觉规则逐项揭示。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "在不改变复习信息架构的前提下，交付可切换的全局秋日枫叶皮肤、AI 请求真实取消及无文字生成反馈，并优化重点挖空遮罩。",
+        "inScope": [
+          "在设置页外观分组提供简约与秋日枫叶选择，并使用本机存储持久化选择；秋日枫叶提供跟随系统的浅色枫叶与深色夜枫 token。",
+          "将主题 token 应用于全局页面背景、导航、分组列表、Sheet、表单和交互细节；闪卡标题与正文保持高对比、无叶片和无纹理的阅读表面。",
+          "为 AI 讲解生成建立端到端取消信号：前端停止图标可中止当前请求，后端将取消传递给 Provider；取消后保留旧讲解且不写入半成品。",
+          "生成期间仅显示无文字主题化不定进度环和独立停止图标；支持 ARIA 名称、动态状态提示和减少动态效果。",
+          "将文本与公式挖空优化为原文字数占位、暖灰底、枫棕细描边和极淡叶脉纹理；短词不加纹理，点击单项后以 120-180ms 淡入揭示。",
+          "补充主题持久化、真实取消、取消后数据不变、文本/公式遮罩以及桌面和 iPhone 尺寸无溢出的自动化验收。"
+        ],
+        "outOfScope": [
+          "不改变资料、导入、复习筛选、掌握状态、编辑、备份、认证、Tunnel 或发布流程的功能边界。",
+          "不实现 AI 流式输出、批量生成、队列、费用统计、历史版本或取消后的用量退款。",
+          "不新增其他季节皮肤、在线皮肤市场、跨设备皮肤同步、循环背景动画或会干扰正文的装饰素材。"
+        ],
+        "deferredTo": [
+          "其他季节皮肤与跨设备外观同步在确认真实使用需求后另建独立任务。",
+          "AI 流式输出、批量生成、费用可见性和讲解历史继续按既有 AI 范围独立评估。"
+        ]
+      },
+      "lastProgressOn": "2026-08-11",
+      "result": "已完成全局简约/秋日枫叶外观切换与本机持久化；秋日主题覆盖页面环境、导航、分组、Sheet、表单和交互细节，闪卡阅读面保持中性高对比。AI 生成可从停止图标将 AbortSignal 传至 API 和 Provider，取消不会覆盖原讲解或写入半成品；文本与公式挖空按短词、叶脉纹理和 160ms 揭示规则呈现。",
+      "verification": [
+        "npm run typecheck、npm --workspace @knowledge-flashcards/api run test（55 项）和 npm run build 通过。",
+        "npm run test:ai-explanation:integration 通过 3 项，覆盖 HTTP 传递取消信号；服务单测覆盖 Provider 收到中止后不写入讲解。",
+        "Playwright 模拟 API 在桌面和 390x844 视口验证外观选择写入 localStorage、页面无横向溢出、文本/公式遮罩及深色夜枫阅读卡片；截图已保存。",
+        "npm run progress:check 通过，结构化进度源与展示层一致。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/api.ts",
+        "apps/web/src/styles.css",
+        "apps/api/src/app.ts",
+        "apps/api/src/ai-explanation-service.ts",
+        "apps/api/src/ai-explanation-service.test.ts",
+        "apps/api/test/ai-explanation-http.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "output/playwright/ph5-06-autumn-settings-desktop.png",
+        "output/playwright/ph5-06-autumn-cloze-desktop.png",
+        "output/playwright/ph5-06-autumn-cloze-mobile.png",
+        "output/playwright/ph5-06-autumn-cloze-mobile-dark.png"
+      ],
+      "next": "PH5-06 已完成；不扩展其他皮肤或 AI 能力。GA 剩余验收继续归属 PH5-05，课程与资料导航继续按 PH5-07 任务卡推进。"
+    },
+    {
+      "id": "PH5-07",
+      "sequence": "7",
+      "order": 70,
+      "title": "建立课程、科目与资料九宫格导航及学习趋势",
+      "priority": "P1",
+      "moduleIds": [
+        "content-ingestion",
+        "review-experience",
+        "visual-editor",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M5"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "acceptance": "资料入口可按课程→科目→资料逐层导航；资料九宫格、封面管理、详情页四状态分布与最近 30 天趋势、导入归属、移动排序、JSON/备份恢复和桌面/移动端 URL 返回通过验收。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "在保留资料→章→节→闪卡内容模型和 Markdown 标题协议的前提下，新增课程/科目目录层，使用逐层 URL 导航进入资料九宫格和资料详情，并为资料封面与四种掌握状态趋势建立可恢复的数据边界。",
+        "inScope": [
+          "新增单层课程和课程下单归属科目，支持新增、改名、手动排序、科目移动、空节点删除确认和非空节点删除阻止。",
+          "资料入口使用课程→科目→资料逐层 URL；课程/科目为单列列表，科目页资料使用桌面 3 列、iPhone 2 列的九宫格，不分页。",
+          "资料格显示可选封面、资料名称和有效闪卡数量；无封面时封面区域透明；资料详情页提供名称/封面 Sheet 编辑、章/节/单卡列表和失效 URL 返回。",
+          "封面只接受本地 PNG/JPEG/GIF/WebP、最大 5MB，保存原图并生成最长边 512px 缩略图；资料删除、恢复、永久删除和资源清理保持一致。",
+          "导入应用前强制选择课程和科目并支持选择器内新增；相同源文件按 SHA-256 全局去重；现有资料迁移到不可删除的“待整理 / 待整理”。",
+          "资料详情页显示掌握、了解、努力、未评估四状态分布和最近 30 天按 Asia/Shanghai 的每日状态快照趋势；状态变更历史长期保留，新卡导入记录初始未评估，迁移日建立既有卡片初始快照。",
+          "JSON 导出、每日备份和恢复包含课程、科目、排序、封面资源和状态历史；旧 JSON 缺少新增字段时自动归入默认课程/科目；Markdown 导出不加入这些元数据。",
+          "补充 API、数据库迁移、导入/恢复兼容、资源清理、统计计算和桌面/iPhone 浏览器验收，覆盖刷新、前进/后退、无数据状态和无障碍图表摘要。"
+        ],
+        "outOfScope": [
+          "不改变 Markdown 的 # 资料、## 章、### 节、#### 闪卡标题协议，不在前端提供 Markdown 源码编辑。",
+          "不把课程或科目加入复习页筛选；从课程/科目开始复习只转换为现有资料集合筛选。",
+          "不新增空白资料、PDF/OCR、多文件批量导入、网络图片 URL、在线裁剪器、课程/科目封面或资料搜索。",
+          "不实现分页、拖拽跨层移动、课程多级嵌套、共享科目、实时推送或自定义时区。",
+          "不改变账号门禁、Cloudflare Tunnel、AI Provider、离线复习、随机复习、间隔重复、提醒和多用户权限。"
+        ],
+        "deferredTo": [
+          "资料名称搜索、按课程/科目筛选复习和跨资料统计归属后续独立任务。",
+          "长期趋势的 7/90 天切换、更多图表交互和课程/科目视觉封面后续独立任务。",
+          "课程/科目共享、批量迁移和拖拽排序在真实资料规模验证后再评估。"
+        ]
+      },
+      "lastProgressOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+  "result": "已完成 PH5-07：新增课程、科目、资料封面关系和卡片掌握状态历史迁移；旧资料统一绑定不可删除的“待整理 / 待整理”，既有卡片写入迁移日初始快照。兼容迁移将系统默认归属收敛为固定标识并配置 materials.subject_id 默认值，确保现有导入、恢复和测试夹具的旧写入方式继续可用。共享包已补齐目录导航、封面、四状态分布、30 天趋势、导出与恢复字段契约，保持现有 JSON 导出版本兼容。已实现受账号门禁保护的目录 API，以及课程/科目的新增、改名、上下排序、科目跨课程移动、空节点删除限制和指定科目资料格读取；资料页实现逐层 hash URL 导航、资料详情、名称和封面管理，并在桌面与 390px 视口完成验收。复习状态更新会在事务内写入历史，趋势查询以 Asia/Shanghai 墙上时间计算，保证当天趋势与当前分布一致。完整 JSON、手动备份、每日备份和恢复现包含课程、科目、排序、资料归属、封面关联与状态历史；恢复按依赖顺序写入并校验资源路径、哈希和秘密字段，旧 JSON 会落到固定默认目录。",
+      "verification": [
+        "npm run typecheck:shared、npm run typecheck:api 和 npm test 通过，共 57 项测试。",
+        "npm run db:migrate 成功应用 002_phase_5_07_catalog.sql 与 003_phase_5_07_legacy_material_default.sql，重复执行仍由迁移版本校验保护。",
+        "npm run db:check 和 npm run test:review:integration 通过；真实 MySQL 查询确认固定默认课程/科目、materials.subject_id 默认值、2 份现有资料、603 条状态历史和 3 个关键外键。",
+        "迁移单测覆盖目录/封面/状态历史表、旧资料默认归属、迁移快照和敏感字段边界。",
+        "npm run typecheck、npm run build 和 npm test 通过，共 64 项测试。",
+        "npm run test:catalog:integration 通过真实 MySQL + HTTP 验收，覆盖课程/科目读取、资料格封面与闪卡数、科目排序/移动、新建和空/非空删除边界；夹具按外键顺序清理。",
+        "本轮 npm run typecheck、npm run build 和 npm test 通过，后端回归共 64 项。",
+        "Playwright 临时本机目录数据在桌面和 390x844 视口通过课程→科目→资料格、刷新、浏览器前进/后退和管理入口返回验收；移动端 documentElement.scrollWidth 与 clientWidth 均为 390，控制台无目录页面错误。",
+        "npm run typecheck:api、npm run typecheck:web、npm run build 和 npm test 通过；后端单测共 70 项。",
+        "npm run test:catalog:integration 通过真实 MySQL + HTTP 验收，资料详情返回有效层级、当前四状态分布和连续 30 天趋势；夹具状态历史按外键顺序清理。",
+        "本机 API http://127.0.0.1:8787/api/health 返回 HTTP 200，现有 Vite 前端 http://127.0.0.1:5173/ 返回 HTTP 200；业务目录端点在无会话下返回 401。",
+    "npm run typecheck、npm run build 和 npm test 通过；后端单测共 70 项。",
+    "npm run test:catalog:integration 通过真实 MySQL + HTTP 验收，覆盖状态更新历史事件、当天趋势与当前分布一致，以及夹具外键顺序清理。",
+    "独立 Playwright 在桌面及 390x844 视口验证课程→科目→资料格→详情、刷新、前进/后退、失效 URL 返回、3/2 列资料格、无横向溢出和图表无障碍摘要；截图已归档。",
+    "npm run typecheck、npm run build 和 npm test 通过；后端单测共 70 项。",
+    "独立 Playwright 使用本地响应夹具验证课程、科目新增按钮、空名称禁用、Sheet 提交、成功反馈和列表刷新；390x844 视口中 Sheet 层级为 40、高于底部导航 30，documentElement.scrollWidth 与 clientWidth 均为 390。"
+        ,"npm run typecheck、npm run build 和 npm test 通过；后端单测共 74 项。"
+        ,"npm run test:catalog:integration 通过真实 MySQL + HTTP + 临时资源目录验收，覆盖资料改名、封面原图与 512px 缩略图写入、详情读取和移除后的数据库及文件清理。"
+        ,"独立 Playwright 在桌面和 390x844 视口验证资料详情编辑 Sheet、无封面透明区域、文件选择入口与无横向溢出；移动端 Sheet 层级为 40，控制台无错误。"
+        ,"npm run package:windows 通过，Windows 发布包使用固定 Node.js v24.18.0 并安装 178 个生产依赖，包含封面缩略图所需的 sharp。"
+        ,"手动深色模式复核确认资料编辑 Sheet 中封面字段标签计算色为 rgb(152, 152, 157)，与系统深色表面保持可读。"
+        ,"本轮 npm run typecheck、npm run build 和 npm test 通过，后端单测共 74 项。"
+        ,"独立 Playwright 在桌面和 390x844 视口验证课程/科目右侧更多入口、操作 Sheet、科目移动候选、排序边界和删除确认；非空课程删除返回 409 后 Sheet 保持并显示阻止原因，移动端无横向溢出。"
+        ,"手动深色模式下课程/科目操作项计算色为 rgb(242, 242, 247)，遮罩层级为 40。"
+        ,"npm run typecheck、npm run build 和 npm test 通过；后端单测共 76 项。"
+        ,"npm run test:backup:integration 通过真实 MySQL、HTTP 和受管资源目录回归，确认课程、科目排序、资料归属、封面原图/缩略图和状态历史进入 data.json 与资源归档。"
+      ],
+      "affectedFiles": [
+        "database/migrations/002_phase_5_07_catalog.sql",
+        "database/migrations/003_phase_5_07_legacy_material_default.sql",
+        "packages/shared/src/api.ts",
+        "apps/api/src/catalog-migration.test.ts",
+        "apps/api/src/catalog-legacy-default.test.ts",
+        "apps/api/src/catalog-service.ts",
+        "apps/api/src/catalog-service.test.ts",
+        "apps/api/src/catalog-http.test.ts",
+        "apps/api/test/catalog-real-mysql-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/api/package.json",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package.json",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "output/playwright/ph5-07-catalog-desktop.png",
+    "output/playwright/ph5-07-catalog-mobile.png",
+    "apps/api/src/review-service.ts",
+    "apps/api/src/review-service.test.ts",
+    "output/playwright/ph5-07-detail-desktop.png",
+    "output/playwright/ph5-07-detail-mobile.png",
+    "output/playwright/ph5-07-catalog-create-desktop.png",
+    "output/playwright/ph5-07-catalog-create-mobile.png",
+    "apps/api/src/data-governance-service.ts",
+    "apps/api/src/data-governance-service.test.ts",
+    "apps/api/package.json",
+    "package-lock.json",
+    "output/playwright/ph5-07-material-editor-desktop.png",
+    "output/playwright/ph5-07-material-editor-mobile.png",
+    "output/windows-release/",
+    "apps/api/src/import-service.ts",
+    "apps/api/src/import-service.test.ts",
+    "apps/api/test/import-real-mysql-http.test.ts",
+    "apps/api/test/backup-real-mysql-http.test.ts",
+    "output/playwright/ph5-07-import-destination-desktop.png",
+    "output/playwright/ph5-07-import-destination-mobile.png"
+      ],
+      "currentStepBoundary": {
+      "title": "JSON 与备份恢复兼容",
+    "status": "已完成",
+        "confirmedOn": "2026-08-11",
+        "inScope": [
+        "将课程、科目、排序、资料封面关联和掌握状态历史纳入完整 JSON 导出、手动备份、每日备份及恢复；备份归档包含被引用封面原图和缩略图。",
+        "恢复时在同一事务内按依赖顺序写入目录、资料层级、封面关系和状态历史；旧 JSON 缺少新增字段时归入不可删除的“待整理 / 待整理”。",
+        "复用现有资源安全路径、哈希和敏感字段校验，补充服务端单测和真实 MySQL 备份恢复验收。"
+        ],
+        "outOfScope": [
+        "不实现资料跨科目移动、资料搜索、复习筛选变更或趋势时间范围切换。",
+        "不改变 Markdown 导出协议、内容级 JSON/Excel 导入、账号门禁、Cloudflare Tunnel 和 AI 功能。",
+        "不新增拖拽排序、批量操作、课程或科目封面、跨课程共享科目或课程多级嵌套。"
+        ],
+        "deferredTo": [
+        "资料跨科目移动和长期趋势交互归属 PH5-07 后续前端/API 步骤。",
+          "备份保留策略调整、异地备份和更高版本 JSON 迁移归属后续独立数据治理任务。"
+        ]
+      },
+  "next": "PH5-07 已完成。资料跨科目移动、按课程/科目复习筛选、长期趋势交互和更高版本 JSON 迁移均需另立任务；发布主线继续由 PH5-01、PH5-02 和 PH5-05 验收。"
+    },
+    {
+      "id": "PH5-08",
+      "sequence": "8",
+      "order": 80,
+      "title": "补齐本机深浅色显示模式切换",
+      "priority": "P1",
+      "moduleIds": [
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-19",
+      "acceptance": "设置页可选择跟随系统、浅色或深色显示模式；简约和秋日枫叶皮肤均即时适配，选择刷新后仍保留。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "为现有外观设置补齐本机明暗模式选择，使用户能在不改变皮肤的前提下手动切换浅色或深色。",
+        "inScope": [
+          "在设置页外观分组新增跟随系统、浅色、深色三档显示模式分段控件。",
+          "将显示模式写入本机存储，并通过根元素主题属性让简约与秋日枫叶皮肤即时使用对应 token。",
+          "补充桌面与 iPhone 视口的构建和浏览器验收，确认切换、持久化、无横向溢出和无障碍名称。"
+        ],
+        "outOfScope": [
+          "不新增皮肤、跨设备同步、账户级外观偏好或服务端设置接口。",
+          "不修改复习、资料、导入、AI、认证、Tunnel、备份或课程目录业务。",
+          "不改变闪卡正文的纯净阅读表面、内容宽度或既有无障碍规则。"
+        ],
+        "deferredTo": [
+          "更多皮肤及跨设备或账户级偏好在确认真实需求后另建独立任务。"
+        ]
+      },
+      "lastProgressOn": "2026-08-19",
+      "result": "已在设置页外观分组加入跟随系统、浅色、深色三档显示模式分段控件。选择保存到 knowledge-flashcards-color-mode 本机存储，并映射到根元素 data-color-mode；简约与秋日枫叶皮肤均使用对应浅色或深色 token。终端 Playwright 已完成三档点击、刷新持久化、简约/秋日枫叶即时适配，以及 390x844 和 1440x900 无横向溢出回归。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/web exec vite build 通过，36 个模块完成转换并生成生产前端产物；仅保留既有大 chunk 警告。",
+        "运行中的 Vite 开发页 http://127.0.0.1:5173/ 返回 HTTP 200。",
+    "原 PH5-07 的 MaterialsRoute 类型不匹配已修复；2026-08-19 运行 npm run typecheck:web 通过。",
+    "终端 Playwright 390x844 验证简约皮肤的跟随系统和深色切换：深色时 data-color-mode/localStorage 均为 dark，根背景为 rgb(0, 0, 0)、正文为 rgb(242, 242, 247)，documentWidth=390；刷新后深色 radio 仍为选中。",
+    "终端 Playwright 验证秋日枫叶皮肤深色即时使用 rgb(23, 21, 18) 背景和 rgb(243, 238, 232) 正文；浅色切换写入 light 并使用 rgb(244, 241, 235) 背景，跟随系统切换写入 system。",
+    "终端 Playwright 1440x900 验证秋日枫叶深色 documentWidth=1440；390x844 与 1440x900 均无横向溢出，控制台仅有 React DevTools 开发提示。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+    "progress/logs.json",
+    "output/playwright/ph5-08-mobile-autumn-dark-20260819.png",
+    "output/playwright/ph5-08-desktop-autumn-dark-20260819.png"
+  ],
+  "next": "本任务已完成；更多皮肤或跨设备、账户级外观偏好按后续独立需求处理。"
+    },
+    {
+      "id": "PH5-09",
+      "sequence": "9",
+      "order": 90,
+      "title": "修复 AI 讲解 Markdown 渲染",
+      "priority": "P1",
+      "moduleIds": [
+        "ai-service",
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "进行中",
+      "startedOn": "2026-08-11",
+      "acceptance": "AI 讲解中的 Markdown 标题、强调、列表、分隔线、表格、公式和安全链接以只读结构化内容显示，不出现 Markdown 标记原文；兼容模型常见的 `**“强调文本”**` 与 `*“强调文本”*` 行内强调写法。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-11",
+    "summary": "将已保存 AI 讲解的 Markdown 文本在复习卡片内解析为安全、只读的结构化展示，并在本次生成成功完成时自动展开结果。",
+        "inScope": [
+          "复用现有正文节点渲染规则，解析 AI 讲解中的标准 Markdown、GFM 表格和数学公式。",
+      "兼容模型输出的中文引号包裹型行内强调，将 `**“强调文本”**` 与 `*“强调文本”*` 转换为只读强调节点。",
+      "保留现有安全链接协议限制，禁止渲染 AI 响应中的原始 HTML，且不执行任何外部脚本。",
+      "仅在当前卡片的 AI 讲解请求成功完成后自动展开讲解区，使新结果立即可见。",
+      "补充构建与浏览器回归，验证标题、强调、列表和分隔线不再以 Markdown 标记原样显示。"
+        ],
+        "outOfScope": [
+      "不改动 AI Provider、提示词、生成请求、保存格式或历史数据。",
+      "不新增 AI 流式输出、富文本编辑、图片加载、导出格式或正文编辑能力。",
+      "不改变复习卡片已有高亮、挖空和掌握状态逻辑。",
+      "不改变首次进入或切换卡片时的默认折叠、用户手动展开/收起，以及生成失败或取消时的折叠状态。"
+        ],
+        "deferredTo": [
+          "AI 响应格式约束、流式输出和历史版本继续按后续独立 AI 任务评估。"
+        ]
+      },
+      "lastProgressOn": "2026-08-12",
+      "result": "复习页已将当前 AI 讲解由纯文本段落切换为 Markdown AST 的只读结构化渲染，支持标题、强调、列表、分隔线、GFM 表格和数学公式；链接继续复用既有协议白名单，原始 HTML 节点不会渲染，AI 讲解内的公式不再显示为可标注控件。已额外兼容模型常见但不符合 CommonMark 边界规则的 `**“强调文本”**` 与 `*“强调文本”*`，中文引号及其中内容会正确显示为强调样式。本次将生成成功后的面板状态改为展开，使新讲解立即可见；首次进入、切卡、手动切换、失败和取消时的折叠状态保持不变。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过；生产构建转换 222 个模块，仅保留既有大 chunk 警告。",
+        "独立 Markdown 解析回归覆盖三级标题、粗体、分隔线、有序/无序列表、GFM 表格、公式与 script HTML：结果节点类型符合预期，HTML 节点由 UI 丢弃。",
+        "中文引号强调回归确认 `事故隐患的本质是**“不符合规定”**——…` 转换为 text + strong + text 节点，强调内容保留完整中文引号。",
+        "本机浏览器自动化初始化被 Codex 运行时 process 属性冲突阻断，尚待可用浏览器环境完成页面元素回归。",
+        "2026-08-12：npm run typecheck:web 通过。",
+        "2026-08-12：npm run build:web 通过，转换 2000 个模块；仅有既有大 chunk 警告。"
+      ],
+      "affectedFiles": [
+        "apps/web/package.json",
+        "package-lock.json",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "packages/shared/src/api.ts",
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/data-governance-service.ts",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "在可用浏览器自动化环境验证 AI 面板的标题、强调、列表、分隔线和原始 HTML 抑制后，补充截图证据并完成任务。"
+    },
+    {
+      "id": "PH5-10",
+      "sequence": "10",
+      "order": 100,
+      "title": "新增 JSON 与 Excel 资料导入及模板下载",
+      "priority": "P1",
+      "moduleIds": [
+        "content-ingestion",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M5",
+        "GA"
+      ],
+      "status": "进行中",
+      "startedOn": "2026-08-11",
+      "acceptance": "用户能在导入页选择 Markdown、JSON 或 Excel 单文件，下载 JSON/Excel 模板，并将符合模板的资料预览、校验、重复检测后应用为层级闪卡。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-11",
+        "summary": "在保留现有 Markdown/ZIP 导入链路的前提下，新增内容级 JSON 与 Excel 单资料协议及前端模板下载，并统一进入既有预览与应用流程。",
+        "inScope": [
+          "定义并校验 format/version/title/chapters 的内容级 JSON；每张闪卡的正文 body 复用 Markdown/GFM/公式安全解析。",
+          "定义并校验单工作表 Excel 的“资料、章、节、闪卡、正文”五列；每行转换为一张闪卡。",
+      "扩展导入预览的来源类型、可识别错误、来源哈希重复检测与原有应用事务。",
+      "本次最小步骤：来源哈希去重仅检索未删除资料，回收箱中的资料不会导致新上传资料在预览或应用阶段被跳过。",
+      "本次最小步骤：新增迁移，将来源哈希唯一索引改为普通查询索引，允许回收箱资料保留后重新导入相同源文件。",
+      "本次最小步骤：JSON 下载模板提供同级的“第一章”和“第二章”示例；每章各保留一个最小可解析的小节和闪卡，用于展示多章节填写结构。",
+      "本次最小步骤：移除对疑似 GFM 表格分隔行的猜测式预校验；只有 Markdown 解析器实际识别为表格时才校验表格结构，含 -、:、| 的普通正文必须保留并可导入。",
+      "在导入页提供 Markdown、JSON、Excel 选择，以及 JSON/Excel 模板下载、格式说明和桌面/iPhone 回归。",
+          "补充 JSON、Excel、模板下载、错误定位和既有 Markdown 回归测试。"
+        ],
+        "outOfScope": [
+          "不改动完整 JSON 备份的导出、恢复、确认流程或历史数据格式。",
+          "不实现多文件/批量导入、CSV、PDF、OCR、ZIP 内 JSON/Excel、资源文件或图片导入。",
+      "不导入课程科目归属、封面、学习状态、标注、AI 讲解、备份内容、API Key 或其他设置。",
+      "不改变回收箱资料的恢复、永久删除、保留期限或资料移动逻辑。",
+      "不改变 JSON 导入协议、章节排序、Excel 模板或完整 JSON 恢复行为。",
+      "不自动修复或改写上传文件中的 Markdown 文本；跨单元格或跨 Markdown 节点的内联高亮校验规则保持不变。",
+      "不改变既有 Markdown/ZIP 标题协议、可视化编辑、复习、资料目录或账号门禁。"
+        ],
+        "deferredTo": [
+      "批量资料导入、CSV、PDF/OCR、资源包和跨格式内容迁移在需求确认后分别建立独立任务。",
+      "完整 JSON 数据备份的恢复继续归属现有数据治理流程。",
+      "回收箱恢复、永久删除和保留策略继续归属 PH4-04 数据治理流程。"
+        ]
+      },
+  "lastProgressOn": "2026-08-12",
+  "result": "已新增内容级 JSON 与 Excel 单资料解析，并复用既有 Markdown/GFM/公式与 HTML、资源安全校验；导入预览、来源哈希重复检测和应用事务保持统一。后端提供 JSON、Excel 模板下载端点，前端导入页支持 Markdown、JSON、Excel 分段选择及 JSON/Excel 模板下载。下载的 JSON 模板现在包含同级“第一章”和“第二章”，每章各有一个最小小节与闪卡示例。完整 JSON 备份仍会被普通资料导入明确拒绝。来源哈希去重现只检索未删除资料；回收箱资料可保留并重新导入同一源文件。已移除将疑似 GFM 表格分隔行当作错误的预校验：只有 Markdown 解析器实际识别为表格时才校验表格列数，正文可自由包含 -、:、|。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api run test 通过，70 项测试全部通过；覆盖 JSON 层级解析、完整备份拦截、Excel 模板解析、模板下载端点、JSON 上传原始内容保留及既有 Markdown 回归。",
+        "npm run typecheck 通过。",
+        "npm run build 通过；仅出现既有 Vite 大 chunk 警告。",
+        "npm run progress:build 与 npm run progress:check 通过。",
+    "尝试连接 Codex 内置浏览器时初始化报 Cannot redefine property: process，尚未完成导入页格式切换、模板点击下载及桌面/390x844 无横向溢出回归。",
+    "npm run typecheck:api 通过；导入服务单元测试 6 项通过，覆盖活动资料重复跳过及回收箱同源资料重新导入。",
+    "npm run db:check 和 npm run db:migrate 通过，004_allow_reimport_trashed_materials.sql 已执行，将来源哈希唯一索引替换为查询索引。",
+    "npm run test:import:integration 通过真实 MySQL + HTTP 验收：资料软删除进入回收箱后，同一 ZIP 预览不再标记重复，重新应用成功并保留两条同源资料记录。"
+    ,"npm --workspace @knowledge-flashcards/api run test 通过，88 项测试全部通过；JSON 模板断言同级“第一章”“第二章”顺序与两章闪卡均可直接解析。"
+    ,"npm run typecheck:api 通过。"
+    ,"npm --workspace @knowledge-flashcards/api run typecheck 通过；API 单元测试 90 项全部通过，覆盖 Markdown 与 JSON body 中包含 -、:、| 的普通正文不被误判为表格。"
+      ],
+      "affectedFiles": [
+        "apps/api/package.json",
+        "apps/api/src/app.ts",
+        "apps/api/src/health.test.ts",
+    "apps/api/src/ingestion.test.ts",
+    "apps/api/src/ingestion.ts",
+    "apps/api/src/import-service.ts",
+    "apps/api/src/import-service.test.ts",
+    "apps/api/src/xlsx-populate.d.ts",
+    "apps/api/test/import-real-mysql-http.test.ts",
+        "apps/web/package.json",
+        "apps/web/src/App.tsx",
+        "apps/web/src/api.ts",
+        "apps/web/src/styles.css",
+        "package-lock.json",
+    "packages/shared/src/api.ts",
+    "database/migrations/004_allow_reimport_trashed_materials.sql",
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+    "progress/logs.json"
+    ,"项目开发进度.md"
+    ,"当前执行看板.md"
+    ,"progress/tasks/phase-5.json"
+    ,"progress/logs.json"
+      ],
+  "next": "回收箱资料不参与去重已验收。待 Codex 内置浏览器连接恢复后，验证 Markdown/JSON/Excel 分段切换、JSON/Excel 模板下载、合法文件预览与错误显示，以及桌面和 390x844 无横向溢出；验收通过后完成本任务。"
+    },
+    {
+      "id": "PH5-13",
+      "sequence": "13",
+      "order": 130,
+      "title": "按资料续读并简化复习资料选择",
+      "priority": "P1",
+      "moduleIds": [
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "进行中",
+      "startedOn": "2026-08-11",
+  "acceptance": "每份资料独立保存并恢复最后一张闪卡；当前学习资料选择器仅显示资料名称，并决定顶部统计与快捷开始范围；复习页筛选只保留资料和掌握状态，不再提供章节、节或关键词选择。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-11",
+      "summary": "将复习续读位置从全局单张闪卡改为按资料保存，并将复习筛选收敛为资料与掌握状态；在复习首页补充仅当前复习会话生效的背默模式和当前学习资料选择。",
+        "inScope": [
+          "在打开、前后切换和状态自动切卡时按资料持久化最后一张有效闪卡。",
+        "复习面板提供当前学习资料选择；选择器及其选项只显示资料名称，所选资料统一决定顶部统计和快捷开始范围。",
+      "为每份资料返回闪卡、掌握、未评估和努力数量，并以所选资料统计替换原有全局统计。",
+      "补齐当前资料复习统计中的“了解”数量，贯通摘要查询、共享契约和界面展示。",
+          "复习筛选仅保留资料选择和掌握状态多选，移除章节、节与关键词条件及其 API 契约。",
+          "兼容并迁移既有全局最后闪卡设置，补充服务/API 回归测试。",
+          "在复习首页提供背默模式 Switch；开启后进入闪卡时自动启用既有重点挖空，遮罩当前及后续闪卡的全部已标注重点，关闭后正常显示。",
+          "将背默模式 Switch 设计为关闭近黑、开启橙色的 iOS 风格控件，并提供尊重减少动态效果偏好的滑块过渡。",
+      "将背默模式控件调整为长而细的扁平圆角矩形，保持 44px 触控高度并收紧视觉行高；轨道高度与滑块保持一致，并隔离主题通用 input 规则对其尺寸的覆盖。",
+      "将背默模式开关的视觉轨道宽度收紧为 30px，并同步滑块开启位移；轨道和滑块继续保持 18px 等高。"
+        ],
+        "outOfScope": [
+          "不改变资料、章、节和闪卡的管理层级及阅读页上下文展示。",
+          "不改变结果集固定顺序、上一张/下一张、掌握状态、复习记录、既有重点挖空或 AI 讲解。",
+        "不持久化背默模式，不修改闪卡内容、重点高亮、API 或数据库。",
+        "不改变资料续读位置、资料选择后的恢复逻辑，或筛选 Sheet 的资料与掌握状态条件。",
+          "不实现随机复习、间隔重复、提醒、标签、离线复习或多用户设置。"
+        ],
+        "deferredTo": [
+          "更细的章节或关键词定位需求须以独立资料浏览功能重新评估。",
+          "随机与间隔重复继续归属第一版后续学习算法任务。"
+        ]
+      },
+      "lastProgressOn": "2026-08-12",
+  "result": "已完成按资料续读、筛选收敛、背默模式和当前学习资料统计：续读位置使用 review.lastCards 资料映射，筛选只保留资料与掌握状态，背默模式仅在当前会话生效。复习首页现以只显示资料名称的当前资料选择器替代原资料列表；所选资料决定顶部闪卡、掌握、了解、未评估、努力统计和快捷开始范围，刷新后会保留有效选择或回退到首份资料。当前步骤的代码、类型、服务测试、生产构建和浏览器交互验收均已完成；任务保持进行中，后续不扩展本步范围。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过 76 项 API 与服务测试，覆盖资料进度映射导出与恢复。",
+        "npm run test:review:integration 通过真实 MySQL + HTTP 验收：两份隔离资料的进度独立保存、重新进入后各自恢复对应闪卡，验收数据和原有资料进度均已清理恢复。",
+        "npm run build 通过；仅有既有 Vite 大 chunk 警告。",
+    "独立 Playwright 可打开本机登录页；受账号门禁限制且 Codex 内置浏览器初始化失败，未完成登录后的桌面与 390px 页面交互回归。",
+    "npm run typecheck:web 通过。",
+    "npm --workspace @knowledge-flashcards/web exec vite build 通过；仅有既有大 chunk 警告。",
+    "本轮 npm run typecheck、npm --workspace @knowledge-flashcards/api run test（76 项）、npm run build:web 和 npm run test:review:integration 均通过；Web 构建仅有既有大 chunk 警告。",
+    "独立 Playwright 使用本地认证与 Dashboard 响应桩验证选择器仅显示资料名称；切换资料后统计和快捷入口同步切换，390x844 视口无横向溢出且控制台无错误。",
+    "npm run progress:build 与 npm run progress:check 均通过，结构化进度源与展示层一致。",
+    "本轮 npm run typecheck、npm run build 与 npm run test:review:integration 均通过；真实 MySQL + HTTP 验收覆盖“了解”状态更新后当前资料摘要 familiarCount 为 1。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "apps/api/test/m4-real-mysql-http.test.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/api.ts",
+        "apps/web/src/styles.css",
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/config.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+  "next": "本步统计修复已完成；PH5-13 继续按既有验收范围推进，不扩展新的复习入口或筛选语义。"
+    },
+    {
+      "id": "PH5-11",
+      "sequence": "11",
+      "order": 110,
+      "title": "临时屏蔽本机账号密码登录",
+      "priority": "P0",
+      "moduleIds": [
+        "delivery-security",
+        "runtime-foundation"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "暂缓",
+      "startedOn": "2026-08-11",
+      "acceptance": "本机地址访问业务接口和前端时不再出现登录表单，公网 Tunnel 已停止且账号哈希仍仅保留在本机忽略配置。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "暂缓",
+        "confirmedOn": "2026-08-11",
+        "summary": "为缩短本机状态查看流程，临时停用公网连接器并屏蔽本机账号密码门禁；保留原有凭证和认证实现，后续可通过本机配置恢复。",
+        "inScope": [
+          "将本机 PUBLIC_ACCESS_READY 和 CLOUDFLARED_ENABLED 设为 false，停止受管 Cloudflare Tunnel。",
+          "仅在本机忽略配置中清空 AUTH_USERNAME 与 AUTH_PASSWORD_HASH 的生效值，不删除或记录原有哈希。",
+          "重启本项目受管 API 与 Web 进程，并验证认证会话接口和受保护业务接口均以已认证状态响应。"
+        ],
+        "outOfScope": [
+          "不修改认证源代码、会话 Cookie、失败限速或前端登录实现。",
+          "不修改 Cloudflare Tunnel、DNS、凭证、数据库、资料业务或 Windows 发布包。",
+          "不把账号、密码、哈希或 Tunnel 凭证写入进度源或 Markdown 展示层。"
+        ],
+        "deferredTo": [
+          "恢复本机账号密码门禁和公网连接器时，沿用 PH5-04 的认证实现并重新执行 PH5-05 公网安全回归。",
+          "多账号、权限模型和长期公网监控不纳入本步。"
+        ]
+      },
+      "lastProgressOn": "2026-08-11",
+      "result": "曾验证本机免登录模式可用，但用户随后确认必须对外提供服务，已由 PH5-12 恢复原有账号门禁与项目 Tunnel。本机免登录配置当前不生效；认证实现、Cookie、限速和凭证内容均未改动。",
+      "verification": [
+        "重启受管 API、Web 与 Tunnel 进程后，/api/auth/session 返回 authenticated=true 且 username 为 null。",
+        "未携带 Cookie 请求 /api/catalog/courses 返回 200，本机 Web 首页返回 200 并包含 root 容器。",
+        ".runtime/process.json 的 tunnelProcessId 和 tunnelPublicUrl 均为 null，项目 Cloudflare 配置未对应任何运行进程。",
+        "review.panspan.cloud 返回 502，确认公网不再提供本机应用。"
+      ],
+      "affectedFiles": [
+        ".env.local（本机忽略配置）",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "暂不继续本机免登录方案。若仍需缩短本机状态查看流程，须先确认不会绕过公网认证的受限访问模型，再建立独立任务。"
+    },
+    {
+      "id": "PH5-12",
+      "sequence": "12",
+      "order": 120,
+      "title": "恢复公网账号门禁与 Tunnel",
+      "priority": "P0",
+      "moduleIds": [
+        "delivery-security",
+        "runtime-foundation"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "review.panspan.cloud 可通过 HTTPS 对外访问，未登录业务接口仍返回 401，本机凭证和 Tunnel 凭证未进入进度源。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-11",
+        "summary": "按用户新增的对外提供要求，恢复 PH5-04 单账号门禁与既有项目 Tunnel；不扩展本机免登录例外。",
+        "inScope": [
+          "恢复本机忽略配置中已注释的 AUTH_USERNAME、AUTH_PASSWORD_HASH、PUBLIC_ACCESS_READY 和 CLOUDFLARED_ENABLED 原有效值。",
+          "重启受管 API、Web 和项目 Cloudflare Tunnel，并验证本机健康检查、未登录拦截和公网 HTTPS 首页。"
+        ],
+        "outOfScope": [
+          "不修改认证源代码、账户、密码哈希、Cookie、失败限速、Tunnel、DNS 或凭证内容。",
+          "不实现仅本机免登录例外，不改变资料、数据库、导入或发布包。",
+          "不把账号、密码、哈希或 Tunnel 凭证写入进度源或 Markdown 展示层。"
+        ],
+        "deferredTo": [
+          "兼顾本机免登录查看与公网认证的受限访问方案，待单独确认安全模型后建立新任务。",
+          "其余 GA 回归继续归属 PH5-05。"
+        ]
+      },
+      "lastProgressOn": "2026-08-11",
+      "result": "已恢复 PH5-04 单账号门禁和既有项目 Cloudflare Tunnel：本机认证变量、PUBLIC_ACCESS_READY 与 CLOUDFLARED_ENABLED 均恢复生效，受管 API、Web 和 Tunnel 已重启。未登录业务请求重新被拦截，公网 HTTPS 可用。",
+      "verification": [
+        "/api/auth/session 未登录返回 authenticated=false，未携带 Cookie 的 /api/catalog/courses 返回 401。",
+        ".runtime/process.json 已记录 Tunnel PID，项目 Cloudflare 配置对应进程正在运行。",
+        "review.panspan.cloud 首页返回 200、text/html 且包含 root 容器。",
+        "Playwright 访问公网首页显示用户名、密码和登录按钮。"
+      ],
+      "affectedFiles": [
+        ".env.local（本机忽略配置）",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "继续 PH5-05 的其余 GA 回归；本机免登录访问维持暂缓，除非先确认可保护公网入口的独立安全模型。"
+    },
+    {
+      "id": "PH5-14",
+      "sequence": "14",
+      "order": 140,
+      "title": "在资料详情提供逐卡内容编辑与排序",
+      "priority": "P1",
+      "moduleIds": [
+        "visual-editor",
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "进行中",
+      "startedOn": "2026-08-11",
+      "acceptance": "资料详情按章、节展示独立闪卡编辑卡；用户可在卡内可视化编辑正文，表格支持空白单元格输入、加删行、相邻单元格横纵合并与拆分，并可在同一节内上移或下移，刷新后顺序和表格跨度保持一致。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-11",
+        "summary": "将资料详情中的闪卡标题列表升级为逐张卡片入口，复用既有可视化编辑器、编辑锁和同层排序接口。",
+        "inScope": [
+          "资料详情按章、节展示每张闪卡的独立卡片，清晰显示当前序号、标题和就近操作。",
+          "在单张卡片内打开既有结构化正文编辑器，支持标题、正文、表格、公式和受管图片的可视化编辑。",
+          "在闪卡编辑态的表格中支持空白单元格直接输入、添加行、删除行以及选中相邻单元格后合并；合并单元格使用结构化 rowSpan/colSpan 保存并在阅读态正确展示。",
+          "复用既有编辑锁续期、保存和释放流程，避免跨设备同时编辑同一张闪卡。",
+          "在同一节内提供上移和下移操作，复用既有排序接口并在刷新后显示保存后的顺序。"
+        ],
+        "outOfScope": [
+          "不修改 Markdown、JSON 或 Excel 的导入协议，不提供 Markdown 或 LaTeX 源码编辑；本步不新增导入文件中的复杂 HTML 合并单元格语义。",
+          "不新增拖拽排序、跨节移动、批量编辑、复习算法、状态、挖空或 AI 讲解功能。",
+          "不改动闪卡数据表、已有编辑锁、排序 API 或资料目录层级。"
+        ],
+        "deferredTo": [
+          "跨节移动继续使用既有资料管理入口；如需在资料详情提供该入口，应单独评估交互边界。",
+          "拖拽排序和批量操作在确认真实效率需求后另立任务。"
+        ]
+      },
+      "lastProgressOn": "2026-08-13",
+      "result": "资料详情的闪卡标题列表已替换为按章、节排列的独立闪卡编辑卡。每张卡显示序号、标题、编辑、上移和下移图标；展开后复用既有结构化正文编辑器、图片上传和 90 秒编辑锁续期，保存后同步标题并反馈失效重点数量。排序复用既有同节排序接口并立即以服务端返回的层级顺序刷新本页。闪卡编辑态表格现支持空白单元格直接输入、按选中单元格加行/删行、横向或纵向合并和拆分；rowSpan/colSpan 会经共享契约、服务端编辑校验、阅读态渲染和 JSON 恢复白名单保存。已修复无子节点空白单元格只显示选中边框、无法输入的问题。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/web exec vite build 通过，完成 2000 个模块转换与生产产物生成；仅有既有大 chunk 警告。",
+        "http://127.0.0.1:5173/ 返回 HTTP 200 且包含 root 容器。",
+        "npm run progress:build 与 npm run progress:check 通过。",
+        "npm run typecheck 通过；npm run build 通过（Web 仅有既有大 chunk 警告）。",
+        "npm --workspace @knowledge-flashcards/api test 通过 102 项，覆盖合并跨度写入与非法跨度拒绝。",
+        "内置浏览器连接仍因 Cannot redefine property: process 失败，表格编辑桌面与 390px 交互验收待运行时恢复。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "待运行时恢复后补做表格编辑的桌面与 390px 交互回归；若合并单元格需要 Markdown 导出保真，另立协议任务。"
+    },
+    {
+      "id": "PH5-15",
+      "sequence": "15",
+      "order": 150,
+      "title": "实现资料九宫格长按拖入回收站快捷删除",
+      "priority": "P1",
+      "moduleIds": [
+        "review-experience",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-11",
+      "completedOn": "2026-08-11",
+      "acceptance": "在资料九宫格长按任一资料后，可将其拖入页面顶部垃圾桶，资料随即移入回收站并从当前网格移除；未拖入时不改变页面或打开资料详情。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-11",
+        "summary": "为科目页的资料九宫格增加触摸和鼠标均可用的长按拖放删除捷径，复用已有资料软删除与回收站恢复链路。",
+        "inScope": [
+          "资料格在长按后进入拖动状态，顶部显示带可访问名称的垃圾桶目标区；桌面鼠标和触摸设备均可将资料拖入目标区。",
+          "拖入目标区后调用既有资料软删除接口，立即从当前九宫格移除并反馈已移入回收站。",
+          "短按资料格继续进入资料详情；取消长按、松开到目标区外或请求失败时保持资料不变并恢复页面状态。",
+          "补充键盘无障碍替代入口、减少动态效果规则、桌面与 390px 视口无横向溢出的交互验收。"
+        ],
+        "outOfScope": [
+          "不新增或修改资料删除、回收站恢复、永久删除、资源清理或资料详情 API。",
+          "不实现拖拽排序、跨科目移动、多选批量删除或课程、科目和闪卡删除手势。",
+          "不改变资料导入、封面、复习、认证或数据备份行为。"
+        ],
+        "deferredTo": [
+          "资料排序、跨科目移动和批量整理在确认真实使用需求后另立任务。",
+          "回收站列表和永久删除沿用既有数据治理入口。"
+        ]
+      },
+      "lastProgressOn": "2026-08-11",
+      "result": "资料九宫格现支持长按拖动：触发后页面顶部出现垃圾桶，资料副本随指针移动；进入目标区时垃圾桶高亮，松开后复用既有层级软删除并立即从当前网格移除。短按仍进入详情，拖动取消或在目标区外松开不改资料；同时提供 Delete 键的无障碍替代入口。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build 通过；仅有既有 Vite 大 chunk 警告。",
+        "独立 Playwright 使用隔离认证与资料接口夹具验证桌面长按、顶部垃圾桶激活、DELETE /api/hierarchy/material/:id、删除反馈、目标区外取消与短按进入详情；未读取账户凭证或写入现有资料。",
+        "独立 Playwright 在 390x844 视口验证长按拖入删除前后 document.body.scrollWidth 与 documentElement.scrollWidth 均为 390。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "资料排序、跨科目移动和批量删除如有需求，须以独立任务评估。"
+    },
+    {
+      "id": "PH5-16",
+      "sequence": "16",
+      "order": 160,
+      "title": "支持 JSON 内容级高亮导入",
+      "priority": "P1",
+      "moduleIds": [
+        "content-ingestion",
+        "annotation-cloze"
+      ],
+      "milestoneIds": [
+        "M5",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-12",
+      "completedOn": "2026-08-12",
+      "acceptance": "内容级 JSON 能导入文本与公式高亮，模板可表达该协议；歧义、缺失或正文修正后的失效匹配会在预览或应用时阻止写入。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-12",
+        "summary": "扩展内容级 JSON 单资料导入的高亮协议，并将外部文本或公式标记自动解析为现有结构化高亮锚点。",
+        "inScope": [
+          "为 JSON 卡片增加可选 highlights：文本使用 text，公式使用 formula，occurrence 用于指定重复项。",
+          "在预览阶段校验高亮声明，并在应用时按最终正文生成文本字符范围或公式节点路径后事务写入 highlights。",
+          "更新 JSON 导入模板，补充文本与公式高亮示例。",
+          "为有效匹配、重复歧义、未匹配、公式匹配、正文修正和数据库写入补充自动化测试。"
+        ],
+        "outOfScope": [
+          "不改变完整 JSON 备份的格式、恢复流程或内部 cardId/nodePath 锚点。",
+          "不扩展 Markdown、ZIP 或 Excel 导入协议，不支持跨正文节点的文本匹配。",
+          "不导入课程科目归属、封面、学习状态、AI 讲解、资源内容、密钥或其他设置。",
+          "不改变既有阅读高亮、挖空、可视化编辑或高亮编辑迁移规则。"
+        ],
+        "deferredTo": [
+          "跨节点富文本匹配、批量标注规则和从外部学习状态迁移，待确认实际数据来源后另立任务。",
+          "完整 JSON 数据备份恢复继续归属现有数据治理流程。"
+        ]
+      },
+      "lastProgressOn": "2026-08-12",
+      "result": "内容级 JSON 的每张卡现可使用 highlights 声明文本或公式重点。导入预览会先收集当前卡片完整 body 中按正文从前到后的所有匹配，再用 occurrence 选择第 N 次出现，不会隐式选择第一个；计数跨普通文本、粗体等节点，单条 text 仍要求落在一个结构化文本节点内。应用时按最终正文重新匹配并在同一事务写入 highlights。JSON 模板已改为自解释示例，直接列出同段多项、重复文本 occurrence、公式、相邻/重叠、自动去重和跨节点限制规则。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，83 项测试覆盖文本和公式自动定位、body 全局 occurrence 顺序、跨节点计数、重复文本歧义、模板解析、事务写入和正文修正后回滚。",
+        "npm run test:import:integration 通过真实 MySQL + HTTP 验收，JSON 文本与公式高亮均写入 highlights，夹具数据在测试结束后清理。",
+        "JSON 模板可被自身完整解析，覆盖同段多项、重复文本 occurrence、公式和重叠高亮示例。",
+        "npm run typecheck 通过。",
+        "npm run build 通过；仅有既有 Vite 大 chunk 警告。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/import-service.ts",
+        "apps/api/src/ingestion.test.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/api/test/import-real-mysql-http.test.ts",
+        "项目开发方案.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "如需支持跨富文本节点匹配、批量自动标注或从外部学习状态迁移，先根据实际 JSON 来源另立任务；完整 JSON 备份继续使用既有恢复入口。"
+    },
+    {
+      "id": "PH5-17",
+      "sequence": "17",
+      "order": 170,
+      "title": "明确 JSON 高亮重复匹配判定标准",
+      "priority": "P1",
+      "moduleIds": [
+        "content-ingestion",
+        "annotation-cloze"
+      ],
+      "milestoneIds": [
+        "M5",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-12",
+      "completedOn": "2026-08-12",
+      "acceptance": "下载的 JSON 模板明确说明重复按当前卡片 body 的连续子串匹配判定、包含关系与表格文本均会计数，并提供 occurrence 示例且能被解析器直接通过。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-12",
+        "summary": "补充 JSON 导入模板中高亮重复匹配的可操作判定标准，避免用户将被更长文本包含的目标或表格文本误认为唯一匹配。",
+        "inScope": [
+          "在 JSON 模板的 __高亮字段规则 中明确：匹配按当前卡片 body 的连续文本子串计数，目标被更长文本包含也算一次。",
+          "说明普通正文、列表和表格单元格中的文本都参与当前卡片的计数，不同卡片互不影响。",
+          "在模板示例中加入包含关系导致重复的 occurrence 写法，并补充模板内容断言与解析回归。"
+        ],
+        "outOfScope": [
+          "不修改高亮解析、occurrence 选择、错误提示或自动补全行为。",
+          "不修改用户下载目录中的 JSON 文件，不扩展跨结构化节点文本匹配。",
+          "不变更 Markdown、ZIP、Excel 或完整备份恢复协议。"
+        ],
+        "deferredTo": [
+          "导入错误中展示每次命中的上下文、位置或提供自动补全 occurrence，需另立任务评估。"
+        ]
+      },
+      "lastProgressOn": "2026-08-12",
+      "result": "JSON 模板现明确重复按当前卡片 body 的连续文本子串判定：目标作为更长文本的一部分出现时同样计数，普通正文、列表和表格单元格均参与计数，卡片之间互不影响。模板以“10人以下”独立出现及包含在“3人以上10人以下”中的两次匹配，演示 occurrence: 1 与 occurrence: 2 的写法。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，83 项测试全部通过。",
+        "JSON 模板回归断言 duplicate 规则包含连续文本子串与包含关系示例，模板可由当前解析器直接解析。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "如需把每个重复命中的次数和上下文直接展示在导入错误中，需另立任务扩展诊断反馈。"
+    },
+    {
+      "id": "PH5-18",
+      "sequence": "18",
+      "order": 180,
+      "title": "将 JSON 高亮去重要求改为模型可执行指令",
+      "priority": "P1",
+      "moduleIds": [
+        "content-ingestion",
+        "annotation-cloze"
+      ],
+      "milestoneIds": [
+        "M5",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-12",
+      "completedOn": "2026-08-12",
+      "acceptance": "JSON 模板包含模型生成高亮前必须执行的逐卡精确匹配、自检、优先扩展唯一短语和 occurrence 填写规则，明确禁止按 highlights 数组顺序猜测序号。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-12",
+        "summary": "把 JSON 高亮重复规则从说明性文本升级为模型可遵循的强制生成与校验指令，减少外部模型生成无法导入的短词重复标注。",
+        "inScope": [
+          "在 JSON 模板增加面向模型的逐卡生成步骤和输出前自检要求。",
+          "要求优先使用唯一且语义完整的原文短语；重复时才填写实际 occurrence。",
+          "明确禁止按 highlights 数组下标、猜测或默认第一个匹配确定 occurrence，并增加正反示例与模板断言。"
+        ],
+        "outOfScope": [
+          "不改变 JSON 解析、重复判定、occurrence 选择或导入错误行为。",
+          "不修改用户的 JSON 文件，不添加自动修复、自动扩词或模型调用能力。",
+          "不修改 Markdown、ZIP、Excel 或备份恢复协议。"
+        ],
+        "deferredTo": [
+          "在导入预览中提供逐条匹配次数、上下文定位或自动修复，需另立交互与解析任务。"
+        ]
+      },
+      "lastProgressOn": "2026-08-12",
+      "result": "JSON 模板新增“给生成模型的高亮硬性要求”：每张卡片先逐字搜索并统计连续子串命中；唯一时才省略 occurrence，重复时优先扩展为唯一的完整原文语义短语，仍重复才填写实际 occurrence。模板明确禁止用 highlights 数组下标、猜测或默认第一个匹配确定 occurrence，并要求输出前逐条复查。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，83 项测试全部通过。",
+        "模板断言确认硬性要求覆盖逐字搜索、优先扩展唯一短语、禁止按数组顺序猜测 occurrence 与输出前逐条复查，模板可由解析器直接通过。",
+        "npm run typecheck、npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "如需在预览中自动列出命中次数、上下文或提供可确认的自动修复，需另立导入诊断任务。"
+    },
+    {
+      "id": "PH5-19",
+      "sequence": "19",
+      "order": 190,
+      "title": "固化 JSON 高亮重复判定算法与反例",
+      "priority": "P1",
+      "moduleIds": [
+        "content-ingestion",
+        "annotation-cloze"
+      ],
+      "milestoneIds": [
+        "M5",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-12",
+      "completedOn": "2026-08-12",
+      "acceptance": "JSON 模板以结构化字段写出命中单位、包含与重叠、节点边界、occurrence 编号和通过/失败条件，并覆盖短数字、跨节点、公式和重复声明反例；模板可直接解析。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-12",
+        "summary": "把 JSON 高亮重复判定从说明性文字固化为与解析器一致的可执行算法和反例，消除模型对短词、包含命中、重叠命中及跨节点文本的歧义。",
+        "inScope": [
+          "在 JSON 模板增加结构化 __高亮重复判定标准，定义 text/formula 的命中单位与 occurrence 编号算法。",
+          "明确文本先 trim、仅在单个解析后文本节点内连续子串匹配，包含命中和重叠命中均计数，节点之间只合并计数顺序不跨节点匹配。",
+          "加入可直接照抄的短数字、包含关系、重叠、跨节点、公式和重复声明正反例，并补充模板断言。"
+        ],
+        "outOfScope": [
+          "不修改当前解析器的匹配、排序、去重或错误处理算法。",
+          "不修改用户 JSON 文件，不新增自动扩词、自动修复或模型调用。",
+          "不改变 Markdown、ZIP、Excel 或完整备份恢复协议。"
+        ],
+        "deferredTo": [
+          "导入预览直接展示每个命中的节点路径、字符位置和上下文，需另立诊断反馈任务。"
+        ]
+      },
+      "lastProgressOn": "2026-08-12",
+      "result": "JSON 模板新增结构化 __高亮重复判定标准，定义 text 的单节点连续子串命中、formula 的完整公式节点命中、包含和重叠命中计数、正文节点遍历顺序、occurrence 编号、唯一匹配通过条件和失败条件，并用短数字、包含关系、重叠文本、跨 Markdown 节点和公式示例说明正反边界。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，83 项测试全部通过。",
+        "模板断言覆盖连续子串、occurrence 顺序、唯一匹配门槛、短数字、跨节点和公式反例；模板可由解析器直接通过。",
+        "npm run typecheck 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "如需在导入预览中展示每次命中的节点路径、字符位置和上下文，需另立诊断反馈任务。"
+    },
+    {
+      "id": "PH5-20",
+      "sequence": "20",
+      "order": 200,
+      "title": "支持 JSON body 内联高亮标记导入",
+      "priority": "P1",
+      "moduleIds": [
+        "content-ingestion",
+        "annotation-cloze"
+      ],
+      "milestoneIds": [
+        "M5",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-12",
+      "completedOn": "2026-08-12",
+      "acceptance": "JSON 卡片 body 可用 [[hl:原文]] 直接标记任意重复文本位置；导入后的正文不包含标记，生成正确结构化锚点；数组高亮仍兼容公式与旧 text/occurrence 文件，模板以内联标记为主。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-12",
+        "summary": "以 body 内联高亮标记替代模型对重复文本 occurrence 的推算，文本位置由标记本身直接表达。",
+        "inScope": [
+          "JSON body 支持 [[hl:原文]] 文本高亮标记，同一文本可在每个目标位置分别标记。",
+          "解析时移除标记、生成现有文本锚点，并在预览、正文入库和阅读内容中保留无标记正文。",
+          "预览正文未修改时保留内联标记的精确锚点；正文被修改后仅允许能唯一重新定位的标记继续导入，否则阻止写入。",
+          "保留 highlights 数组对 formula 及旧 text/occurrence 声明的兼容，模板改以内联文本标记为主并补充回归测试。"
+        ],
+        "outOfScope": [
+          "不修改 Markdown、ZIP、Excel 或完整备份恢复协议。",
+          "不支持跨 Markdown 节点、代码块、图片替代文本或公式内部的 [[hl:...]] 文本标记。",
+          "不实现自动扩词、自动修复 occurrence、模型调用或导入预览定位 UI。",
+          "不修改用户已有 JSON 文件。"
+        ],
+        "deferredTo": [
+          "公式的 body 内联标记、预览中逐次命中定位和批量迁移旧 occurrence 文件，需要另立协议或交互任务。"
+        ]
+      },
+      "lastProgressOn": "2026-08-12",
+      "result": "JSON 卡片 body 现可用 [[hl:原文]] 直接标记文本位置。解析器先用内部边界标记经过 Markdown 解析，再移除协议标记并生成现有 text 锚点，因此预览、入库正文和阅读内容均不含 [[hl:...]]。同一文本可在每个目标位置独立标记，无需 occurrence；预览正文未修改时保留精确锚点，正文修改后改为唯一重新定位，重复或缺失会阻止应用。highlights 数组继续兼容 formula 及旧 text/occurrence 文件，下载模板已以内联文本标记为主示例。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，86 项测试覆盖重复文本内联标记、标记剥离、跨节点拒绝、旧 text/occurrence 兼容、正文修正后的唯一重定位及模板解析。",
+        "npm run test:import:integration 通过真实 MySQL + HTTP 验收，内联文本高亮与公式高亮在同一导入事务中写入 highlights。",
+        "npm run typecheck 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "apps/api/src/import-service.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/api/test/import-real-mysql-http.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "公式内联标记、预览命中定位和旧 occurrence 文件批量迁移仍按已确认边界另立任务。"
+    },
+    {
+      "id": "PH5-21",
+      "sequence": "21",
+      "order": 210,
+      "title": "兼容表格单元格内联高亮标记",
+      "priority": "P1",
+      "moduleIds": [
+        "content-ingestion",
+        "annotation-cloze"
+      ],
+      "milestoneIds": [
+        "M5",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-12",
+      "completedOn": "2026-08-12",
+      "acceptance": "合法 GFM 表格单元格内的 [[hl:原文]] 可导入、正文不含标记且锚点位于该单元格；跨单元格或 Markdown 结构的标记继续阻止；原有错误表格分隔行校验保持有效。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-12",
+        "summary": "修复内联标记的内部解析令牌触发表格分隔行预校验，恢复表格单元格内普通文本高亮导入。",
+        "inScope": [
+          "调整 JSON 内联标记与 GFM 表格语法校验的执行顺序或输入，使单元格内普通文本标记不被误报为错误分隔行。",
+          "补充表格单元格内重复文本标记、正文标记剥离和锚点路径回归。",
+          "保持跨单元格、粗体等 Markdown 结构、代码、公式和未转义管道符的内联标记拒绝行为。"
+        ],
+        "outOfScope": [
+          "不扩展跨单元格、跨节点、公式或代码中的内联高亮协议。",
+          "不修改 Markdown、ZIP、Excel 或旧 highlights/occurrence 导入协议。",
+          "不新增导入预览定位 UI 或自动修复。"
+        ],
+        "deferredTo": [
+          "公式内联标记、跨节点高亮和预览逐次命中定位继续按后续独立任务评估。"
+        ]
+      },
+      "lastProgressOn": "2026-08-12",
+      "result": "内联高亮的内部临时令牌已移除连字符等会触发表格预校验的字符，GFM 表格单元格中的 [[hl:原文]] 现可正常经过 Markdown 解析、移除标记并生成单元格文本锚点。未转义的 | 仍会拆分单元格并由表格校验及内联节点边界校验共同阻止，跨粗体等结构化节点的限制保持不变。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，88 项测试覆盖表格单元格内重复标记、标记剥离、单元格锚点、未转义管道符跨单元格拒绝和既有错误分隔行校验。",
+        "实际解析 C:\\Users\\panshimao\\Downloads\\deepseek_json_20260812_23f9dc.json 通过：3 张表格闪卡、21 个表格高亮、0 个问题，正文不残留 [[hl:...]]。",
+        "npm run test:import:integration 与 npm run typecheck 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "公式内联标记、跨节点高亮和预览逐次命中定位仍按已确认边界另立任务。"
+    },
+    {
+      "id": "PH5-22",
+      "sequence": "22",
+      "order": 220,
+      "title": "优化复习闪卡切换性能",
+      "priority": "P1",
+      "moduleIds": [
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "M2",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-12",
+      "completedOn": "2026-08-12",
+      "acceptance": "正常上一张、下一张切换只读取目标闪卡，不请求当前筛选集的完整列表；单张响应只附带相邻卡片 ID、序号和总数；状态切换、筛选、续读位置和复习记录保持原有语义。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-12",
+        "summary": "消除普通切卡时重复加载筛选集及单卡重复读取造成的等待。",
+        "inScope": [
+          "在单张闪卡响应中提供仅含前后卡片 ID、当前序号和总数的导航信息。",
+          "普通上一张、下一张只请求目标闪卡，不请求当前筛选集的任何列表。",
+          "移除读取单张闪卡后为返回响应再次查询同一张卡的重复工作，并补充服务及真实 MySQL 回归。"
+        ],
+        "outOfScope": [
+          "不改变复习筛选条件、固定排序、按资料续读、状态保存、复习记录或编辑锁语义。",
+          "不实现预加载、离线缓存、随机复习、间隔重复或新的切换动画。",
+          "不改动资料、导入、AI、认证、Tunnel 或备份功能。"
+        ],
+        "deferredTo": [
+          "若实际内容渲染仍有性能瓶颈，再以独立任务进行长正文、复杂表格或公式的前端渲染性能分析。"
+        ]
+      },
+      "lastProgressOn": "2026-08-12",
+      "result": "复习页已移除完整卡片列表状态。开始复习、筛选和单卡读取均返回当前闪卡及前后卡片 ID、当前位置和总数；普通上一张、下一张只请求目标卡片，不再请求当前筛选集。状态变更继续自动前往变更前的下一张，筛选、固定排序、按资料续读、复习记录和编辑锁语义保持不变。单卡读取改为先做轻量定位、写入续读和浏览记录，再仅完整读取一次当前卡片，避免原来的完整内容重复查询。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm --workspace @knowledge-flashcards/api run test 通过，91 项测试全部通过。",
+        "npm run test:review:integration 通过真实 MySQL + HTTP 验收：单卡响应提供相邻 ID、序号和总数，从 nextCardId 直接读取下一张并正确回传前一张 ID；状态、编辑和按资料续读保持有效。",
+        "npm run build 通过；Web 仍仅出现既有的大 Chunk 警告。",
+        "页面源码不再引用 fetchReviewCards 或完整 reviewResult 状态；内置浏览器连接仍受 RISK-021 的 process 属性冲突阻断，未读取本机登录凭据。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/api/src/app.ts",
+        "apps/api/src/review-service.ts",
+        "apps/api/src/review-service.test.ts",
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "若仍感到正文切换迟滞，另立任务分析长正文、复杂表格和公式的前端渲染耗时。"
+    },
+    {
+      "id": "PH5-23",
+      "sequence": "23",
+      "order": 230,
+      "title": "降低深色模式闪卡高亮刺眼度",
+      "priority": "P1",
+      "moduleIds": [
+        "annotation-cloze",
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "M2",
+        "M3",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-13",
+      "completedOn": "2026-08-13",
+      "acceptance": "深色模式下文本、表格和公式阅读高亮使用低饱和深色背景与可读前景，不再出现刺眼的浅色/亮橙色；浅色模式、高亮数据和挖空遮罩保持原有语义。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-13",
+        "summary": "只调整深色模式阅读态高亮的视觉颜色，降低白色和亮橙色对正文阅读的干扰。",
+        "inScope": [
+          "为简约深色模式的文本、表格和公式高亮覆盖低饱和深色背景与正文前景色。",
+          "为秋日枫叶深色模式提供独立的低饱和暖色高亮背景，保持与主题环境协调。",
+          "同步 DESIGN.md 深色高亮 token，确保规范与实际样式一致。"
+        ],
+        "outOfScope": [
+          "不修改浅色模式高亮颜色。",
+          "不修改挖空遮罩、揭示动画、高亮保存协议或高亮交互行为。",
+          "不新增颜色选择、用户自定义主题或其他页面的状态色。"
+        ],
+        "deferredTo": [
+          "若真实设备仍存在特定屏幕的对比度或色觉适配问题，另立无障碍视觉校准任务。"
+        ]
+      },
+      "lastProgressOn": "2026-08-13",
+      "result": "深色模式普通阅读高亮（含公式整段高亮）改用 #4B4530 背景和 #D1D1D6 前景；秋日枫叶深色模式改用 #56402F。跟随系统且系统为深色时使用同一套颜色。挖空遮罩继续使用原有中性遮罩，浅色高亮和高亮持久化行为不变。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过；仅有既有 Vite 大 chunk 警告。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/styles.css",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "若真实设备仍存在特定屏幕的对比度或色觉适配问题，另立无障碍视觉校准任务。"
+    },
+    {
+      "id": "PH5-24",
+      "sequence": "24",
+      "order": 240,
+      "title": "导入正文格式 AI 修正",
+      "priority": "P1",
+      "moduleIds": [
+        "content-ingestion",
+        "ai-service"
+      ],
+      "milestoneIds": [
+        "M5",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-13",
+      "completedOn": "2026-08-13",
+      "acceptance": "导入预览的“需要处理”列表中，每条可修正正文 Markdown 格式问题均提供独立“优化格式”操作；每次只向当前启用 Provider 发送该条问题和对应的一张卡片正文，允许多条并发，且用户确认后仍通过既有应用操作写入。JSON 无法读取或语法不合规时不显示且不能调用 AI 修正。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-13",
+        "summary": "在导入预览的需要处理列表中逐条新增“优化格式”，限定为可重新解析的正文格式问题，并复用设置页当前启用的 Provider；本次调整移除服务端正文保真拦截，仅保留提示词约束和格式问题重新解析。",
+        "inScope": [
+          "仅对 unsafe_html、invalid_formula、invalid_table 三类正文 Markdown 格式问题提供 AI 修正入口。",
+          "每次请求只发送当前一条问题和其所在闪卡的一份 Markdown 正文；不同闪卡可同时请求，服务端按修订版本合并每条结果；同一闪卡的旧结果不得覆盖已完成修正，不能把全部错误合并为一次请求。",
+          "Provider 的用户消息只包含目标闪卡的 body 原文，不携带标题、卡片索引、问题对象或整份 JSON；系统消息只约束格式修正边界。",
+          "后端使用当前启用 Provider，密钥只在后端解密和发送；AI 返回结果必须经既有 Markdown 解析和点击的问题类型减少校验后才更新预览，正文与既有高亮只通过 Provider 提示词要求保留，不在服务端做内容或高亮匹配拦截。",
+          "在每条可修正问题旁显示“优化格式”、独立生成状态、失败反馈和逐次更新的可应用预览。"
+        ],
+        "outOfScope": [
+          "不修复 JSON 语法、JSON 读取错误或 JSON Schema 错误，不向该类预览显示 AI 修正。",
+          "不修复资料、章、节、闪卡标题和层级结构，不修复图片路径、缺失资源、ZIP 或 Excel 文件结构。",
+          "不修改原始上传文件，不自动应用导入，不保存 AI 修正历史或新增 Provider 配置。"
+        ],
+        "deferredTo": [
+          "如需让 AI 修复 JSON 协议、标题层级、资源引用或提供逐条差异确认，另立输入协议与交互任务评估。"
+        ]
+      },
+      "lastProgressOn": "2026-08-13",
+      "result": "导入预览的“需要处理”列表现在为每条 unsafe_html、invalid_formula、invalid_table 问题提供独立“优化格式”按钮。每次 AI 请求只发送该问题和对应的一张卡片正文，不同卡片的多个按钮可并发请求；服务端按卡片上下文和预览修订合并结果，保留其他卡片问题，并拒绝覆盖同一卡片已更新正文的旧结果。AI 返回会重新解析，仅校验点击的问题类型确实减少；正文与既有高亮由系统提示词要求 Provider 保留，服务端不再做正文保真或高亮重定位校验，AI 修正后的预览可直接应用并原样携带原高亮数据。JSON 读取、语法和 Schema 错误不创建修正预览，也不显示入口。",
+      "verification": [
+        "npm test 通过，99 项测试全部通过，包含逐条单卡请求、并发修正、JSON 语法错误禁用、重新解析预览、不拦截正文变化和不校验 AI 修正高亮回归。",
+        "npm run typecheck 通过。",
+        "npm run build 通过；Web 仅保留既有 Vite 大 Chunk 警告。",
+        "补充回归确认代码围栏和单项 cards Provider 响应会更新问题列表及下方闪卡正文预览。",
+        "内置浏览器仍因 RISK-021 所述的 Cannot redefine property: process 运行时错误无法连接，未执行页面截图验收。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/import-service.ts",
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/import-service.test.ts",
+        "apps/api/src/health.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "若真实 Provider 在特定模型上返回非 JSON 或多次并发同一卡片产生冲突，另立 Provider 兼容与冲突提示任务；本步不自动重试或润色正文。"
+    },
+    {
+      "id": "PH5-25",
+      "sequence": "25",
+      "order": 250,
+      "title": "HTML 表格导入与格式优化诊断",
+      "priority": "P1",
+      "moduleIds": [
+        "content-ingestion",
+        "ai-service"
+      ],
+      "milestoneIds": [
+        "M5",
+        "GA"
+      ],
+      "status": "进行中",
+      "startedOn": "2026-08-13",
+      "acceptance": "Markdown、ZIP 和内容级 JSON 正文中的安全 HTML 换行与表格可解析为结构化正文并正常阅读；脚本、样式、事件属性和其他未支持 HTML 继续被拒绝。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中",
+        "confirmedOn": "2026-08-13",
+      "summary": "兼容安全 HTML 换行与表格导入，复用现有结构化内容渲染并保持不安全 HTML 拒绝。",
+        "inScope": [
+          "将结构安全且可解析的 HTML table 转为内部 GFM 表格节点，不放行脚本、样式或其他原始 HTML。",
+        "将 HTML br、p、div 和 table/thead/tbody/tfoot/tr/th/td 转为现有 break、paragraph、table/tableRow/tableCell 节点，并保留表头和对齐信息。",
+        "补充 HTML 换行、表格、事件属性拒绝以及现有 JSON body 复用解析路径的 API 回归测试。"
+        ],
+        "outOfScope": [
+        "不修复 JSON 读取、JSON 语法或 JSON Schema 错误。",
+        "不放行脚本、样式、事件属性、链接和其他未列入白名单的原始 HTML，不支持跨行/跨列合并。",
+        "不改变 AI 格式修正、Provider 配置、高亮协议和原始上传文件。"
+        ],
+        "deferredTo": [
+        "复杂 HTML 跨行/跨列合并、样式语义和更多非表格 HTML 标签的转换另立任务。"
+        ]
+      },
+      "lastProgressOn": "2026-08-13",
+      "result": "导入解析器现兼容安全 HTML 的 br 换行、p/div 段落和 table/thead/tbody/tfoot/tr/th/td 表格，将其转换为现有结构化内容节点；HTML 表头和单元格 align 信息会保留，前端复习表格按显式表头渲染。脚本、样式、事件属性、链接及其他未支持标签仍报告 unsafe_html。JSON body 与 Markdown/ZIP 共用同一解析路径。",
+      "verification": [
+        "npm --workspace @knowledge-flashcards/api test 通过，101 项测试全部通过，新增 HTML 换行/表格转换与不安全属性拒绝回归。",
+        "npm run typecheck 通过。",
+        "npm run build:web 与 npm run build:api 通过；Web 仅有既有 Vite 大 chunk 警告。",
+        "内置浏览器仍因 RISK-021 所述的 Cannot redefine property: process 无法启动，未完成实际页面表格回归，因此任务保持进行中。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/ingestion.ts",
+        "apps/api/src/ingestion.test.ts",
+        "apps/api/src/review-service.ts",
+        "apps/web/src/App.tsx",
+        "packages/shared/src/api.ts",
+        "apps/api/package.json",
+        "package-lock.json",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "待内置浏览器运行时恢复后验证 HTML 换行和显式表头表格的实际阅读展示；colspan/rowspan、style 语义或更多 HTML 标签另立任务。"
+    }
+  ]
+}

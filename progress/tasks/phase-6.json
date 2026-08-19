@@ -1,0 +1,563 @@
+{
+  "phaseId": "phase-6",
+  "tasks": [
+    {
+      "id": "PH6-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "冻结题库领域协议与阶段拆分",
+      "priority": "P0",
+      "moduleIds": [
+        "project-governance",
+        "question-bank",
+        "practice-experience",
+        "question-ai",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M6"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-19",
+      "completedOn": "2026-08-19",
+      "acceptance": "产品定位、开发方案、设计规范和结构化进度源已一致定义章节题/真题/模拟题入口、JSON/Excel 模板、题型校验、双模式刷题、统计、错题专项、AI 历史与备份兼容；后续任务均有明确边界。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-19",
+        "summary": "将用户确认的刷题模块决策固化为可实施、可验收的领域协议和最小任务序列。",
+        "inScope": [
+          "明确课程→科目→章节题/真题/模拟题→题库→题目层级，其中仅章节题在导入与管理中拥有章节树。",
+          "明确章节题与真题/模拟题的 JSON、Excel 模板差异，及题干、题型、选项、答案必填和 A-F 连续选项校验。",
+          "明确背题、检测、会话续答、错题专项、统计、可视化编辑、题目 AI 多版本与备份迁移的交互和数据边界。",
+          "新增第六阶段任务卡、范围风险和变更日志，并同步自动生成的展示层。"
+        ],
+        "outOfScope": [
+          "不创建数据库迁移、共享 API 契约、题库导入接口、前端入口或任何刷题界面。",
+          "不实现题目与闪卡知识点联动、题目图片导入、随机出题、部分得分、主观题 AI 评分、趋势图或日期筛选。",
+          "不修改现有闪卡导入、闪卡复习、现有 AI 讲解存储或已发布备份内容。"
+        ],
+        "deferredTo": [
+          "PH6-02 负责数据库、共享契约和备份恢复迁移。",
+          "PH6-03 至 PH6-08 分别负责题库导入、目录管理、可视化编辑、刷题会话、统计错题专项和题目 AI。",
+          "PH6-09 负责整链路真实 MySQL、浏览器和备份回归。"
+        ]
+      },
+      "lastProgressOn": "2026-08-19",
+      "result": "题库功能的层级、模板字段、必填校验、题型、作答模式、统计口径、错题口径、编辑语义、AI 历史和备份兼容已与产品、开发和设计基线一致。章节题按文件章节建树；真题和模拟题导入整套题库且无章节。",
+      "verification": [
+        "npm run progress:build 通过，自动展示层已由结构化源生成。",
+        "npm run progress:check 通过，阶段、里程碑、模块、任务、风险和日志引用一致。"
+      ],
+      "affectedFiles": [
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/config.json",
+        "progress/tasks/phase-6.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "按 PH6-02 先建立可迁移的数据模型、共享 API 契约和备份恢复兼容，随后才实现任何题库导入或界面。"
+    },
+    {
+      "id": "PH6-02",
+      "sequence": "2",
+      "order": 20,
+      "title": "建立题库数据模型与备份恢复兼容",
+      "priority": "P0",
+      "moduleIds": [
+        "question-bank",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M6"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-19",
+      "completedOn": "2026-08-19",
+      "acceptance": "MySQL 迁移、共享 TypeScript 契约及 JSON 备份恢复支持题库、章节、题目、题目 AI 版本、作答会话和快照；旧 version 1 闪卡备份仍可恢复，且不包含任何 API Key。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-19",
+        "summary": "先建立与闪卡隔离的题库持久化和完整备份契约，使后续导入、编辑、刷题和 AI 功能建立在可恢复的数据基础上。",
+        "inScope": [
+          "新增题库、章节题章节、题目、题目 AI 讲解版本、刷题会话和作答快照的 MySQL 迁移及迁移测试。",
+          "扩展共享 TypeScript 类型与 JSON 导出/恢复，当前导出使用 version 2，恢复兼容已有 version 1 闪卡备份。",
+          "保存题目结构化正文、选项、答案、知识点、题目版本、会话范围、作答快照和最终判定所需字段；背题、检测和错题专项均可作为最近有效结果来源。",
+          "补充 JSON 导出恢复与敏感字段隔离测试，并运行真实 MySQL 迁移与现有数据治理回归。"
+        ],
+        "outOfScope": [
+          "不提供题库导入模板、预览、应用接口或前端导入入口。",
+          "不提供题库目录、章节、题目编辑、刷题、统计、错题专项或题目 AI 请求接口与界面。",
+          "不实现题目和闪卡知识点联动、题目图片、随机抽题、部分得分、主观题 AI 评分或统计趋势。"
+        ],
+        "deferredTo": [
+          "PH6-03 使用本步模型实现题库 JSON/Excel 模板、预览和应用。",
+          "PH6-04、PH6-05 分别提供目录和可视化编辑的业务接口与界面。",
+          "PH6-06 至 PH6-08 分别实现刷题会话、统计错题专项和题目 AI 讲解。"
+        ]
+      },
+      "lastProgressOn": "2026-08-19",
+      "result": "新增 question_banks、question_chapters、questions、question_ai_explanations、practice_sessions 和 practice_attempts 表，并扩展题库回收站实体枚举。共享契约支持题库类型、三种题型、双模式、三种来源、题目结构化内容、AI 多版本、会话和不可变作答快照。完整导出升级为 version 2，恢复端兼容 version 1 闪卡备份；v2 恢复会写回题库与快照并返回各类数量。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm --workspace @knowledge-flashcards/api test 通过，105 项测试全部通过。",
+        "npm run db:migrate 真实 MySQL 成功执行 005_phase_6_question_bank.sql 与 006_phase_6_question_trash.sql。",
+        "npm run test:data-governance:integration 通过真实 HTTP 数据导出/恢复回归。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "database/migrations/005_phase_6_question_bank.sql",
+        "database/migrations/006_phase_6_question_trash.sql",
+        "apps/api/src/migration.test.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "packages/shared/src/api.ts",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "进入 PH6-03，实现按章节题/真题/模拟题选择的 JSON/Excel 题库导入、模板下载和预览校验。"
+    },
+    {
+      "id": "PH6-03",
+      "sequence": "3",
+      "order": 30,
+      "title": "实现题库 JSON/Excel 导入与模板",
+      "priority": "P0",
+      "moduleIds": [
+        "question-bank"
+      ],
+      "milestoneIds": [
+        "M6"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-19",
+      "completedOn": "2026-08-19",
+      "acceptance": "导入页可在既有课程、科目和三类题库入口下下载对应 JSON/Excel 模板、预览和应用；章节题按章节建树，真题/模拟题无章节，所有已确认必填、连续选项、答案、判断题和重名题库校验均有定位错误。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-19",
+        "summary": "建立题库 JSON/Excel 的下载、解析、严格预览和原子写入 API，为后续导入页接入准备稳定协议。",
+        "inScope": [
+          "提供章节题与真题/模拟题各自适用的 JSON、Excel 模板；题目 JSON/Excel 仅描述一套题库，课程、科目和入口类型由请求选择。",
+          "校验题库名称、章节题章节、题干、题型、A-F 连续实际选项、答案、判断题固定选项、解析/知识点可空以及同一课程科目类型下的重名题库。",
+          "支持导入预览、取消、应用和精确的行/字段错误；验证课程、科目及二者归属，使用事务写入题库、章节和题目。",
+          "补充共享 API 契约、服务单元测试、HTTP 契约测试和真实 MySQL 导入回归。"
+        ],
+        "outOfScope": [
+          "不接入现有导入页面、模板下载按钮、前端文件上传或任何题库管理页面。",
+          "不支持题目图片、ZIP、Markdown、批量题库、同名覆盖/追加、AI 格式修正或从闪卡资料导入。",
+          "不实现题目应用内编辑、刷题会话、统计、错题专项、题目 AI 讲解或题目与闪卡联动。"
+        ],
+        "deferredTo": [
+          "PH6-04 和 PH6-05 接入题库目录、题目管理及可视化编辑。",
+          "导入页的内容/类型分段、模板图标、文件选择和预览界面随 PH6-04 的题库入口一并接入。",
+          "PH6-06 至 PH6-08 分别实现刷题、统计错题专项和题目 AI 讲解。"
+        ]
+      },
+      "lastProgressOn": "2026-08-19",
+      "result": "新增独立题库导入服务和受认证保护的题库模板、预览、应用、取消 API。章节题按 JSON chapters 或 Excel 章节列写入 question_chapters；真题和模拟题只写入题库及根级题目。导入严格校验题库名、课程科目归属、章节、题干、题型、A-F 连续实际选项、答案、判断题固定选项和同科目同类型重名；解析、知识点可为空，题干/选项/解析复用结构化 Markdown 内容解析。应用只能使用服务端预览令牌，并在同一事务中锁定题库集合、检查重名和写入实体。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm --workspace @knowledge-flashcards/api test 通过，110 项测试全部通过；覆盖 JSON/Excel 模板、题型/选项/答案校验、重名、事务回滚与认证 HTTP 契约。",
+        "npm run test:question-import:integration 通过真实 MySQL 与 HTTP 回归，验证章节、题目、多选答案、解析和知识点的实际写入。",
+        "npm run db:migrate 通过，已确认 005/006 题库迁移保持已应用状态。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/question-import-service.ts",
+        "apps/api/src/question-import-service.test.ts",
+        "apps/api/src/question-import-http.test.ts",
+        "apps/api/test/question-import-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "package.json",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "进入 PH6-04，在课程科目下接入题库目录和导入入口；本步导入 API 保持无前端依赖。"
+    },
+    {
+      "id": "PH6-04",
+      "sequence": "4",
+      "order": 40,
+      "title": "实现课程科目下的题库目录管理",
+      "priority": "P0",
+      "moduleIds": [
+        "question-bank"
+      ],
+      "milestoneIds": [
+        "M6"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-19",
+      "completedOn": "2026-08-19",
+      "lastProgressOn": "2026-08-19",
+      "acceptance": "科目页可在资料与题库间切换，题库页固定显示章节题、真题、模拟题入口；各入口支持空题库新建、改名、排序、软删除与恢复，章节题额外支持章节新增、改名、排序、移动和删除约束。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-19",
+        "summary": "在既有课程到科目的资料目录中增加题库分段与目录管理，使空题库和已导入题库能在独立领域模型上被安全组织。",
+        "inScope": [
+          "扩展共享 API 契约与认证服务，提供按科目读取题库目录，以及题库新建、改名、排序、软删除、恢复和章节目录管理。",
+          "实现题库软删除、恢复与目录约束：删除会将题库及其章节题目一起移入回收站；章节删除前必须不含有效题目，章节移动只限同一科目的章节题库。",
+          "在课程、科目路径下增加资料/题库分段、章节题/真题/模拟题入口、题库目录和导入入口；复用 PH6-03 的导入 API 与模板能力。",
+          "为目录服务和 HTTP 契约补充单元/集成回归，并执行前端类型和生产构建校验。"
+        ],
+        "outOfScope": [
+          "不实现题目新增、编辑、删除、排序或可视化题干/选项/解析编辑。",
+          "不实现背题、检测、会话续答、统计、错题专项或题目 AI 讲解。",
+          "不修改 PH6-03 导入文件格式、预览校验或原子写入规则，不支持题目图片、随机出题或题目与闪卡联动。"
+        ],
+        "deferredTo": [
+          "PH6-05 负责题目可视化编辑与题目级管理。",
+          "PH6-06 至 PH6-08 分别负责刷题会话、统计错题专项和题目 AI 讲解。",
+          "PH6-09 负责题库主链路、备份恢复和浏览器端整体验收。"
+        ]
+      },
+      "lastProgressOn": "2026-08-19",
+      "result": "新增独立题库目录服务与受认证保护 API，在科目资料页接入资料/题库切换、章节题/真题/模拟题固定分组、空题库新建、改名、上下排序、软删除、恢复与章节目录管理。题库导入入口在当前课程和科目上下文中打开，支持类型选择、JSON/Excel 模板下载、文件预览、定位错误、取消和原子应用。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，113 项 API 测试全部通过。",
+        "npm run test:question-bank:integration 通过真实 MySQL 与 HTTP 回归，覆盖题库新建、章节新建与移动、软删除、回收站读取和恢复。",
+        "npm run build 通过。",
+        "npm run progress:build 与 npm run progress:check 通过。",
+        "本轮内置浏览器权限桥接不可用，未能自动执行桌面与 390px 实机页面截图；已启动无认证本地验收服务 http://127.0.0.1:5175，API 为 http://127.0.0.1:8788。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/question-bank-service.ts",
+        "apps/api/src/question-bank-service.test.ts",
+        "apps/api/test/question-bank-real-mysql-http.test.ts",
+        "apps/api/package.json",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "package.json",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "进入 PH6-05，实现题干、选项和解析的可视化题目编辑，以及题目新增、移动、排序和软删除。"
+    },
+    {
+      "id": "PH6-05",
+      "sequence": "5",
+      "order": 50,
+      "title": "实现可视化题目编辑",
+      "priority": "P0",
+      "moduleIds": [
+        "question-bank",
+        "visual-editor"
+      ],
+      "milestoneIds": [
+        "M6"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-19",
+      "completedOn": "2026-08-19",
+      "lastProgressOn": "2026-08-19",
+      "acceptance": "题库内可新增、编辑、移动、排序和软删除题目；题干、选项、解析均通过可视化编辑，选项动态增删且最多六项，保存时严格复用题型、答案和判断题校验，不出现 Markdown 或 LaTex 源码编辑态。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-19",
+        "summary": "在 PH6-04 题库目录内增加题目级管理和可视化编辑，沿用题库模型与导入校验，先完成可独立验收的题目 CRUD 主链路。",
+        "inScope": [
+          "提供按题库读取有效题目及回收站题目，题目新增、编辑、移动题库/章节、上下排序、软删除和恢复 API。",
+          "可视化编辑题干、选项、解析和知识点；题型切换、选项动态增删（最多 A-F 六项）、答案选择复用既有严格校验，判断题固定为 A: 对、B: 错。",
+          "在题库详情中展示题目列表、题型和答案摘要，并以编辑抽屉/表单完成新增和修改，不出现 Markdown 或 LaTex 源码编辑态。",
+          "补充题目服务校验单测，并通过类型检查与生产构建验证前后端契约。"
+        ],
+        "outOfScope": [
+          "不实现背题、检测、会话续答、统计、错题专项或题目 AI 讲解。",
+          "不实现题目图片、随机抽题、部分得分、主观题 AI 评分或题目与闪卡知识点联动。",
+          "不修改 PH6-03 导入文件格式、预览令牌和原子导入规则，不提供 Markdown/LaTex 源码输入模式。"
+        ],
+        "deferredTo": [
+          "PH6-06 负责题目背题、检测和会话快照。",
+          "PH6-07 负责统计与错题专项；PH6-08 负责题目 AI 讲解和版本历史。",
+          "PH6-09 负责三类题库、编辑、刷题、统计、备份恢复和浏览器端整体验收。"
+        ]
+      },
+      "result": "新增独立题目服务与认证 API，支持题目列表、可视化结构化内容保存、题型/选项/答案/判断题校验、题库与章节移动、排序、软删除、回收站恢复和编辑版本递增。题库页增加题目工作区，题干、选项、解析和知识点均通过可视化控件编辑，支持最多六项动态选项和同科目题库移动。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，115 项 API 测试全部通过，新增题目保存校验测试。",
+        "npm run build 通过，Web 与 API 生产构建成功。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/app.ts",
+        "apps/api/src/question-service.ts",
+        "apps/api/src/question-service.test.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "进入 PH6-06，实现背题与检测会话；统计、错题专项和题目 AI 继续分别由 PH6-07、PH6-08 负责。"
+    },
+    {
+      "id": "PH6-06",
+      "sequence": "6",
+      "order": 60,
+      "title": "实现背题与检测会话",
+      "priority": "P0",
+      "moduleIds": [
+        "practice-experience",
+        "question-bank"
+      ],
+      "milestoneIds": [
+        "M6"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-19",
+      "completedOn": "2026-08-19",
+      "lastProgressOn": "2026-08-19",
+      "acceptance": "题库可按整套或章节启动背题、检测；背题即时按绿色正确/红色误选反馈，检测过程不泄露结果且支持返回修改，单选/判断自动下一题、多选确认后下一题，未完成会话可继续或放弃并保存最终答案快照。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-19",
+        "summary": "在 PH6-05 题目主链路上增加可恢复的背题和检测会话，服务端持久化不可变题目快照并隔离检测答案。",
+        "inScope": [
+          "按整套或章节启动 cram 背题、test 检测，创建会话和每题作答快照；章节仅限章节题库。",
+          "支持未完成会话列表、继续、单题作答、检测返回修改、完成和放弃；单选/判断前端自动进入下一题，多选由用户确认后进入下一题。",
+          "背题作答返回正确/错误反馈与正确答案；检测作答和会话读取不返回正确答案，完成后才返回结果摘要。",
+          "补充共享契约、会话服务单测和认证 HTTP 契约，验证题目版本快照、答案隔离、事务写入和会话状态转换。"
+        ],
+        "outOfScope": [
+          "不实现统计、正确率趋势、累计错题专项或答对后移出规则。",
+          "不实现题目 AI 讲解、临时提示词、版本历史或题目与闪卡知识点联动。",
+          "不实现随机抽题、部分得分、主观题 AI 评分、跨题库会话和修改既有题库导入格式。"
+        ],
+        "deferredTo": [
+          "PH6-07 负责完成会话后的统计、正确率、题型/模式累计和错题专项。",
+          "PH6-08 负责题目 AI 讲解和题目版本历史标记。",
+          "PH6-09 负责真实 MySQL、备份恢复与桌面/390px 刷题链路整体验收。"
+        ]
+      },
+      "result": "新增可恢复的背题与检测会话。题库可按整套或章节启动 cram/test；服务端在会话创建时保存题干、选项、答案、解析和题目版本快照，作答写入 practice_attempts。背题即时返回正确/错误、正确答案和解析；检测在完成前隐藏正确答案与解析，完成时计算结果并揭示答案。题库页接入范围选择、背题/检测入口、未完成会话继续和放弃；单选/判断选择后自动前进，多选确认后前进。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，120 项 API 测试全部通过，覆盖会话服务与认证 HTTP 契约。",
+        "npm run build 通过；Web 构建仅保留既有大 chunk 警告。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/practice-service.ts",
+        "apps/api/src/practice-service.test.ts",
+        "apps/api/src/practice-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "PH6-07 实现完成会话统计、正确率和错题专项；PH6-08 实现题目 AI 讲解与版本历史。真实 MySQL、备份恢复和桌面/390px 刷题链路留待 PH6-09。"
+    },
+    {
+      "id": "PH6-07",
+      "sequence": "7",
+      "order": 70,
+      "title": "实现题库统计与错题专项",
+      "priority": "P1",
+      "moduleIds": [
+        "practice-experience"
+      ],
+      "milestoneIds": [
+        "M6"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-19",
+      "completedOn": "2026-08-19",
+      "lastProgressOn": "2026-08-19",
+      "acceptance": "完成会话后可查看总题数、已作答、未作答、正确、错误与一位小数正确率；题库、章节题章节、题型和模式均有累计统计，支持本次错题和累计错题专项，累计错题答对后立即移出。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-19",
+        "summary": "在 PH6-06 可恢复会话基础上增加完成结果、题库统计和错题专项，统计口径固定为已完成会话。",
+        "inScope": [
+          "新增题库总览、章节题章节、题型和 cram/test 模式累计统计，返回总题数、已作答、未作答、正确、错误、百分比正确率和最近完成时间。",
+          "检测完成后展示本次结果，并允许从指定已完成会话启动本次错题练习；题库页可启动累计错题练习。",
+          "累计错题按每题最近一次已完成结果保留，后续已完成会话答对后从累计错题中移除；错题练习继续复用不可变题目快照。",
+          "补充共享契约、统计/错题服务、认证 HTTP 契约和单元测试，并接入题库工作区。"
+        ],
+        "outOfScope": [
+          "不实现日期趋势图、日期筛选、部分得分、随机抽题、主观题 AI 评分或跨题库统计。",
+          "不实现题目 AI 讲解、知识点联动、答对后修改题目或错题的手工移除。",
+          "不在本步执行真实 MySQL、备份恢复和桌面/390px 浏览器整体验收。"
+        ],
+        "deferredTo": [
+          "PH6-08 负责题目 AI 讲解和题目版本历史标记。",
+          "PH6-09 负责真实 MySQL、备份恢复与桌面/390px 刷题链路整体验收。"
+        ]
+      },
+      "result": "新增题库统计服务和错题来源会话。已完成会话返回本次总题数、已作答、未作答、正确、错误和一位小数正确率；题库工作区展示总览、章节、题型和 cram/test 模式统计及累计错题数。累计统计按当前题库有效题目和每题最近一次已作答完成结果汇总，未作答不会覆盖既有答题状态。错题专项支持指定已完成会话的本次错题与每题最近一次仍答错的累计错题，后续完成并答对后会从累计错题移除。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，122 项 API 测试全部通过，覆盖结果摘要、统计聚合、错题来源和认证 HTTP 统计路由。",
+        "npm run build 通过；Web 构建仅保留既有大 chunk 警告。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/practice-service.ts",
+        "apps/api/src/practice-service.test.ts",
+        "apps/api/src/practice-statistics-service.ts",
+        "apps/api/src/practice-statistics-service.test.ts",
+        "apps/api/src/practice-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH6-08，实现题目 AI 讲解与版本历史；真实 MySQL、备份恢复和桌面/390px 刷题整体验收留待 PH6-09。"
+    },
+    {
+      "id": "PH6-08",
+      "sequence": "8",
+      "order": 80,
+      "title": "实现题目 AI 讲解与版本历史",
+      "priority": "P1",
+      "moduleIds": [
+        "question-ai",
+        "question-bank"
+      ],
+      "milestoneIds": [
+        "M6"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-19",
+      "completedOn": "2026-08-19",
+      "lastProgressOn": "2026-08-19",
+      "acceptance": "题目详情可使用当前启用 Provider 与可选临时提示词生成、取消和安全渲染讲解；请求仅含当前题目及本次作答上下文，每次生成保留版本，题目变更后旧版本标注可能过时且不删除。",
+      "executionBoundary": {
+        "confirmed": true,
+      "statusLabel": "已完成",
+        "confirmedOn": "2026-08-19",
+        "summary": "在现有题目编辑和刷题会话基础上增加题目级 AI 讲解，多版本追加保存并对题目版本变化做过时提示。",
+        "inScope": [
+          "新增题目 AI 讲解共享契约、历史查询和生成 API；生成只读取当前有效题目与可选本次作答上下文。",
+          "复用当前启用 AI Provider 的解密、超时和取消机制；每次成功生成向 question_ai_explanations 追加一条版本，不覆盖旧记录。",
+          "在题目详情提供折叠式 AI 讲解区、临时提示词、生成/停止、历史版本和安全文本渲染；题目版本变化时标注讲解可能过时。",
+          "补充服务与 HTTP 契约测试，并完成类型检查、测试、构建和进度源校验。"
+        ],
+        "outOfScope": [
+          "不实现题目图片理解、主观题 AI 评分、自动改题、自动重试或 Provider 管理页改造。",
+          "不修改题库导入格式、题目编辑校验、刷题判分、统计口径或闪卡既有 AI 讲解存储。",
+          "不在本步完成真实 MySQL 全链路和桌面/移动浏览器验收。"
+        ],
+      "deferredTo": [
+          "PH6-09 负责真实 MySQL、备份恢复和桌面/390px 浏览器整体验收。",
+          "后续独立任务负责题目图片、多模态 Provider 或 AI 评分能力。"
+      ],
+      "result": "新增题目 AI 讲解服务与认证 API，读取当前有效题目结构和可选作答上下文，调用当前启用 Provider，并在成功后向 question_ai_explanations 追加版本。题目详情接入折叠式 AI 讲解、临时提示词、生成/停止、历史版本和安全 Markdown 渲染；历史按当前题目版本标注可能过时。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，126 项 API 测试全部通过，覆盖 Provider 请求内容、密钥隔离、版本追加、取消不写入、过时标记和认证 HTTP 路由。",
+        "npm run build 通过；Web 构建仅保留既有大 chunk 警告。",
+        "真实 MySQL、备份恢复和桌面/390px 浏览器验收按边界留待 PH6-09。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/question-ai-service.ts",
+        "apps/api/src/question-ai-service.test.ts",
+        "apps/api/src/question-ai-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "进入 PH6-09，执行真实 MySQL、备份恢复以及桌面/390px 浏览器端题库主链路验收。"
+      }
+    },
+    {
+      "id": "PH6-09",
+      "sequence": "9",
+      "order": 90,
+      "title": "验证题库主链路与备份恢复",
+      "priority": "P0",
+      "moduleIds": [
+        "question-bank",
+        "practice-experience",
+        "question-ai",
+        "data-governance",
+        "delivery-security"
+      ],
+      "milestoneIds": [
+        "M6",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-19",
+      "completedOn": "2026-08-19",
+      "lastProgressOn": "2026-08-19",
+      "acceptance": "真实 MySQL、HTTP、JSON 备份恢复和桌面/390px 浏览器验收覆盖三类题库导入、编辑、两种刷题模式、续答、统计、错题专项与 AI 历史；无文本溢出、答案泄露、错误统计或未受保护的业务接口回归。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-19",
+        "summary": "对第六阶段题库主链路执行真实 MySQL、HTTP、备份恢复和桌面/390px 浏览器的整体验收，记录环境阻塞并只修复本阶段回归。",
+        "inScope": [
+          "运行题库导入、目录、题目编辑、刷题、统计错题和题目 AI 的真实 MySQL/HTTP 集成测试，并检查认证门禁。",
+          "验证 JSON v2 导出/恢复包含题库、题目 AI 版本、会话和作答快照，且不暴露 API Key。",
+          "启动本地 Web/API，使用桌面和 390px 视口检查题库入口、题目编辑、刷题结果、AI 历史、无横向溢出和答案隐藏。",
+          "对发现的 PH6 回归补最小代码或测试修复，并同步风险、日志和自动生成进度展示层。"
+        ],
+        "outOfScope": [
+          "不新增题库产品能力，不改变已冻结的题型、统计、错题、AI 版本或备份契约。",
+          "不使用真实 Provider API Key 进行联网生成，不记录或导出任何密钥。",
+          "不把无法启动的外部 MySQL、浏览器权限或 Provider 环境伪装为已验收。"
+        ],
+        "deferredTo": [
+          "真实 Provider 多模型兼容和公网 Tunnel 验收另立交付任务。"
+        ]
+      },
+      "result": "完成第六阶段题库主链路验收。真实 MySQL/HTTP 通过题库导入、目录、数据治理和备份回归；临时真实题库夹具验证题目读取、检测作答隐藏与完成结果、统计错题和 AI 历史查询；桌面与 390px 终端浏览器验证题库入口、题目 AI 折叠区、检测结果和无横向溢出。",
+      "verification": [
+        "npm run test:question-import:integration 通过真实 MySQL 与 HTTP。",
+        "npm run test:question-bank:integration 通过真实 MySQL 与 HTTP。",
+        "npm run test:data-governance:integration 通过真实 HTTP，备份/恢复契约不下发秘密。",
+        "npm run test:backup:integration 通过真实 MySQL、HTTP 和资源目录；此前失败的历史无引用夹具已精确清理后重跑通过。",
+        "npm run db:check 与 npm run storage:check 通过。",
+        "Playwright 1440x900 与 390x844 验证题库/AI/检测结果页面，documentElement.scrollWidth 等于 clientWidth，控制台无错误。",
+        "真实 Provider 联网生成未执行，避免使用真实 API Key；生成逻辑由 PH6-08 服务测试覆盖。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md",
+        "output/playwright/ph6-09-question-desktop.png",
+        "output/playwright/ph6-09-question-mobile.png",
+        "output/playwright/ph6-09-question-mobile-workspace.png",
+        "output/playwright/ph6-09-practice-mobile.png"
+      ],
+      "next": "第六阶段主链路完成；后续仅处理真实 Provider 多模型兼容、公网 Tunnel 或新需求。"
+    }
+  ]
+}
