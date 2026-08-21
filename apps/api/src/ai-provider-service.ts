@@ -4,7 +4,9 @@ import {
   type AiProviderKind,
   type AiProviderProfile,
   type AiProviderProfileCreateRequest,
+  type AiProviderProfileStateUpdateRequest,
   type AiProviderProfileUpdateRequest,
+  type AiProviderProfilesReorderRequest,
   type AiProviderProfilesResponse,
 } from '@knowledge-flashcards/shared';
 import { config } from './config.js';
@@ -50,8 +52,18 @@ export interface AiProviderService {
   create(request: AiProviderProfileCreateRequest): Promise<AiProviderProfilesResponse>;
   update(profileId: string, request: AiProviderProfileUpdateRequest): Promise<AiProviderProfilesResponse>;
   activate(profileId: string): Promise<AiProviderProfilesResponse>;
+  setState(profileId: string, request: AiProviderProfileStateUpdateRequest): Promise<AiProviderProfilesResponse>;
+  reorder(request: AiProviderProfilesReorderRequest): Promise<AiProviderProfilesResponse>;
   remove(profileId: string): Promise<AiProviderProfilesResponse>;
   testConnection(profileId: string): Promise<{ message: string }>;
+}
+
+export interface ActiveAiProvider {
+  id: string;
+  provider: string;
+  baseUrl: string;
+  model: string;
+  apiKey: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -75,6 +87,11 @@ function booleanValue(value: unknown): boolean {
 
 function affectedRows(value: unknown): number {
   return isRecord(value) && typeof value.affectedRows === 'number' ? value.affectedRows : 0;
+}
+
+function nonNegativeInteger(value: unknown): number {
+  const result = Number(value);
+  return Number.isInteger(result) && result >= 0 ? result : 0;
 }
 
 function requiredText(value: unknown, label: string, maxLength: number): string {
@@ -132,6 +149,7 @@ function profileFromRow(row: Record<string, unknown>): AiProviderProfile | null 
     model: textValue(row.model),
     hasApiKey: booleanValue(row.has_api_key),
     isActive: booleanValue(row.is_active),
+    priority: nonNegativeInteger(row.priority),
   };
 }
 
@@ -179,6 +197,42 @@ export function decryptAiProviderApiKey(ciphertext: Buffer | Uint8Array | string
   }
 }
 
+export async function activeAiProviders(
+  database: AiProviderSqlExecutor,
+  encryptionSecret: string,
+): Promise<ActiveAiProvider[]> {
+  const [rows] = await database.execute(`
+    SELECT id, provider, base_url, model, api_key_ciphertext
+    FROM ai_provider_profiles
+    WHERE is_active = TRUE
+    ORDER BY priority ASC, updated_at DESC, id
+  `);
+  const configured = rowsFrom(rows);
+  if (configured.length === 0) {
+    throw new AiProviderApiError(503, '尚未配置启用的 AI Provider。');
+  }
+
+  const providers: ActiveAiProvider[] = [];
+  for (const profile of configured) {
+    if (!profile.api_key_ciphertext) continue;
+    try {
+      providers.push({
+        id: textValue(profile.id),
+        provider: textValue(profile.provider),
+        baseUrl: textValue(profile.base_url),
+        model: textValue(profile.model),
+        apiKey: decryptAiProviderApiKey(profile.api_key_ciphertext as Buffer, encryptionSecret),
+      });
+    } catch {
+      // 单个渠道密钥失效时继续尝试优先级更低的候选渠道。
+    }
+  }
+  if (providers.length === 0) {
+    throw new AiProviderApiError(503, '没有可用的已启用 AI Provider。');
+  }
+  return providers;
+}
+
 export class AiProviderServiceImpl implements AiProviderService {
   private readonly fetchImplementation: typeof fetch;
   private readonly requestTimeoutMs: number;
@@ -193,9 +247,9 @@ export class AiProviderServiceImpl implements AiProviderService {
       `
         SELECT id, name, provider, base_url, model,
           api_key_ciphertext IS NOT NULL AS has_api_key,
-          is_active
+          is_active, priority
         FROM ai_provider_profiles
-        ORDER BY is_active DESC, updated_at DESC, id
+        ORDER BY is_active DESC, priority ASC, updated_at DESC, id
       `,
     );
     return {
@@ -214,17 +268,14 @@ export class AiProviderServiceImpl implements AiProviderService {
     const connection = await this.options.database.getConnection();
     try {
       await connection.beginTransaction();
-      if (request.isActive) {
-        await this.lockActiveProfileUpdates(connection);
-        await connection.execute('UPDATE ai_provider_profiles SET is_active = FALSE WHERE is_active = TRUE');
-      }
+      const priority = request.isActive ? await this.nextActivePriority(connection) : 0;
       await connection.execute(
         `
           INSERT INTO ai_provider_profiles
-            (id, name, provider, base_url, model, api_key_ciphertext, is_active)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+            (id, name, provider, base_url, model, api_key_ciphertext, is_active, priority)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `,
-        [randomUUID(), profile.name, profile.provider, profile.baseUrl, profile.model, encryptAiProviderApiKey(apiKey, this.options.encryptionSecret), request.isActive],
+        [randomUUID(), profile.name, profile.provider, profile.baseUrl, profile.model, encryptAiProviderApiKey(apiKey, this.options.encryptionSecret), request.isActive, priority],
       );
       await connection.commit();
     } catch (error) {
@@ -268,7 +319,14 @@ export class AiProviderServiceImpl implements AiProviderService {
   }
 
   async activate(profileId: string): Promise<AiProviderProfilesResponse> {
+    return this.setState(profileId, { isActive: true });
+  }
+
+  async setState(profileId: string, request: AiProviderProfileStateUpdateRequest): Promise<AiProviderProfilesResponse> {
     const id = normalizedProfileId(profileId);
+    if (!isRecord(request) || typeof request.isActive !== 'boolean') {
+      throw new AiProviderApiError(400, '启用状态格式无效。');
+    }
     const connection = await this.options.database.getConnection();
     try {
       await connection.beginTransaction();
@@ -280,8 +338,42 @@ export class AiProviderServiceImpl implements AiProviderService {
       if (rowsFrom(existingRows).length === 0) {
         throw new AiProviderApiError(404, 'Provider 配置不存在。');
       }
-      await connection.execute('UPDATE ai_provider_profiles SET is_active = FALSE WHERE is_active = TRUE');
-      await connection.execute('UPDATE ai_provider_profiles SET is_active = TRUE WHERE id = ?', [id]);
+      if (request.isActive) {
+        const priority = await this.nextActivePriority(connection);
+        await connection.execute('UPDATE ai_provider_profiles SET is_active = TRUE, priority = ? WHERE id = ?', [priority, id]);
+      } else {
+        await connection.execute('UPDATE ai_provider_profiles SET is_active = FALSE, priority = 0 WHERE id = ?', [id]);
+      }
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback().catch(() => undefined);
+      throw error;
+    } finally {
+      connection.release();
+    }
+    return this.list();
+  }
+
+  async reorder(request: AiProviderProfilesReorderRequest): Promise<AiProviderProfilesResponse> {
+    if (!isRecord(request) || !Array.isArray(request.profileIds) || request.profileIds.length === 0) {
+      throw new AiProviderApiError(400, 'Provider 排序格式无效。');
+    }
+    const profileIds = request.profileIds.map((id) => typeof id === 'string' ? normalizedProfileId(id) : '');
+    if (profileIds.some((id) => !id) || new Set(profileIds).size !== profileIds.length) {
+      throw new AiProviderApiError(400, 'Provider 排序格式无效。');
+    }
+    const connection = await this.options.database.getConnection();
+    try {
+      await connection.beginTransaction();
+      await this.lockActiveProfileUpdates(connection);
+      const [rows] = await connection.execute('SELECT id FROM ai_provider_profiles WHERE is_active = TRUE FOR UPDATE');
+      const activeIds = rowsFrom(rows).map((row) => textValue(row.id));
+      if (activeIds.length !== profileIds.length || activeIds.some((id) => !profileIds.includes(id))) {
+        throw new AiProviderApiError(409, 'Provider 候选池已变化，请刷新后重试。');
+      }
+      for (const [index, id] of profileIds.entries()) {
+        await connection.execute('UPDATE ai_provider_profiles SET priority = ? WHERE id = ? AND is_active = TRUE', [index + 1, id]);
+      }
       await connection.commit();
     } catch (error) {
       await connection.rollback().catch(() => undefined);
@@ -381,6 +473,11 @@ export class AiProviderServiceImpl implements AiProviderService {
       'SELECT setting_key FROM app_settings WHERE setting_key = ? FOR UPDATE',
       [activeProfileMutexKey],
     );
+  }
+
+  private async nextActivePriority(connection: AiProviderSqlConnection): Promise<number> {
+    const [rows] = await connection.execute('SELECT COALESCE(MAX(priority), 0) + 1 AS next_priority FROM ai_provider_profiles WHERE is_active = TRUE FOR UPDATE');
+    return Math.max(1, nonNegativeInteger(rowsFrom(rows)[0]?.next_priority));
   }
 }
 

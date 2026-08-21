@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import XlsxPopulate from 'xlsx-populate';
 import {
   createQuestionImportTemplate,
   InMemoryQuestionImportPreviewStore,
@@ -86,6 +87,31 @@ test('题库 JSON 预览规范化答案、解析正文并事务写入', async ()
   assert.equal(database.connection.transactionStarted, true);
   assert.equal(database.connection.committed, true);
   assert.equal(database.connection.statements.filter((item) => item.sql.includes('INSERT INTO questions')).length, 1);
+});
+
+test('题干超过 255 个字符仍可预览并应用', async () => {
+  const database = new FakeDatabase();
+  const questionImport = service(database);
+  const stem = '题'.repeat(256);
+  const preview = await questionImport.preview('长题干.json', source({ stem }), 'course-1', 'subject-1', 'official');
+  assert.equal(preview.valid, true);
+  assert.equal(preview.document?.questions[0]?.stemText, stem);
+
+  const applied = await questionImport.apply({ previewId: preview.previewId! });
+  assert.equal(applied.questionCount, 1);
+  assert.equal(database.connection.statements.filter((item) => item.sql.includes('INSERT INTO questions')).length, 1);
+});
+
+test('Excel 导入允许超过 255 个字符的题干', async () => {
+  const questionImport = service(new FakeDatabase());
+  const template = await createQuestionImportTemplate('official', 'excel');
+  const workbook = await XlsxPopulate.fromDataAsync(Buffer.from(template.content));
+  const stem = '题'.repeat(256);
+  workbook.sheet('题库').cell('B2').value(stem);
+
+  const preview = await questionImport.preview(template.fileName, await workbook.outputAsync(), 'course-1', 'subject-1', 'official');
+  assert.equal(preview.valid, true);
+  assert.equal(preview.document?.questions[0]?.stemText, stem);
 });
 
 test('章节题必须按章节导入，选项不能跳号', async () => {

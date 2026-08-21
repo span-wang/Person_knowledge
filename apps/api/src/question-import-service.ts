@@ -198,10 +198,11 @@ function requiredText(
   line: number,
   context: string[],
   issues: ImportIssue[],
+  maxLength = 255,
 ): string | null {
   if (typeof value === 'string' && value.trim()) {
-    if (value.trim().length > 255) {
-      issues.push(schemaIssue(sourceType, `${label}不能超过 255 个字符。`, '缩短文本后重新导入。', fileName, line, context));
+    if (value.trim().length > maxLength) {
+      issues.push(schemaIssue(sourceType, `${label}不能超过 ${maxLength} 个字符。`, '缩短文本后重新导入。', fileName, line, context));
       return null;
     }
     return value.trim();
@@ -435,7 +436,7 @@ function questionFromFields(
   chapterTitle: string | null,
   chapterIndex: number | null,
 ): ParsedQuestion | null {
-  const stemText = requiredText(fields.stem, '题干', sourceType, sourceFileName, line, [...context, '题干'], issues) ?? '';
+  const stemText = requiredText(fields.stem, '题干', sourceType, sourceFileName, line, [...context, '题干'], issues, maxTextLength) ?? '';
   const type = normalizeType(fields.type);
   if (!type) {
     issues.push(schemaIssue(sourceType, '题型无效。', '题型只能是 single、multiple 或 true_false。', sourceFileName, line, [...context, '题型']));

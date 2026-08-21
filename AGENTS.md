@@ -44,6 +44,8 @@
 13. 前端必须遵守 `DESIGN.md` 的 iOS 风格层级和控件规范。
 14. 主界面禁止出现功能介绍长段落；按钮文字原则上不超过 4 个汉字。
 15. 图标能明确表达动作时优先使用图标，陌生图标必须提供 Tooltip 和无障碍名称。
+16. 图表的设计必须使用并遵守C:\Users\panshimao\.codex\skills\lieflat-charts技能
+17. UI的设计和修改必须使用和遵守C:\Users\panshimao\.codex\skills\ui-ux-pro-max技能
 
 ## 4. 完成标准
 

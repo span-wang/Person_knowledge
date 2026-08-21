@@ -1,6 +1,455 @@
 {
   "entries": [
     {
+      "id": "LOG-122",
+      "date": "2026-08-21",
+      "taskIds": [
+        "PH6-16"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "收紧悬浮问答的真实流式输出与超时策略",
+      "action": "移除 Provider 完整 JSON 的兼容回退，要求 text/event-stream；接口增加 SSE 预热注释与防缓冲头，前端逐段按可见增量呈现。新增首字与流空闲双超时配置，持续输出不受总时长限制。",
+      "result": "非流式 Provider 现在会返回明确兼容性错误，不再整段显示为成功回答；定向测试确认首段可先于后段抵达客户端，首字后持续输出不会被原 30 秒总时长截断。默认超时为首字 30 秒、连续空闲 45 秒，可用 AI_STUDY_ASSISTANT_FIRST_TOKEN_TIMEOUT_SECONDS 与 AI_STUDY_ASSISTANT_STREAM_IDLE_TIMEOUT_SECONDS 调整。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "node --import tsx --test apps/api/src/study-assistant-service.test.ts apps/api/src/study-assistant-http.test.ts 通过，6 项测试全部通过。",
+        "npm test 通过，155 项 API 测试全部通过。",
+        "npm run build、npm run progress:build 与 npm run progress:check 通过；仅保留既有 Vite 大体积 chunk 提示。"
+      ],
+      "affectedFiles": [
+        ".env.example",
+        "apps/api/src/config.ts",
+        "apps/api/src/study-assistant-service.ts",
+        "apps/api/src/study-assistant-service.test.ts",
+        "apps/api/src/study-assistant-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "启动本机 API 后在合法认证态以当前 Provider 完成一次真实流式问答；若返回不支持 stream，改用支持 SSE 的模型或服务，再补做桌面与 390px 验收。"
+    },
+    {
+      "id": "LOG-121",
+      "date": "2026-08-21",
+      "taskIds": [
+        "PH6-16"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "完成悬浮问答流式输出与一键复制",
+      "action": "将悬浮问答 Provider 请求改为 stream，并通过 SSE 向浏览器转发分段；前端逐段显示回答。为生成完成的回答增加带无障碍名称、悬停提示和成功确认的一键复制图标，生成中保持禁用。",
+      "result": "流式输出、网络分段拼接与检测模式内容隔离均已通过自动化验证；复制不会改变学习内容、聊天持久化、AI 讲解历史或作答数据。认证态真实工作区的桌面/390px 视觉与复制反馈验收仍受 RISK-028 阻塞，PH6-16 保持进行中。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，152 项 API 测试全部通过，覆盖 stream 标记、跨分段 SSE 拼接、认证后的 SSE 事件序列及检测题答案/解析隔离。",
+        "npm run build 通过；仅保留既有 Vite 大体积 chunk 提示。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/study-assistant-service.ts",
+        "apps/api/src/study-assistant-service.test.ts",
+        "apps/api/src/study-assistant-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "取得合法认证态后补做桌面与 390px 的流式输出、复制反馈、悬浮入口、键盘焦点和底部无覆盖验收，再收尾 PH6-16。"
+    },
+    {
+      "id": "LOG-120",
+      "date": "2026-08-21",
+      "taskIds": [
+        "PH6-16"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "实现刷题与闪卡悬浮问答助手",
+      "action": "新增受控即时问答服务和认证 API；前端以默认收起的 Bot 悬浮入口接入闪卡与刷题页面，回答仅保存在当前页面会话。检测会话未完成时服务端仅发送题干和选项，并限制模型不得给出答案、选项、解析或作答结论。",
+      "result": "实现与自动化验证完成，刷题入口预留固定底部栏空间，面板支持 Esc 收起、停止请求、可访问名称与安全 Markdown 只读渲染。未取得合法认证态，真实桌面/390px 业务页面视觉验收按 RISK-028 保持待办，PH6-16 未提前完成。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，151 项 API 测试全部通过。",
+        "npm run build 通过；仅保留既有 Vite 大体积 chunk 提示。",
+        "Playwright 登录页启动检查和控制台检查通过；认证态工作区视觉验收受 RISK-028 阻断。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/study-assistant-service.ts",
+        "apps/api/src/study-assistant-service.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "取得合法认证态后补做桌面与 390px 的悬浮入口、展开问答、焦点和底部无覆盖验收，再收尾 PH6-16。"
+    },
+    {
+      "id": "LOG-119",
+      "date": "2026-08-21",
+      "taskIds": [
+        "PH6-15"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "合并题数与乱序设置行",
+      "action": "将题数原生下拉框与乱序选项合并到同一设置行；乱序改为小尺寸原生勾选框，外层标签保留 44px 最小点击高度，并补齐桌面与移动端响应式对齐样式。",
+      "result": "题库详情和课程复习工作台的刷题设置均以“题数下拉框 + 乱序勾选项”呈现，乱序不再单独显示大号 Switch；作答筛选、会话参数和服务端语义保持不变。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过；仅保留既有 Vite 大体积 chunk 提示。",
+        "未改变背默模式继续使用的 Switch 或刷题会话 API。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "DESIGN.md",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "PH6-15 继续沿用既有认证态真实设备视觉验收风险；间隔重复和进行中会话重新洗牌另立任务。"
+    },
+    {
+      "id": "LOG-118",
+      "date": "2026-08-21",
+      "taskIds": [
+        "PH6-15"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "补充只练未做的练习筛选",
+      "action": "扩展刷题创建选项和会话范围快照；题库、章节和科目收藏题入口增加“不区分 / 只练未做”分段控件。服务端在候选题查询阶段排除已有提交答案的题目，再执行既有题数截取和乱序；错题入口保持不展示且拒绝该筛选。",
+      "result": "只练未做与不区分均能创建可恢复的固定题目会话，刷新和续答不会重新筛选。未做定义为该题不存在任何已提交答案，已开始但未作答的会话不影响其未做状态。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，149 项 API 测试全部通过。",
+        "npm run build:web 通过；仅保留既有大体积 chunk 提示。",
+        "开发服务 http://127.0.0.1:5173/ 返回 200；内置浏览器当前无法建立本机连接，认证态视觉回归仍沿用 RISK-021/RISK-028。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/practice-service.ts",
+        "apps/api/src/practice-service.test.ts",
+        "apps/api/src/practice-http.test.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "认证态真实设备视觉验收沿用 RISK-021/RISK-028；按掌握度、错误次数或时间间隔动态编排题目另立任务。"
+    },
+    {
+      "id": "LOG-117",
+      "date": "2026-08-21",
+      "taskIds": [
+        "PH5-27"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "完成库洛米精致主题",
+      "action": "复用现有本机外观持久化与皮肤覆盖层，新增黑紫、薰衣草紫、莓果粉、暖黄 token 及静态几何环境装饰；系统化细化导航、按钮、输入、分段控件、容器、列表、Sheet、检索与刷题工作区，并在受控认证页面回归浅深色和手机宽度。",
+      "result": "库洛米主题不再只是配色切换：主控件采用黑紫实体层与莓粉细节，容器使用薰衣草边界和轻量内高光，背景只保留低对比度静态耳饰、蝴蝶结、骷髅与星芒；设置页可选并本机持久化，闪卡正文和公式未引入装饰或纹理。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过；仅保留既有大体积 chunk 提示。",
+        "终端 Playwright 受控认证态验证 1403px 设置页和 390x844 深色设置页：库洛米选项、显示模式、导航、容器与装饰均已渲染；390px 无横向溢出，深色背景/正文为 rgb(23, 18, 27)/rgb(247, 240, 248)。",
+        "测试浏览器仅拦截 auth session 读取且未调用写接口；所有路由与本机主题偏好已在关闭前撤销。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "更多角色主题、主题市场和自定义配色另立主题能力任务；真实 iPhone Safari 设备回归沿用既有 GA 发布验收。"
+    },
+    {
+      "id": "LOG-107",
+      "date": "2026-08-20",
+      "taskIds": [
+        "PH7-01"
+      ],
+      "phaseMilestone": "第七阶段 / M7",
+      "step": "完成跨课程全局检索与目标定位",
+      "action": "新增 MySQL ngram 全文索引、认证检索服务和共享契约；在复习页接入检索弹层、去抖、受控摘要、课程/科目/类型筛选、空状态、深链定位和桌面/移动端无障碍交互；补充服务、HTTP、性能 EXPLAIN 与浏览器回归。",
+      "result": "用户可跨课程检索有效资料、闪卡和题目；结果按内容类型分组并限制数量，资料、闪卡和题目可直接定位，题目刷新后仍会滚动并聚焦目标。390px、375px 横屏和深色模式均无横向溢出，筛选 Sheet 的触控行与焦点约束符合 UI 规范。",
+      "verification": [
+        "npm run db:migrate、npm run typecheck、npm run build 通过。",
+        "全局检索服务与 HTTP 定向测试通过，三类 EXPLAIN 均命中 ngram 全文索引。",
+        "Playwright 1440px、390x844、844x375 与深色模式通过；控制台无新增错误。",
+        "进度展示层由 npm run progress:build 生成，并由 npm run progress:check 校验。"
+      ],
+      "affectedFiles": [
+        "database/migrations/008_phase_7_global_search.sql",
+        "packages/shared/src/api.ts",
+        "apps/api/src/global-search-service.ts",
+        "apps/api/src/global-search-service.test.ts",
+        "apps/api/src/global-search-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-7.json",
+        "progress/logs.json"
+      ],
+      "next": "PH7-02 在题库 P0 主链路稳定后启动。"
+    },
+    {
+      "id": "LOG-106",
+      "date": "2026-08-20",
+      "taskIds": [
+        "GOV-003"
+      ],
+      "phaseMilestone": "第七阶段 / M7",
+      "step": "冻结全局检索、错题巩固与学习洞察的 P1 范围",
+      "action": "将用户确认的三项能力写入产品定位、开发方案和设计规范；新增第七阶段、M7、三个业务模块、GOV-003 与 PH7-01 至 PH7-03 任务卡，并登记性能、统计语义和备份边界风险。",
+      "result": "三项能力已按全局检索、错题巩固、学习洞察的顺序拆分为独立任务。所有实现均以前置的 GA 发布和题库 P0 主链路稳定为条件；本步未改动应用、数据库或既有业务语义。",
+      "verification": [
+        "npm run progress:build 通过，展示层由结构化源重新生成。",
+        "npm run progress:check 通过，阶段、里程碑、模块、任务、风险和日志引用一致。"
+      ],
+      "affectedFiles": [
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/config.json",
+        "progress/tasks/phase-7.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "GA 发布验收与题库 P0 主链路稳定后，按 PH7-01 实现全局检索；PH7-02、PH7-03 不提前启动。"
+    },
+    {
+      "id": "LOG-105",
+      "date": "2026-08-20",
+      "taskIds": [
+        "PH6-14"
+      ],
+      "phaseMilestone": "第六阶段 / M6、GA",
+      "step": "完成课程复习工作台 UI 重构",
+      "action": "重组课程/科目选择、闪卡/题库分段、继续学习和科目分组列表；为选择 Sheet 补充展开状态、Esc 关闭和焦点回归；统一章节范围、收藏题与刷题操作区的响应式布局；修复移动端固定主导航的 44px 触控目标与正文安全区。",
+      "result": "复习工作台在桌面与 390px 视口均保持清晰的信息层级和无横向溢出。闪卡、题库、章节范围、收藏题与继续入口维持既有业务语义；移动端焦点不会被固定导航遮挡。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过；仅保留既有 Vite 大 chunk 警告。",
+        "npm run progress:check 通过。",
+        "Playwright 1440px 与 390x844 受控工作台回归通过，闪卡、题库、收藏题和章节范围均无横向溢出。",
+        "Playwright 确认课程 Sheet 可用 Esc 关闭并将焦点还给触发控件；聚焦页面末尾操作不会被 53px 底部导航遮挡，控制台无运行时错误。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md",
+        "output/playwright/ph6-14-workspace-desktop.png",
+        "output/playwright/ph6-14-workspace-mobile.png",
+        "output/playwright/ph6-14-workspace-questions-mobile.png",
+        "output/playwright/ph6-14-workspace-questions-mobile-bottom.png",
+        "output/playwright/ph6-14-workspace-mobile-nav.png",
+        "output/playwright/ph6-14-workspace-questions-mobile-dark.png"
+      ],
+      "next": "大规模工作台虚拟化、跨端上下文冲突提示和真实 iPhone Safari 设备验收另立任务或沿用既有风险项。"
+    },
+    {
+      "id": "LOG-104",
+      "date": "2026-08-20",
+      "taskIds": [
+        "PH6-12"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "完成题目收藏与科目收藏题练习",
+      "action": "新增题目收藏迁移、共享契约和收藏切换 API；将科目内跨题库收藏题保存为独立 subjectId 范围会话；在题目工作区、独立刷题页和课程复习工作台接入收藏操作、背题、检测和继续入口；同步 JSON 导出恢复，并补全服务、HTTP、工作台与数据治理回归。",
+      "result": "用户可收藏或取消收藏单题，并在每个科目题库分段对全部收藏题背题、检测或继续。收藏会话按创建时快照保存，不污染任何单题库的累计统计；本机数据库已执行 007 收藏迁移，复习页服务器 500 已恢复。",
+      "verification": [
+        "npm run db:migrate 通过，已执行 007_phase_6_question_favorites.sql。",
+        "npm run typecheck 通过。",
+        "npm test 通过，133 项 API 测试全部通过。",
+        "npm run build 通过；仅有既有 Vite 大 chunk 警告。",
+        "Playwright 临时无认证验收实例中，复习 > 题库工作台加载正常且无接口错误。"
+      ],
+      "affectedFiles": [
+        "database/migrations/007_phase_6_question_favorites.sql",
+        "packages/shared/src/api.ts",
+        "apps/api/src/question-service.ts",
+        "apps/api/src/practice-service.ts",
+        "apps/api/src/review-workspace-service.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/api.ts",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "收藏夹分组、随机收藏练习和跨科目收藏练习继续按后续独立任务处理。"
+    },
+    {
+      "id": "LOG-103",
+      "date": "2026-08-20",
+      "taskIds": [
+        "PH6-13"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "为章节题增加工作台选章刷题入口",
+      "action": "扩展工作台题库摘要返回章节 ID、标题和题数；在章节题卡片增加章节选择器，并将所选范围传给既有背题/检测会话；补充工作台服务回归、类型检查和 Web 构建。",
+      "result": "章节题可在课程复习工作台按章节启动背题或检测，也可保留整库刷题；真题和模拟题入口不变。",
+      "verification": [
+        "node --import tsx --test apps/api/src/review-workspace-service.test.ts 通过。",
+        "node --import tsx --test apps/api/src/review-workspace-http.test.ts 通过。",
+        "npm run typecheck 通过。",
+        "npm run build:web 通过；仅有既有 Vite 大 chunk 警告。",
+        "全量 npm test 仍受 PH6-10/PH6-12 既有 Fake 数据库字段不同步影响，4 项刷题服务测试失败。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/review-workspace-service.ts",
+        "apps/api/src/review-workspace-service.test.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "章节进度、章节续读筛选和工作台大规模列表性能另立任务。"
+    },
+    {
+      "id": "LOG-102",
+      "date": "2026-08-20",
+      "taskIds": [
+        "PH6-10"
+      ],
+      "phaseMilestone": "第六阶段 / M6、GA",
+      "step": "优化刷题答案选择响应",
+      "action": "登记快速作答边界；检测模式选项先本地更新并立即切题，答案后台保存并在失败时回滚；作答 API 改为按当前题返回增量结果，服务端避免读取和序列化整套会话题目；补充 HTTP、服务回归并执行类型检查和 Web 构建。",
+      "result": "答案选择不再等待整套会话回包；检测模式即时切题，背题仍等待判分反馈，答案校验、统计和完成规则保持不变。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm run build:web 通过；仅保留 Vite 既有大 chunk 警告。",
+        "刷题 HTTP、服务定向回归通过，作答响应不含 questions 整套题目数组。",
+        "npm test 通过，131 项 API 测试全部通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/practice-service.ts",
+        "apps/api/src/practice-service.test.ts",
+        "apps/api/src/practice-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "packages/shared/src/api.ts",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "取得合法登录态后补做独立刷题页桌面/390px 真实交互验收；性能优化代码已完成。"
+    },
+    {
+      "id": "LOG-101",
+      "date": "2026-08-20",
+      "taskIds": [
+        "PH6-11"
+      ],
+      "phaseMilestone": "第六阶段 / M6",
+      "step": "取消题干 255 字符业务限制",
+      "action": "登记输入规模边界；将题干导入校验改为复用既有 100 万字符内容上限；补 JSON、Excel 与应用内保存服务回归；执行类型检查、全量 API 测试和进度同步。",
+      "result": "题干不再受 255 字符限制。JSON 和 Excel 导入可预览 256 字符题干，JSON 导入可事务应用；应用内题目保存也可通过 256 字符题干的输入校验。其他字段约束与题型校验未变。",
+      "verification": [
+        "题库导入与题目保存定向测试 9 项全部通过。",
+        "npm run typecheck 通过。",
+        "npm test 通过，131 项 API 测试全部通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/question-import-service.ts",
+        "apps/api/src/question-import-service.test.ts",
+        "apps/api/src/question-service.test.ts",
+        "progress/risks.json",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "其他题库字段的长度策略继续维持现状；需要变更时单独拆分并验收。"
+    },
+    {
+      "id": "LOG-100",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH5-01"
+      ],
+      "phaseMilestone": "第五阶段 / GA",
+      "step": "压缩移动端底部导航高度",
+      "action": "在 640px 以下视口将底部导航上下内边距、导航项高度与字号压缩至原有约三分之一，并将主内容底部预留从 96px 同步收紧到 32px；不改桌面端、safe-area 语义或导航业务逻辑。",
+      "result": "移动端底部导航占用空间已显著降低，保留固定定位和安全区内边距；PH5-01 仍等待真实 iPhone Safari 的主屏幕安装、原生选词浮动工具栏和 Home Indicator 验收。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过；Vite 仅报告既有大 chunk 警告。",
+        "npm run progress:check 通过；移动端 640px 以下规则将导航内边距、项目最小高度和字号压缩至原有约三分之一，并移除固定导航的额外底部间距。",
+        "真实 iPhone Safari 添加到主屏幕、长按选词原生浮动工具栏和 Home Indicator 安全区仍未完成，PH5-01 保持进行中。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "完成移动端导航高度与无横向溢出回归；真实 iPhone Safari 验收仍归属 PH5-01。"
+    },
+    {
+      "id": "LOG-099",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-10"
+      ],
+      "phaseMilestone": "第六阶段 / M6、GA",
+      "step": "完成独立刷题页、AI 解析入口和紧凑选项交互实现",
+      "action": "将题库与复习入口统一到独立 /review/practice/:sessionId 页面；移除刷题遮罩弹窗；增加题目 AI 解析历史/生成/停止入口；背题作答后改为等待用户点击下一题；将选项行压缩到 28px 级并修正序号垂直居中；运行类型检查、构建和未登录本地页面检查。",
+      "result": "代码实现和构建验证通过。终端浏览器被认证门禁挡在登录页，未执行真实题目会话的桌面/390px 验收，PH6-10 保持进行中。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm run build:web 通过；仅保留 Vite 既有大 chunk 警告。",
+        "playwright-cli 打开 http://127.0.0.1:5173 成功，页面显示登录门禁；未读取或绕过账号密码。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/risks.json",
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "取得合法登录态后补做独立刷题页真实交互和响应式验收。"
+    },
+    {
+      "id": "LOG-097",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH6-10"
+      ],
+      "phaseMilestone": "第六阶段 / M6、GA",
+      "step": "启动独立刷题页与题目解析入口改造",
+      "action": "登记独立刷题页面、题目 AI 解析入口和背题手动下一题的边界；保留现有会话、判分、统计、错题与 AI 服务契约。",
+      "result": "任务进行中，尚未完成代码与浏览器验收。",
+      "verification": [
+        "已在 PH6-10 任务卡登记执行边界，任务保持进行中。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-6.json",
+        "progress/logs.json"
+      ],
+      "next": "先改造刷题页面渲染与交互，再运行类型检查、构建和响应式验收。"
+    },
+    {
       "id": "LOG-094",
       "date": "2026-08-19",
       "taskIds": [
@@ -2647,6 +3096,351 @@
         "progress/logs.json"
       ],
       "next": "继续观察真实 Provider 的格式修正输出；非 JSON 或格式问题未减少时仅在对应问题行提示失败，不自动重试或润色正文。"
+    },
+    {
+      "id": "LOG-096",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH5-26"
+      ],
+      "phaseMilestone": "第五阶段 / M2、M5、M6、GA",
+      "step": "收敛课程复习工作台到具体练习入口",
+      "action": "在已完成数据库工作台聚合的基础上，接入闪卡阅读/背默模式、题库直接背题/检测/继续会话、工作台/闪卡/题库会话 hash URL 恢复；课程摘要同步纳入有效闪卡续读，并补充入口样式。",
+      "result": "课程工作台不再把题库动作导向管理页，资料行可直接进入阅读或背默，题库行可创建或恢复现有 PracticeSessionPanel；复制或刷新复习 URL 时按 URL 优先恢复，失效会话回退工作台，数据库上下文继续作为默认跨端状态。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，128 项测试全部通过。",
+        "真实 ReviewWorkspaceService SQL mock、认证、复习、题库和课程工作台 HTTP 契约测试保持通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "apps/api/src/review-workspace-service.ts",
+        "apps/api/src/review-workspace-service.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/logs.json"
+      ],
+      "next": "PH5-26 已完成；题目编辑、随机/间隔重复和大规模性能优化不纳入本步。"
+    },
+    {
+      "id": "LOG-109",
+      "date": "2026-08-20",
+      "taskIds": ["PH7-02"],
+      "phaseMilestone": "第七阶段 / M7",
+      "step": "接入错题筛选与备注可视化入口",
+      "action": "在题库页增加同科目累计错题筛选 Sheet、知识点/题型/日期筛选、背题/检测入口和结果内备注编辑；补齐移动端单列布局、触控尺寸、关闭焦点回归和深色模式 token。",
+      "result": "前端类型检查和生产构建通过；浏览器可访问登录页，但当前无合法登录态，受保护题库页面的桌面/390px/横屏真实点击回归待认证后补做。",
+      "verification": ["npm run typecheck 通过。", "npm run build 通过。", "Playwright 127.0.0.1 登录页加载通过；业务页认证态验证受登录态阻塞。"],
+      "affectedFiles": ["apps/web/src/App.tsx", "apps/web/src/api.ts", "apps/web/src/styles.css", "progress/logs.json"],
+      "next": "取得合法认证态后完成 1440px、390px、375px、横屏、深色模式和 Sheet 焦点回归，再收尾 PH7-02。"
+    },
+    {
+      "id": "LOG-108",
+      "date": "2026-08-20",
+      "taskIds": ["PH7-02"],
+      "phaseMilestone": "第七阶段 / M7",
+      "step": "落地题目备注与同科目累计错题复练后端契约",
+      "action": "新增独立备注表和读写 API，扩展 JSON/每日备份恢复，增加按最近有效错误、知识点、题型和时间筛选的错题查询，并支持背题/检测会话创建。",
+      "result": "备注与作答快照保持隔离；迁移 009 已执行；旧题库级累计错题语义保留。前端筛选入口和完整浏览器回归仍待补齐。",
+      "verification": ["npm run db:migrate 通过。", "npm run typecheck 通过。", "npm test 通过，136 项测试全部通过。", "npm run build 通过。"],
+      "affectedFiles": ["database/migrations/009_phase_7_wrong_answer_notes.sql", "apps/api/src/question-service.ts", "apps/api/src/wrong-answer-service.ts", "apps/api/src/practice-service.ts", "apps/api/src/data-governance-service.ts", "apps/api/src/app.ts", "apps/web/src/api.ts", "packages/shared/src/api.ts", "progress/logs.json"],
+      "next": "补齐错题筛选/复练前端入口、HTTP/真实 MySQL 边界测试和备注可视化编辑后，再完成 PH7-02。"
+    },
+    {
+      "id": "LOG-098",
+      "date": "2026-08-19",
+      "taskIds": [
+        "PH5-26"
+      ],
+      "phaseMilestone": "第五阶段 / M2、M5、M6、GA",
+      "step": "修复课程工作台资料聚合的续读查询",
+      "action": "将材料 UUID 作为 MySQL JSON 对象键安全引用；兼容数据库原生续读映射与完整备份包装格式；在真实复习 MySQL/HTTP 夹具中新增课程、科目和工作台请求回归。",
+      "result": "带连字符 UUID 不再触发 ER_INVALID_JSON_PATH，/api/review/workspace 返回 200，并能恢复对应资料的最近闪卡；完整 API 测试和生产构建保持通过。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，127 项 API 测试全部通过。",
+        "npm run test:review:integration 通过真实 MySQL 与 HTTP 回归。",
+        "npm run build 通过，Web、API 和共享类型均可构建。",
+        "npm run progress:build 与 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/api/src/review-workspace-service.ts",
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "继续按 PH5-26 原边界完成工作台剩余验收；性能优化和真实设备并发验收另立后续范围。"
+    },
+    {
+      "id": "LOG-110",
+      "date": "2026-08-20",
+      "taskIds": [
+        "PH7-02"
+      ],
+      "phaseMilestone": "第七阶段 / M7",
+      "step": "完成错题备注、筛选与巩固复练收尾",
+      "action": "补充错题查询服务单元测试、认证 HTTP 契约和真实 MySQL/HTTP 回归；在错题筛选 Sheet 增加 Tab 焦点循环并保留 Esc 关闭和触发按钮焦点回归；同步任务卡与展示层。",
+      "result": "累计错题只保留最近一次仍为错误的有效题目，支持知识点、题型和日期筛选；当前备注与作答快照隔离并可纳入 JSON/每日备份恢复；筛选结果可创建背题或检测会话。浏览器连接因当前桌面 native pipe bridge 不可用未能建立，认证态视觉验收按既有阻塞记录保留，不伪造通过。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，139 项 API 测试全部通过。",
+        "node --import tsx --test apps/api/test/wrong-answer-real-mysql-http.test.ts 通过。",
+        "npm run build、npm run progress:build 和 npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/api/src/wrong-answer-service.test.ts",
+        "apps/api/src/wrong-answer-http.test.ts",
+        "apps/api/test/wrong-answer-real-mysql-http.test.ts",
+        "progress/tasks/phase-7.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "PH7-03 负责周期学习洞察；随机复练、间隔重复、复杂备注历史和附件不纳入后续小步。"
     }
-  ]
+    ,{
+      "id": "LOG-111",
+      "date": "2026-08-20",
+      "taskIds": ["PH7-03"],
+      "phaseMilestone": "第七阶段 / M7",
+      "step": "完成周期学习洞察与薄弱知识点",
+      "action": "新增共享洞察契约、Asia/Shanghai 周期聚合服务、认证 API、服务/HTTP/真实 MySQL 回归；复习工作台工具区按需打开 7/30 天洞察面板，使用 F2 Hairline Line 点线图、可见摘要、空状态和薄弱知识点列表。",
+      "result": "用户可查看最近 7 天或 30 天的有效闪卡复习量、掌握状态变化、已完成题库正确率和达到 3 次样本量的薄弱知识点；不写入学习历史。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，142 项 API 测试全部通过。",
+        "node --import tsx --test apps/api/test/learning-insights-real-mysql-http.test.ts 通过。",
+        "npm run build 通过。",
+        "认证态浏览器视觉回归受 RISK-021/RISK-028 环境阻塞，未伪造通过。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/learning-insights-service.ts",
+        "apps/api/src/learning-insights-service.test.ts",
+        "apps/api/src/learning-insights-http.test.ts",
+        "apps/api/test/learning-insights-real-mysql-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-7.json",
+        "progress/config.json",
+        "progress/logs.json",
+        "progress/risks.json"
+      ],
+      "next": "更多图表类型、多课程比较、长期报表和真实设备认证态视觉回归另立任务。"
+    },
+    {
+      "id": "LOG-112",
+      "date": "2026-08-20",
+      "taskIds": [
+        "PH8-01"
+      ],
+      "phaseMilestone": "第八阶段 / M8",
+      "step": "冻结闪卡与题目的文字、手写备注边界",
+      "action": "新增第八阶段和 PH8-01，明确复用题目当前文字备注、为闪卡新增对应记录，并以归一化矢量笔迹支持触控与手写笔；题目备注随解析显示。",
+      "result": "本步开始实施。笔迹和文字均保持当前版本，不进入作答快照；检测作答期间不显示题目备注。",
+      "verification": [
+        "任务卡、产品定位、开发方案、设计规范、风险与阶段元数据已同步。"
+      ],
+      "affectedFiles": [
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/config.json",
+        "progress/tasks/phase-8.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "实现迁移、认证 API、画板 Sheet、题目解析展示、备份恢复与自动化验收。"
+    },
+    {
+      "id": "LOG-113",
+      "date": "2026-08-20",
+      "taskIds": [
+        "PH7-04"
+      ],
+      "phaseMilestone": "第七阶段 / M7",
+      "step": "重构学习洞察统计图表",
+      "action": "登记 PH7-04 边界，沿用 F2 Hairline Line 重构逐日复习量图表，并将状态变化、题库结果和薄弱知识点改为紧凑表格与比例摘要。",
+      "result": "前端图表重构完成，未修改学习洞察 API、数据库统计口径或既有学习历史；待进度展示层同步后验收。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过。",
+        "npm run progress:check 待执行 progress:build 后复核。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-7.json",
+        "progress/logs.json"
+      ],
+      "next": "运行 progress:build 与 progress:check，并在可用认证态后补做桌面与 390px 视觉验收。"
+    },
+    {
+      "id": "LOG-114",
+      "date": "2026-08-20",
+      "taskIds": [
+        "PH7-04"
+      ],
+      "phaseMilestone": "第七阶段 / M7",
+      "step": "细化学习洞察图表层级",
+      "action": "依据 UI/UX 图表与表格规范，补充折线基线、低饱和面积填充、末点标注、状态标识和移动端分组间距。",
+      "result": "洞察面板的视觉层级与数据锚点更清晰，仍保持颜色为辅助信息且不改变既有统计口径。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/logs.json"
+      ],
+      "next": "取得认证态后补做桌面与 390px 真实视觉验收。"
+    },
+    {
+      "id": "LOG-115",
+      "date": "2026-08-20",
+      "taskIds": ["PH8-01"],
+      "phaseMilestone": "第八阶段 / M8",
+      "step": "完成闪卡与题目的文字、手写备注",
+      "action": "新增闪卡备注表和题目笔迹字段，提供认证读写 API、矢量画板 Sheet、解析后备注展示、检测隐藏、完整 JSON/每日备份恢复，并补齐迁移、服务、前端和数据治理测试。修复画板连续笔画会覆盖上一笔的问题，并将损坏笔迹映射为 409。",
+      "result": "PH8-01 达到验收标准：文字和手写均可保存、清除和恢复；题目备注只在背题提交后或检测完成后的解析下方显示；备注不进入不可变作答快照。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，145 项 API 测试全部通过。",
+        "npm run db:migrate 通过，010_phase_8_handwritten_notes.sql 已执行。",
+        "npm run build 通过。",
+        "认证态真实浏览器与真实设备回归仍受 RISK-021/RISK-028 环境限制。"
+      ],
+      "affectedFiles": [
+        "database/migrations/010_phase_8_handwritten_notes.sql",
+        "packages/shared/src/api.ts",
+        "apps/api/src/card-review-note-service.ts",
+        "apps/api/src/question-service.ts",
+        "apps/api/src/practice-service.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "apps/api/src/card-review-note-service.test.ts",
+        "apps/api/src/question-service.test.ts",
+        "apps/api/src/practice-service.test.ts",
+        "apps/api/src/data-governance-service.test.ts",
+        "progress/tasks/phase-8.json",
+        "progress/logs.json"
+      ],
+      "next": "多颜色、压感、荧光笔、区域擦除、画布背景和笔迹历史另立任务；认证态真实设备验收沿用 RISK-021/RISK-028。"
+    },
+  {
+    "id": "LOG-116",
+      "date": "2026-08-20",
+      "taskIds": ["PH8-01"],
+      "phaseMilestone": "第八阶段 / M8",
+      "step": "补齐题目备注入口与解析下方展示",
+      "action": "将题目备注入口加入刷题题目工具区，背题中和检测完成后可用，检测作答中隐藏；保存后立即更新当前题目，并让文字/笔迹备注复用解析的下方内容块样式直接展示。",
+      "result": "题目在刷题流程中有明确的备注入口，备注展示位置与解析一致，未改变检测期间答案、解析和备注的隐藏边界。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm run build:web 通过。",
+        "npm test 通过，145 项 API 测试全部通过。",
+        "开发服务 http://127.0.0.1:5175/ 返回 200。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-8.json",
+        "progress/logs.json"
+      ],
+    "next": "认证态真实浏览器与真实设备回归仍沿用 RISK-021/RISK-028；高级笔迹编辑能力另立任务。"
+  },
+  {
+    "date": "2026-08-21",
+    "taskIds": [
+      "PH6-17"
+    ],
+    "id": "LOG-123",
+    "phaseMilestone": "第六阶段 / M6",
+    "step": "实现 AI Provider 优先级与失败自动降级",
+    "action": "新增 011_ai_provider_failover.sql，为 Provider 增加候选池启用状态和 priority；增加候选池状态/排序 API 与设置页复选框、上下移动控件；将闪卡讲解、题目讲解、导入格式修正和悬浮框流式问答统一接入按优先级的失败前自动降级。",
+    "result": "首选 Provider 在首段有效结果前发生网络、超时、非成功状态或无效内容时会尝试下一启用渠道；悬浮框已输出首段内容后不切换或混拼。API Key 仍只在后端解密，全部渠道失败返回明确错误。认证态设置页视觉验收仍受 RISK-021/RISK-028 环境限制。",
+    "verification": [
+      "npm run typecheck 通过。",
+      "npm test 通过，159 项 API 测试全部通过。",
+      "npm run build 通过。",
+      "npm run test:ai-provider:integration 通过真实 MySQL 与 HTTP 回归。",
+      "Provider、AI 讲解、题目 AI、悬浮问答和迁移定向回归共 23 项通过。",
+      "npm run db:migrate 通过，011_ai_provider_failover.sql 已登记并执行。"
+    ],
+    "affectedFiles": [
+      "database/migrations/011_ai_provider_failover.sql",
+      "apps/api/src/ai-provider-service.ts",
+      "apps/api/src/ai-explanation-service.ts",
+      "apps/api/src/question-ai-service.ts",
+      "apps/api/src/import-service.ts",
+      "apps/api/src/study-assistant-service.ts",
+      "apps/api/src/app.ts",
+      "apps/web/src/api.ts",
+      "apps/web/src/App.tsx",
+      "apps/web/src/styles.css",
+      "packages/shared/src/api.ts",
+      "progress/tasks/phase-6.json",
+      "progress/risks.json",
+      "progress/logs.json"
+    ],
+    "next": "取得合法认证态后补做设置页 1440px 与 390px 候选池交互和错误提示视觉回归；熔断、冷却、可用率统计和跨模型策略另立任务。"
+  },
+  {
+    "id": "LOG-124",
+    "date": "2026-08-21",
+    "taskIds": [
+      "PH6-16"
+    ],
+    "phaseMilestone": "第六阶段 / M6",
+    "step": "柔化学习助手悬浮问答界面",
+    "action": "将悬浮入口调整为紧凑圆角控件，收敛面板边界与阴影，加入短促展开动效及减少动态效果降级；同步提问气泡、输入区和深色、秋日、库洛米主题的视觉层级。",
+    "result": "悬浮入口和问答面板降低了厚重边框、重阴影与突兀切换感，既有 SSE 流式问答、复制、停止、Esc、ARIA 和检测题内容隔离逻辑未改动。认证态真实学习工作区的桌面/390px 视觉验收仍受登录态限制，PH6-16 保持进行中。",
+    "verification": [
+      "npm run typecheck:web 通过。",
+      "npm run build:web 通过；仅保留既有 Vite 大体积 chunk 提示。",
+      "git diff --check -- apps/web/src/styles.css progress/tasks/phase-6.json 通过。",
+      "Playwright 在 http://127.0.0.1:5173 成功加载登录页并且控制台无错误；业务工作区受登录态限制，未伪造认证态视觉验收。"
+    ],
+    "affectedFiles": [
+      "apps/web/src/styles.css",
+      "progress/tasks/phase-6.json",
+      "progress/logs.json"
+    ],
+    "next": "取得合法认证态后，在 1440px、390px 和深色模式验证入口、展开面板、焦点、底部避让及横向溢出，再收尾 PH6-16。"
+  },
+  {
+    "id": "LOG-125",
+    "date": "2026-08-21",
+    "taskIds": [
+      "PH6-16"
+    ],
+    "phaseMilestone": "第六阶段 / M6",
+    "step": "细化学习助手小猫贴图",
+    "action": "将悬浮入口贴图从夸张表情调整为简洁圆脸小猫，补充眼睛高光、细线胡须和低饱和项圈；拖动、键盘微调、位置保存与问答面板逻辑保持不变。",
+    "result": "小猫贴图的表情和配色更克制，在 56px 入口尺寸下保持主体可辨识，不再使用醒目的大嘴和装饰吊饰。",
+    "verification": [
+      "npm run typecheck:web 通过。",
+      "npm run build:web 通过；仅保留既有 Vite 大体积 chunk 提示。",
+      "git diff --check -- apps/web/src/App.tsx apps/web/src/styles.css apps/web/public/study-assistant-cat.svg progress/tasks/phase-6.json 通过。",
+      "Playwright 浏览器桥接启动失败，认证态学习工作区视觉验收未伪造通过。"
+    ],
+    "affectedFiles": [
+      "apps/web/public/study-assistant-cat.svg",
+      "apps/web/src/App.tsx",
+      "apps/web/src/styles.css",
+      "progress/tasks/phase-6.json",
+      "progress/logs.json"
+    ],
+    "next": "取得合法认证态后，在 1440px、390px、深色模式验证小猫贴图清晰度、拖动边界、键盘微调、面板避让和无横向溢出，再收尾 PH6-16。"
+  }
+]
 }

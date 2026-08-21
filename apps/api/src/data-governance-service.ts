@@ -8,6 +8,8 @@ import {
   type DataExportAiExplanation,
   type DataExportQuestionAiExplanation,
   type DataExportQuestion,
+  type DataExportQuestionReviewNote,
+  type DataExportCardReviewNote,
   type DataExportQuestionBank,
   type DataExportQuestionChapter,
   type DataExportPracticeSession,
@@ -43,6 +45,7 @@ import {
   type ReviewContentNode,
   type ReviewHighlightAnchor,
   type ReviewMasteryStatus,
+  type HandwrittenStroke,
 } from '@knowledge-flashcards/shared';
 import { createDatabasePool } from './database.js';
 import { config } from './config.js';
@@ -368,7 +371,7 @@ function normalizePracticeMode(value: unknown): PracticeMode {
 }
 
 function normalizePracticeSource(value: unknown): PracticeSource {
-  if (value === 'full' || value === 'current_wrong' || value === 'aggregate_wrong') return value;
+  if (value === 'full' || value === 'current_wrong' || value === 'aggregate_wrong' || value === 'favorite') return value;
   throw new DataGovernanceApiError(400, '恢复文件的刷题来源无效。');
 }
 
@@ -411,6 +414,28 @@ function normalizeQuestionOptions(value: unknown): DataExportQuestion['options']
 function normalizeQuestionAnswer(value: unknown): string[] {
   const values = typeof value === 'string' ? [value] : value;
   return normalizeStringArray(values, '题目答案', 6).map((item) => item.toUpperCase());
+}
+
+function normalizeHandwrittenStrokes(value: unknown, label: string): HandwrittenStroke[] {
+  if (!Array.isArray(value) || value.length > 200) {
+    throw new DataGovernanceApiError(400, `恢复文件的${label}无效。`);
+  }
+  let pointCount = 0;
+  const strokes = value.map((stroke) => {
+    if (!isRecord(stroke) || !Array.isArray(stroke.points) || stroke.points.length === 0 || stroke.points.length > 1_000) {
+      throw new DataGovernanceApiError(400, `恢复文件的${label}笔画无效。`);
+    }
+    pointCount += stroke.points.length;
+    if (pointCount > 10_000) throw new DataGovernanceApiError(400, `恢复文件的${label}点数过多。`);
+    return { points: stroke.points.map((point) => {
+      if (!isRecord(point) || typeof point.x !== 'number' || typeof point.y !== 'number' || !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < 0 || point.x > 1_000 || point.y < 0 || point.y > 1_000) {
+        throw new DataGovernanceApiError(400, `恢复文件的${label}坐标无效。`);
+      }
+      return { x: Math.round(point.x), y: Math.round(point.y) };
+    }) };
+  });
+  if (JSON.stringify(strokes).length > 256_000) throw new DataGovernanceApiError(400, `恢复文件的${label}过大。`);
+  return strokes;
 }
 
 interface NormalizedDataExport {
@@ -531,6 +556,20 @@ function normalizeExport(value: unknown): NormalizedDataExport {
       ]));
       return { settingKey: 'review.lastCards', settingValue: { cardIdsByMaterial } };
     }
+    if (item.settingKey === 'review.workspaceContext') {
+      const value = item.settingValue;
+      const map = (input: unknown, label: string) => {
+        if (!isRecord(input)) throw new DataGovernanceApiError(400, `${label}无效。`);
+        return Object.fromEntries(Object.entries(input).map(([key, itemValue]) => [normalizeId(key, `${label}课程标识`), itemValue === null ? null : normalizeId(itemValue, `${label}对象标识`)])) as Record<string, string | null>;
+      };
+      if (value.courseId !== null && value.courseId !== undefined) normalizeId(value.courseId, '当前课程标识');
+      if (!isRecord(value.modesByCourse)) throw new DataGovernanceApiError(400, '复习分段设置无效。');
+      const modesByCourse = Object.fromEntries(Object.entries(value.modesByCourse).map(([courseId, mode]) => {
+        if (mode !== 'flashcards' && mode !== 'questions') throw new DataGovernanceApiError(400, '复习分段设置无效。');
+        return [normalizeId(courseId, '复习分段课程标识'), mode];
+      })) as Record<string, 'flashcards' | 'questions'>;
+      return { settingKey: 'review.workspaceContext', settingValue: { courseId: value.courseId === null || value.courseId === undefined ? null : normalizeId(value.courseId, '当前课程标识'), subjectsByCourse: map(value.subjectsByCourse, '最近科目设置'), modesByCourse, expandedMaterialsByCourse: map(value.expandedMaterialsByCourse, '展开资料设置') } };
+    }
     throw new DataGovernanceApiError(400, '恢复应用设置无效。');
   });
   const catalog = courseEntries === null ? legacyCatalog(exportedAt) : {
@@ -614,7 +653,9 @@ function normalizeExport(value: unknown): NormalizedDataExport {
   const materialIdByCardId = new Map(cards.map((item) => [item.id, materialIdBySectionId.get(item.sectionId)]));
   const invalidLastCard = appSettings.some((item) => item.settingKey === 'review.lastCardId'
     ? !cardIds.has(item.settingValue.cardId)
-    : Object.entries(item.settingValue.cardIdsByMaterial).some(([materialId, cardId]) => !materialIds.has(materialId) || materialIdByCardId.get(cardId) !== materialId));
+    : item.settingKey === 'review.lastCards'
+      ? Object.entries(item.settingValue.cardIdsByMaterial).some(([materialId, cardId]) => !materialIds.has(materialId) || materialIdByCardId.get(cardId) !== materialId)
+      : false);
   if (invalidLastCard) {
     throw new DataGovernanceApiError(400, '恢复文件的最近闪卡不存在。');
   }
@@ -637,7 +678,16 @@ function normalizeExport(value: unknown): NormalizedDataExport {
     }
     if (type === 'multiple' ? answer.length < 2 : answer.length !== 1) throw new DataGovernanceApiError(400, '恢复文件的题目答案数量与题型不匹配。');
     if (type === 'true_false' && (keys.length !== 2 || options[0]?.content?.[0]?.value !== '对' || options[1]?.content?.[0]?.value !== '错' || !['A', 'B'].includes(answer[0]!))) throw new DataGovernanceApiError(400, '恢复文件的判断题格式无效。');
-    return { id: normalizeId(item.id, '题目标识'), questionBankId: normalizeId(item.questionBankId, '题目题库标识'), questionChapterId: item.questionChapterId === null ? null : normalizeId(item.questionChapterId, '题目章节标识'), stem: normalizeContent(item.stem), type, options, answer, analysis: item.analysis === null ? null : normalizeContent(item.analysis), knowledgePoints: normalizeStringArray(item.knowledgePoints ?? [], '题目知识点'), version: normalizeSortOrder(item.version, '题目版本') || 1, sortOrder: normalizeSortOrder(item.sortOrder, '题目排序'), deletedAt: normalizeDate(item.deletedAt, '题目删除时间', true), createdAt: normalizeDate(item.createdAt, '题目创建时间')!, updatedAt: normalizeDate(item.updatedAt, '题目更新时间')! };
+    if (item.isFavorite !== undefined && typeof item.isFavorite !== 'boolean') throw new DataGovernanceApiError(400, '恢复文件的题目收藏状态无效。');
+    return { id: normalizeId(item.id, '题目标识'), questionBankId: normalizeId(item.questionBankId, '题目题库标识'), questionChapterId: item.questionChapterId === null ? null : normalizeId(item.questionChapterId, '题目章节标识'), stem: normalizeContent(item.stem), type, options, answer, analysis: item.analysis === null ? null : normalizeContent(item.analysis), knowledgePoints: normalizeStringArray(item.knowledgePoints ?? [], '题目知识点'), isFavorite: item.isFavorite === true, version: normalizeSortOrder(item.version, '题目版本') || 1, sortOrder: normalizeSortOrder(item.sortOrder, '题目排序'), deletedAt: normalizeDate(item.deletedAt, '题目删除时间', true), createdAt: normalizeDate(item.createdAt, '题目创建时间')!, updatedAt: normalizeDate(item.updatedAt, '题目更新时间')! };
+  });
+  const questionReviewNotes: DataExportQuestionReviewNote[] = (optionalArray('questionReviewNotes') ?? []).map((item) => {
+    if (!isRecord(item)) throw new DataGovernanceApiError(400, '恢复题目备注记录无效。');
+    return { questionId: normalizeId(item.questionId, '题目备注题目标识'), noteText: normalizeText(item.noteText, '题目备注', 2000), strokes: item.strokes === undefined ? [] : normalizeHandwrittenStrokes(item.strokes, '题目手写备注'), updatedAt: normalizeDate(item.updatedAt, '题目备注更新时间')! };
+  });
+  const cardReviewNotes: DataExportCardReviewNote[] = (optionalArray('cardReviewNotes') ?? []).map((item) => {
+    if (!isRecord(item)) throw new DataGovernanceApiError(400, '恢复闪卡备注记录无效。');
+    return { cardId: normalizeId(item.cardId, '闪卡备注闪卡标识'), noteText: normalizeText(item.noteText, '闪卡备注', 2000), strokes: normalizeHandwrittenStrokes(item.strokes, '闪卡手写备注'), updatedAt: normalizeDate(item.updatedAt, '闪卡备注更新时间')! };
   });
   const questionAiExplanations: DataExportQuestionAiExplanation[] = (optionalArray('questionAiExplanations') ?? []).map((item) => {
     if (!isRecord(item)) throw new DataGovernanceApiError(400, '恢复题目 AI 讲解记录无效。');
@@ -645,7 +695,11 @@ function normalizeExport(value: unknown): NormalizedDataExport {
   });
   const practiceSessions: DataExportPracticeSession[] = (optionalArray('practiceSessions') ?? []).map((item) => {
     if (!isRecord(item) || !isRecord(item.scope)) throw new DataGovernanceApiError(400, '恢复刷题会话记录无效。');
-    return { id: normalizeId(item.id, '刷题会话标识'), questionBankId: normalizeId(item.questionBankId, '刷题会话题库标识'), questionChapterId: item.questionChapterId === null ? null : normalizeId(item.questionChapterId, '刷题会话章节标识'), mode: normalizePracticeMode(item.mode), source: normalizePracticeSource(item.source), scope: item.scope, status: normalizePracticeSessionStatus(item.status), startedAt: normalizeDate(item.startedAt, '刷题会话开始时间')!, completedAt: normalizeDate(item.completedAt, '刷题会话完成时间', true), createdAt: normalizeDate(item.createdAt, '刷题会话创建时间')!, updatedAt: normalizeDate(item.updatedAt, '刷题会话更新时间')! };
+    const source = normalizePracticeSource(item.source);
+    const isFavorite = source === 'favorite';
+    if (isFavorite && (item.questionBankId !== null || item.questionChapterId !== null)) throw new DataGovernanceApiError(400, '收藏题会话范围无效。');
+    if (!isFavorite && (item.questionBankId === null || item.questionBankId === undefined || item.subjectId !== null && item.subjectId !== undefined)) throw new DataGovernanceApiError(400, '刷题会话范围无效。');
+    return { id: normalizeId(item.id, '刷题会话标识'), questionBankId: isFavorite ? null : normalizeId(item.questionBankId, '刷题会话题库标识'), subjectId: isFavorite ? normalizeId(item.subjectId, '收藏题会话科目标识') : null, questionChapterId: item.questionChapterId === null ? null : normalizeId(item.questionChapterId, '刷题会话章节标识'), mode: normalizePracticeMode(item.mode), source, scope: item.scope, status: normalizePracticeSessionStatus(item.status), startedAt: normalizeDate(item.startedAt, '刷题会话开始时间')!, completedAt: normalizeDate(item.completedAt, '刷题会话完成时间', true), createdAt: normalizeDate(item.createdAt, '刷题会话创建时间')!, updatedAt: normalizeDate(item.updatedAt, '刷题会话更新时间')! };
   });
   const practiceAttempts: DataExportPracticeAttempt[] = (optionalArray('practiceAttempts') ?? []).map((item) => {
     if (!isRecord(item) || !isRecord(item.snapshot)) throw new DataGovernanceApiError(400, '恢复作答快照记录无效。');
@@ -653,6 +707,8 @@ function normalizeExport(value: unknown): NormalizedDataExport {
     return { id: normalizeId(item.id, '作答记录标识'), practiceSessionId: normalizeId(item.practiceSessionId, '作答会话标识'), questionId: normalizeId(item.questionId, '作答题目标识'), questionVersion: normalizeSortOrder(item.questionVersion, '作答题目版本'), sortOrder: normalizeSortOrder(item.sortOrder, '作答排序'), snapshot: item.snapshot, answer, result: normalizePracticeAttemptResult(item.result), answeredAt: normalizeDate(item.answeredAt, '作答时间', true), createdAt: normalizeDate(item.createdAt, '作答创建时间')!, updatedAt: normalizeDate(item.updatedAt, '作答更新时间')! };
   });
   duplicateIds(questionBanks, '题库'); duplicateIds(questionChapters, '题库章节'); duplicateIds(questions, '题目'); duplicateIds(questionAiExplanations, '题目讲解'); duplicateIds(practiceSessions, '刷题会话'); duplicateIds(practiceAttempts, '作答记录');
+  if (new Set(questionReviewNotes.map((item) => item.questionId)).size !== questionReviewNotes.length) throw new DataGovernanceApiError(400, '恢复题目备注重复。');
+  if (new Set(cardReviewNotes.map((item) => item.cardId)).size !== cardReviewNotes.length) throw new DataGovernanceApiError(400, '恢复闪卡备注重复。');
   const questionBankIds = new Set(questionBanks.map((item) => item.id));
   const questionChapterIds = new Set(questionChapters.map((item) => item.id));
   const questionIds = new Set(questions.map((item) => item.id));
@@ -663,16 +719,22 @@ function normalizeExport(value: unknown): NormalizedDataExport {
     const bank = questionBankById.get(item.questionBankId);
     const chapter = item.questionChapterId === null ? null : questionChapterById.get(item.questionChapterId);
     return !bank || (bank.kind === 'chapter' ? !chapter || chapter.questionBankId !== bank.id : chapter !== null);
-  }) || questionAiExplanations.some((item) => !questionIds.has(item.questionId)) || practiceSessions.some((item) => {
-    const bank = questionBankById.get(item.questionBankId);
+  }) || cardReviewNotes.some((item) => !new Set(cards.map((card) => card.id)).has(item.cardId)) || questionReviewNotes.some((item) => !questionIds.has(item.questionId)) || questionAiExplanations.some((item) => !questionIds.has(item.questionId)) || practiceSessions.some((item) => {
+    if (item.source === 'favorite') return item.questionBankId !== null || item.questionChapterId !== null || item.subjectId === null || !subjectIds.has(item.subjectId);
+    const bank = item.questionBankId === null ? undefined : questionBankById.get(item.questionBankId);
     const chapter = item.questionChapterId === null ? null : questionChapterById.get(item.questionChapterId);
-    return !bank || (bank.kind === 'chapter' ? !chapter || chapter.questionBankId !== bank.id : chapter !== null);
-  }) || practiceAttempts.some((item) => !sessionIds.has(item.practiceSessionId) || !questionIds.has(item.questionId))) {
+    return item.subjectId !== null || !bank || (bank.kind === 'chapter' ? !chapter || chapter.questionBankId !== bank.id : chapter !== null);
+  }) || practiceAttempts.some((item) => {
+    if (!sessionIds.has(item.practiceSessionId) || !questionIds.has(item.questionId)) return true;
+    const session = practiceSessions.find((candidate) => candidate.id === item.practiceSessionId)!;
+    const question = questions.find((candidate) => candidate.id === item.questionId)!;
+    return session.source === 'favorite' && questionBankById.get(question.questionBankId)?.subjectId !== session.subjectId;
+  })) {
     throw new DataGovernanceApiError(400, '恢复文件的题库层级关系无效。');
   }
   return {
     sourceVersion,
-    payload: { format: 'knowledge-flashcards-json', version: 2, exportedAt, materials: normalizedMaterials, chapters, sections, cards, resources, highlights, reviewRecords, aiExplanations, trashItems, appSettings, courses: catalog.courses, subjects: catalog.subjects, materialCovers, reviewStatusHistory, questionBanks, questionChapters, questions, questionAiExplanations, practiceSessions, practiceAttempts },
+    payload: { format: 'knowledge-flashcards-json', version: 2, exportedAt, materials: normalizedMaterials, chapters, sections, cards, resources, highlights, reviewRecords, aiExplanations, trashItems, appSettings, courses: catalog.courses, subjects: catalog.subjects, materialCovers, reviewStatusHistory, questionBanks, questionChapters, questions, questionAiExplanations, practiceSessions, practiceAttempts, questionReviewNotes, cardReviewNotes },
   };
 }
 
@@ -881,7 +943,7 @@ export class DataGovernanceServiceImpl implements DataGovernanceService {
   }
 
   async exportJson(): Promise<DataJsonExportV2> {
-    const [courseRows, subjectRows, materialRows, chapterRows, sectionRows, cardRows, resourceRows, highlightRows, reviewRows, explanationRows, trashRows, settingRows, materialCoverRows, statusHistoryRows, questionBankRows, questionChapterRows, questionRows, questionAiExplanationRows, practiceSessionRows, practiceAttemptRows] = await Promise.all([
+    const [courseRows, subjectRows, materialRows, chapterRows, sectionRows, cardRows, resourceRows, highlightRows, reviewRows, explanationRows, trashRows, settingRows, materialCoverRows, statusHistoryRows, questionBankRows, questionChapterRows, questionRows, questionAiExplanationRows, practiceSessionRows, practiceAttemptRows, questionReviewNoteRows, cardReviewNoteRows] = await Promise.all([
       this.database.execute('SELECT id, name, sort_order, is_system, deleted_at, created_at, updated_at FROM courses ORDER BY sort_order, created_at, id'),
       this.database.execute('SELECT id, course_id, name, sort_order, is_system, deleted_at, created_at, updated_at FROM subjects ORDER BY course_id, sort_order, created_at, id'),
       this.database.execute('SELECT id, subject_id, name, source_filename, source_sha256, imported_at, deleted_at, created_at, updated_at FROM materials ORDER BY created_at, id'),
@@ -893,15 +955,17 @@ export class DataGovernanceServiceImpl implements DataGovernanceService {
       this.database.execute('SELECT card_id, first_viewed_at, last_viewed_at, status_changed_at, view_count FROM review_records ORDER BY card_id'),
       this.database.execute('SELECT card_id, provider, model, prompt_text, content_json, generated_at FROM ai_explanations ORDER BY card_id'),
       this.database.execute('SELECT id, entity_type, entity_id, payload_json, deleted_at, expires_at, restored_at FROM trash_items ORDER BY deleted_at, id'),
-      this.database.execute("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('review.lastCardId', 'review.lastCards')"),
+      this.database.execute("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN ('review.lastCardId', 'review.lastCards', 'review.workspaceContext')"),
       this.database.execute('SELECT id, material_id, original_resource_id, thumbnail_resource_id, created_at, updated_at FROM material_covers ORDER BY material_id'),
       this.database.execute('SELECT id, card_id, from_status, to_status, changed_at, source FROM review_status_history ORDER BY card_id, changed_at, id'),
       this.database.execute('SELECT id, subject_id, kind, name, sort_order, deleted_at, created_at, updated_at FROM question_banks ORDER BY subject_id, kind, sort_order, id'),
       this.database.execute('SELECT id, question_bank_id, title, sort_order, deleted_at, created_at, updated_at FROM question_chapters ORDER BY question_bank_id, sort_order, id'),
-      this.database.execute('SELECT id, question_bank_id, question_chapter_id, stem_json, question_type, options_json, answer_json, analysis_json, knowledge_points_json, version, sort_order, deleted_at, created_at, updated_at FROM questions ORDER BY question_bank_id, sort_order, id'),
+      this.database.execute('SELECT id, question_bank_id, question_chapter_id, stem_json, question_type, options_json, answer_json, analysis_json, knowledge_points_json, is_favorite, version, sort_order, deleted_at, created_at, updated_at FROM questions ORDER BY question_bank_id, sort_order, id'),
       this.database.execute('SELECT id, question_id, question_version, provider, model, prompt_text, content_json, generated_at FROM question_ai_explanations ORDER BY question_id, generated_at, id'),
-      this.database.execute('SELECT id, question_bank_id, question_chapter_id, mode, source, scope_json, status, started_at, completed_at, created_at, updated_at FROM practice_sessions ORDER BY started_at, id'),
+      this.database.execute('SELECT id, question_bank_id, subject_id, question_chapter_id, mode, source, scope_json, status, started_at, completed_at, created_at, updated_at FROM practice_sessions ORDER BY started_at, id'),
       this.database.execute('SELECT id, practice_session_id, question_id, question_version, sort_order, snapshot_json, answer_json, result, answered_at, created_at, updated_at FROM practice_attempts ORDER BY practice_session_id, sort_order, id'),
+      this.database.execute('SELECT question_id, note_text, ink_json, updated_at FROM question_review_notes ORDER BY question_id'),
+      this.database.execute('SELECT card_id, note_text, ink_json, updated_at FROM card_review_notes ORDER BY card_id'),
     ]);
     const resources: DataExportResource[] = await Promise.all(rowsFrom(resourceRows[0]).map(async (row) => ({
       id: textValue(row.id), relativePath: textValue(row.relative_path), mimeType: textValue(row.mime_type), width: row.width === null ? null : numberValue(row.width), height: row.height === null ? null : numberValue(row.height), sha256: textValue(row.sha256), createdAt: dateValue(row.created_at), deletedAt: nullableDateValue(row.deleted_at), contentBase64: await readResourceContent(this.resourcesDirectory, textValue(row.relative_path), textValue(row.sha256)),
@@ -932,16 +996,23 @@ export class DataGovernanceServiceImpl implements DataGovernanceService {
           const cardIdsByMaterial = Object.fromEntries(Object.entries(value).filter(([, cardId]) => typeof cardId === 'string')) as Record<string, string>;
           return [{ settingKey: 'review.lastCards' as const, settingValue: { cardIdsByMaterial } }];
         }
+        if (row.setting_key === 'review.workspaceContext' && isRecord(value)) {
+          const map = (input: unknown) => isRecord(input) ? Object.fromEntries(Object.entries(input).filter(([, item]) => item === null || typeof item === 'string')) as Record<string, string | null> : {};
+          const modesByCourse = isRecord(value.modesByCourse) ? Object.fromEntries(Object.entries(value.modesByCourse).filter(([, item]) => item === 'flashcards' || item === 'questions')) as Record<string, 'flashcards' | 'questions'> : {};
+          return [{ settingKey: 'review.workspaceContext' as const, settingValue: { courseId: value.courseId === null || typeof value.courseId === 'string' ? value.courseId : null, subjectsByCourse: map(value.subjectsByCourse), modesByCourse, expandedMaterialsByCourse: map(value.expandedMaterialsByCourse) } }];
+        }
         return [];
       }),
       materialCovers: rowsFrom(materialCoverRows[0]).map((row) => ({ id: textValue(row.id), materialId: textValue(row.material_id), originalResourceId: textValue(row.original_resource_id), thumbnailResourceId: textValue(row.thumbnail_resource_id), createdAt: dateValue(row.created_at), updatedAt: dateValue(row.updated_at) })),
       reviewStatusHistory: rowsFrom(statusHistoryRows[0]).map((row) => ({ id: textValue(row.id), cardId: textValue(row.card_id), fromStatus: row.from_status === null ? null : textValue(row.from_status) as ReviewMasteryStatus, toStatus: textValue(row.to_status) as ReviewMasteryStatus, changedAt: dateValue(row.changed_at), source: textValue(row.source) as DataExportReviewStatusHistory['source'] })),
       questionBanks: rowsFrom(questionBankRows[0]).map((row) => ({ id: textValue(row.id), subjectId: textValue(row.subject_id), kind: textValue(row.kind) as QuestionBankKind, name: textValue(row.name), sortOrder: numberValue(row.sort_order), deletedAt: nullableDateValue(row.deleted_at), createdAt: dateValue(row.created_at), updatedAt: dateValue(row.updated_at) })),
       questionChapters: rowsFrom(questionChapterRows[0]).map((row) => ({ id: textValue(row.id), questionBankId: textValue(row.question_bank_id), title: textValue(row.title), sortOrder: numberValue(row.sort_order), deletedAt: nullableDateValue(row.deleted_at), createdAt: dateValue(row.created_at), updatedAt: dateValue(row.updated_at) })),
-      questions: rowsFrom(questionRows[0]).map((row) => ({ id: textValue(row.id), questionBankId: textValue(row.question_bank_id), questionChapterId: row.question_chapter_id === null ? null : textValue(row.question_chapter_id), stem: normalizeContent(parseJson(row.stem_json)), type: textValue(row.question_type) as QuestionType, options: normalizeQuestionOptions(parseJson(row.options_json)), answer: normalizeQuestionAnswer(parseJson(row.answer_json)), analysis: row.analysis_json === null ? null : normalizeContent(parseJson(row.analysis_json)), knowledgePoints: normalizeStringArray(parseJson(row.knowledge_points_json), '题目知识点'), version: numberValue(row.version), sortOrder: numberValue(row.sort_order), deletedAt: nullableDateValue(row.deleted_at), createdAt: dateValue(row.created_at), updatedAt: dateValue(row.updated_at) })),
+      questions: rowsFrom(questionRows[0]).map((row) => ({ id: textValue(row.id), questionBankId: textValue(row.question_bank_id), questionChapterId: row.question_chapter_id === null ? null : textValue(row.question_chapter_id), stem: normalizeContent(parseJson(row.stem_json)), type: textValue(row.question_type) as QuestionType, options: normalizeQuestionOptions(parseJson(row.options_json)), answer: normalizeQuestionAnswer(parseJson(row.answer_json)), analysis: row.analysis_json === null ? null : normalizeContent(parseJson(row.analysis_json)), knowledgePoints: normalizeStringArray(parseJson(row.knowledge_points_json), '题目知识点'), isFavorite: Boolean(row.is_favorite), version: numberValue(row.version), sortOrder: numberValue(row.sort_order), deletedAt: nullableDateValue(row.deleted_at), createdAt: dateValue(row.created_at), updatedAt: dateValue(row.updated_at) })),
       questionAiExplanations: rowsFrom(questionAiExplanationRows[0]).map((row) => { const content = parseJson(row.content_json); return { id: textValue(row.id), questionId: textValue(row.question_id), questionVersion: numberValue(row.question_version), provider: textValue(row.provider), model: textValue(row.model), promptText: textValue(row.prompt_text), content: isRecord(content) ? textValue(content.text) : '', generatedAt: dateValue(row.generated_at) }; }),
-      practiceSessions: rowsFrom(practiceSessionRows[0]).map((row) => ({ id: textValue(row.id), questionBankId: textValue(row.question_bank_id), questionChapterId: row.question_chapter_id === null ? null : textValue(row.question_chapter_id), mode: textValue(row.mode) as PracticeMode, source: textValue(row.source) as PracticeSource, scope: (parseJson(row.scope_json) as Record<string, unknown>) ?? {}, status: textValue(row.status) as PracticeSessionStatus, startedAt: dateValue(row.started_at), completedAt: nullableDateValue(row.completed_at), createdAt: dateValue(row.created_at), updatedAt: dateValue(row.updated_at) })),
+      practiceSessions: rowsFrom(practiceSessionRows[0]).map((row) => ({ id: textValue(row.id), questionBankId: row.question_bank_id === null ? null : textValue(row.question_bank_id), subjectId: row.subject_id === null ? null : textValue(row.subject_id), questionChapterId: row.question_chapter_id === null ? null : textValue(row.question_chapter_id), mode: textValue(row.mode) as PracticeMode, source: textValue(row.source) as PracticeSource, scope: (parseJson(row.scope_json) as Record<string, unknown>) ?? {}, status: textValue(row.status) as PracticeSessionStatus, startedAt: dateValue(row.started_at), completedAt: nullableDateValue(row.completed_at), createdAt: dateValue(row.created_at), updatedAt: dateValue(row.updated_at) })),
       practiceAttempts: rowsFrom(practiceAttemptRows[0]).map((row) => ({ id: textValue(row.id), practiceSessionId: textValue(row.practice_session_id), questionId: textValue(row.question_id), questionVersion: numberValue(row.question_version), sortOrder: numberValue(row.sort_order), snapshot: (parseJson(row.snapshot_json) as Record<string, unknown>) ?? {}, answer: row.answer_json === null ? null : normalizeQuestionAnswer(parseJson(row.answer_json)), result: textValue(row.result) as PracticeAttemptResult, answeredAt: nullableDateValue(row.answered_at), createdAt: dateValue(row.created_at), updatedAt: dateValue(row.updated_at) })),
+      questionReviewNotes: rowsFrom(questionReviewNoteRows[0]).map((row) => ({ questionId: textValue(row.question_id), noteText: textValue(row.note_text), strokes: normalizeHandwrittenStrokes(row.ink_json === null || row.ink_json === undefined ? [] : parseJson(row.ink_json), '题目手写备注'), updatedAt: dateValue(row.updated_at) })),
+      cardReviewNotes: rowsFrom(cardReviewNoteRows[0]).map((row) => ({ cardId: textValue(row.card_id), noteText: textValue(row.note_text), strokes: normalizeHandwrittenStrokes(row.ink_json === null || row.ink_json === undefined ? [] : parseJson(row.ink_json), '闪卡手写备注'), updatedAt: dateValue(row.updated_at) })),
     };
   }
 
@@ -1068,10 +1139,10 @@ export class DataGovernanceServiceImpl implements DataGovernanceService {
     const connection = await this.database.getConnection();
     try {
       await connection.beginTransaction();
-      for (const table of ['practice_attempts', 'practice_sessions', 'question_ai_explanations', 'questions', 'question_chapters', 'question_banks', 'sync_locks', 'ai_explanations', 'highlights', 'review_status_history', 'review_records', 'cards', 'sections', 'chapters', 'material_covers', 'materials', 'resources', 'trash_items', 'subjects', 'courses'] as const) {
+      for (const table of ['practice_attempts', 'practice_sessions', 'question_ai_explanations', 'question_review_notes', 'card_review_notes', 'questions', 'question_chapters', 'question_banks', 'sync_locks', 'ai_explanations', 'highlights', 'review_status_history', 'review_records', 'cards', 'sections', 'chapters', 'material_covers', 'materials', 'resources', 'trash_items', 'subjects', 'courses'] as const) {
         await connection.execute(`DELETE FROM ${table}`);
       }
-      await connection.execute("DELETE FROM app_settings WHERE setting_key IN ('review.lastCardId', 'review.lastCards')");
+      await connection.execute("DELETE FROM app_settings WHERE setting_key IN ('review.lastCardId', 'review.lastCards', 'review.workspaceContext')");
       for (const item of payload.courses ?? []) await connection.execute('INSERT INTO courses (id, name, sort_order, is_system, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', [item.id, item.name, item.sortOrder, item.isSystem, mysqlDateTime(item.deletedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
       for (const item of payload.subjects ?? []) await connection.execute('INSERT INTO subjects (id, course_id, name, sort_order, is_system, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [item.id, item.courseId, item.name, item.sortOrder, item.isSystem, mysqlDateTime(item.deletedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
       for (const item of payload.materials) await connection.execute('INSERT INTO materials (id, subject_id, name, source_filename, source_sha256, imported_at, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [item.id, item.subjectId, item.name, item.sourceFilename, item.sourceSha256, mysqlDateTime(item.importedAt), mysqlDateTime(item.deletedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
@@ -1079,6 +1150,7 @@ export class DataGovernanceServiceImpl implements DataGovernanceService {
       for (const item of payload.sections) await connection.execute('INSERT INTO sections (id, chapter_id, title, sort_order, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', [item.id, item.chapterId, item.title, item.sortOrder, mysqlDateTime(item.deletedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
       for (const item of payload.resources) await connection.execute('INSERT INTO resources (id, relative_path, mime_type, width, height, sha256, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [item.id, item.relativePath, item.mimeType, item.width, item.height, item.sha256, mysqlDateTime(item.createdAt), mysqlDateTime(item.deletedAt)]);
       for (const item of payload.cards) await connection.execute('INSERT INTO cards (id, section_id, title, content_json, mastery_status, sort_order, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [item.id, item.sectionId, item.title, JSON.stringify(item.content), item.masteryStatus, item.sortOrder, mysqlDateTime(item.deletedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
+      for (const item of payload.cardReviewNotes ?? []) await connection.execute('INSERT INTO card_review_notes (card_id, note_text, ink_json, updated_at) VALUES (?, ?, ?, ?)', [item.cardId, item.noteText, JSON.stringify(item.strokes), mysqlDateTime(item.updatedAt)]);
       for (const item of payload.materialCovers ?? []) await connection.execute('INSERT INTO material_covers (id, material_id, original_resource_id, thumbnail_resource_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.materialId, item.originalResourceId, item.thumbnailResourceId, mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
       for (const item of payload.highlights) await connection.execute('INSERT INTO highlights (id, card_id, kind, anchor_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)', [item.id, item.cardId, item.kind, JSON.stringify(item.anchor), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
       for (const item of payload.reviewRecords) await connection.execute('INSERT INTO review_records (card_id, first_viewed_at, last_viewed_at, status_changed_at, view_count) VALUES (?, ?, ?, ?, ?)', [item.cardId, mysqlDateTime(item.firstViewedAt), mysqlDateTime(item.lastViewedAt), mysqlDateTime(item.statusChangedAt), item.viewCount]);
@@ -1086,9 +1158,10 @@ export class DataGovernanceServiceImpl implements DataGovernanceService {
       for (const item of payload.aiExplanations) await connection.execute('INSERT INTO ai_explanations (card_id, provider_profile_id, provider, model, prompt_text, content_json, generated_at) VALUES (?, NULL, ?, ?, ?, ?, ?)', [item.cardId, item.provider, item.model, item.promptText, JSON.stringify({ text: item.content }), mysqlDateTime(item.generatedAt)]);
       for (const item of payload.questionBanks) await connection.execute('INSERT INTO question_banks (id, subject_id, kind, name, sort_order, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [item.id, item.subjectId, item.kind, item.name, item.sortOrder, mysqlDateTime(item.deletedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
       for (const item of payload.questionChapters) await connection.execute('INSERT INTO question_chapters (id, question_bank_id, title, sort_order, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', [item.id, item.questionBankId, item.title, item.sortOrder, mysqlDateTime(item.deletedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
-      for (const item of payload.questions) await connection.execute('INSERT INTO questions (id, question_bank_id, question_chapter_id, stem_json, question_type, options_json, answer_json, analysis_json, knowledge_points_json, version, sort_order, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [item.id, item.questionBankId, item.questionChapterId, JSON.stringify(item.stem), item.type, JSON.stringify(item.options), JSON.stringify(item.answer), item.analysis === null ? null : JSON.stringify(item.analysis), JSON.stringify(item.knowledgePoints), item.version, item.sortOrder, mysqlDateTime(item.deletedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
+      for (const item of payload.questions) await connection.execute('INSERT INTO questions (id, question_bank_id, question_chapter_id, stem_json, question_type, options_json, answer_json, analysis_json, knowledge_points_json, is_favorite, version, sort_order, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [item.id, item.questionBankId, item.questionChapterId, JSON.stringify(item.stem), item.type, JSON.stringify(item.options), JSON.stringify(item.answer), item.analysis === null ? null : JSON.stringify(item.analysis), JSON.stringify(item.knowledgePoints), item.isFavorite ? 1 : 0, item.version, item.sortOrder, mysqlDateTime(item.deletedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
+      for (const item of payload.questionReviewNotes ?? []) await connection.execute('INSERT INTO question_review_notes (question_id, note_text, ink_json, updated_at) VALUES (?, ?, ?, ?)', [item.questionId, item.noteText, JSON.stringify(item.strokes ?? []), mysqlDateTime(item.updatedAt)]);
       for (const item of payload.questionAiExplanations) await connection.execute('INSERT INTO question_ai_explanations (id, question_id, question_version, provider_profile_id, provider, model, prompt_text, content_json, generated_at) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)', [item.id, item.questionId, item.questionVersion, item.provider, item.model, item.promptText, JSON.stringify({ text: item.content }), mysqlDateTime(item.generatedAt)]);
-      for (const item of payload.practiceSessions) await connection.execute('INSERT INTO practice_sessions (id, question_bank_id, question_chapter_id, mode, source, scope_json, status, started_at, completed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [item.id, item.questionBankId, item.questionChapterId, item.mode, item.source, JSON.stringify(item.scope), item.status, mysqlDateTime(item.startedAt), mysqlDateTime(item.completedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
+      for (const item of payload.practiceSessions) await connection.execute('INSERT INTO practice_sessions (id, question_bank_id, subject_id, question_chapter_id, mode, source, scope_json, status, started_at, completed_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [item.id, item.questionBankId, item.subjectId, item.questionChapterId, item.mode, item.source, JSON.stringify(item.scope), item.status, mysqlDateTime(item.startedAt), mysqlDateTime(item.completedAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
       for (const item of payload.practiceAttempts) await connection.execute('INSERT INTO practice_attempts (id, practice_session_id, question_id, question_version, sort_order, snapshot_json, answer_json, result, answered_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [item.id, item.practiceSessionId, item.questionId, item.questionVersion, item.sortOrder, JSON.stringify(item.snapshot), item.answer === null ? null : JSON.stringify(item.answer), item.result, mysqlDateTime(item.answeredAt), mysqlDateTime(item.createdAt), mysqlDateTime(item.updatedAt)]);
       for (const item of payload.trashItems) await connection.execute('INSERT INTO trash_items (id, entity_type, entity_id, payload_json, deleted_at, expires_at, restored_at) VALUES (?, ?, ?, ?, ?, ?, ?)', [item.id, item.entityType, item.entityId, JSON.stringify(item.payload), mysqlDateTime(item.deletedAt), mysqlDateTime(item.expiresAt), mysqlDateTime(item.restoredAt)]);
       for (const item of payload.appSettings) await connection.execute('INSERT INTO app_settings (setting_key, setting_value) VALUES (?, ?)', [item.settingKey, JSON.stringify(item.settingValue)]);
@@ -1123,7 +1196,7 @@ export class DataGovernanceServiceImpl implements DataGovernanceService {
       courseCount: payload.courses?.length ?? 0, subjectCount: payload.subjects?.length ?? 0, materialCoverCount: payload.materialCovers?.length ?? 0, reviewStatusHistoryCount: payload.reviewStatusHistory?.length ?? 0,
     };
     return sourceVersion === 2
-      ? { ...restored, questionBankCount: payload.questionBanks.length, questionChapterCount: payload.questionChapters.length, questionCount: payload.questions.length, questionAiExplanationCount: payload.questionAiExplanations.length, practiceSessionCount: payload.practiceSessions.length, practiceAttemptCount: payload.practiceAttempts.length }
+      ? { ...restored, questionBankCount: payload.questionBanks.length, questionChapterCount: payload.questionChapters.length, questionCount: payload.questions.length, questionAiExplanationCount: payload.questionAiExplanations.length, practiceSessionCount: payload.practiceSessions.length, practiceAttemptCount: payload.practiceAttempts.length, questionReviewNoteCount: payload.questionReviewNotes?.length ?? 0, cardReviewNoteCount: payload.cardReviewNotes?.length ?? 0 }
       : restored;
   }
 

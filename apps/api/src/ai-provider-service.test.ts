@@ -16,6 +16,7 @@ type StoredProfile = {
   model: string;
   apiKeyCiphertext: Buffer | null;
   isActive: boolean;
+  priority: number;
 };
 
 class FakeAiProviderDatabase implements AiProviderDatabase, AiProviderSqlConnection {
@@ -26,7 +27,7 @@ class FakeAiProviderDatabase implements AiProviderDatabase, AiProviderSqlConnect
     if (normalized.startsWith('SELECT id, name, provider, base_url, model,')) {
       return [this.profiles
         .slice()
-        .sort((left, right) => Number(right.isActive) - Number(left.isActive))
+        .sort((left, right) => Number(right.isActive) - Number(left.isActive) || left.priority - right.priority)
         .map((profile) => ({
           id: profile.id,
           name: profile.name,
@@ -35,13 +36,8 @@ class FakeAiProviderDatabase implements AiProviderDatabase, AiProviderSqlConnect
           model: profile.model,
           has_api_key: profile.apiKeyCiphertext ? 1 : 0,
           is_active: profile.isActive ? 1 : 0,
+          priority: profile.priority,
         })), []];
-    }
-    if (normalized === 'UPDATE ai_provider_profiles SET is_active = FALSE WHERE is_active = TRUE') {
-      for (const profile of this.profiles) {
-        profile.isActive = false;
-      }
-      return [{ affectedRows: this.profiles.length }, []];
     }
     if (normalized.startsWith('INSERT INTO app_settings')) {
       return [{ affectedRows: 1 }, []];
@@ -50,7 +46,7 @@ class FakeAiProviderDatabase implements AiProviderDatabase, AiProviderSqlConnect
       return [[{ setting_key: values[0] }], []];
     }
     if (normalized.startsWith('INSERT INTO ai_provider_profiles')) {
-      const [id, name, provider, baseUrl, model, apiKeyCiphertext, isActive] = values;
+      const [id, name, provider, baseUrl, model, apiKeyCiphertext, isActive, priority] = values;
       this.profiles.push({
         id: String(id),
         name: String(name),
@@ -59,12 +55,19 @@ class FakeAiProviderDatabase implements AiProviderDatabase, AiProviderSqlConnect
         model: String(model),
         apiKeyCiphertext: Buffer.isBuffer(apiKeyCiphertext) ? apiKeyCiphertext : null,
         isActive: Boolean(isActive),
+        priority: Number(priority),
       });
       return [{ affectedRows: 1 }, []];
     }
     if (normalized === 'SELECT id FROM ai_provider_profiles WHERE id = ? FOR UPDATE') {
       const profile = this.profiles.find((item) => item.id === values[0]);
       return [profile ? [{ id: profile.id }] : [], []];
+    }
+    if (normalized.startsWith('SELECT COALESCE(MAX(priority), 0) + 1 AS next_priority')) {
+      return [[{ next_priority: Math.max(0, ...this.profiles.filter((profile) => profile.isActive).map((profile) => profile.priority)) + 1 }], []];
+    }
+    if (normalized === 'SELECT id FROM ai_provider_profiles WHERE is_active = TRUE FOR UPDATE') {
+      return [this.profiles.filter((profile) => profile.isActive).map((profile) => ({ id: profile.id })), []];
     }
     if (normalized.startsWith('SELECT id, provider, base_url, model, api_key_ciphertext')) {
       const profile = this.profiles.find((item) => item.id === values[0]);
@@ -76,11 +79,22 @@ class FakeAiProviderDatabase implements AiProviderDatabase, AiProviderSqlConnect
         api_key_ciphertext: profile.apiKeyCiphertext,
       }] : [], []];
     }
-    if (normalized === 'UPDATE ai_provider_profiles SET is_active = TRUE WHERE id = ?') {
-      const profile = this.profiles.find((item) => item.id === values[0]);
+    if (normalized === 'UPDATE ai_provider_profiles SET is_active = TRUE, priority = ? WHERE id = ?') {
+      const profile = this.profiles.find((item) => item.id === values[1]);
       if (profile) {
         profile.isActive = true;
+        profile.priority = Number(values[0]);
       }
+      return [{ affectedRows: profile ? 1 : 0 }, []];
+    }
+    if (normalized === 'UPDATE ai_provider_profiles SET is_active = FALSE, priority = 0 WHERE id = ?') {
+      const profile = this.profiles.find((item) => item.id === values[0]);
+      if (profile) { profile.isActive = false; profile.priority = 0; }
+      return [{ affectedRows: profile ? 1 : 0 }, []];
+    }
+    if (normalized === 'UPDATE ai_provider_profiles SET priority = ? WHERE id = ? AND is_active = TRUE') {
+      const profile = this.profiles.find((item) => item.id === values[1] && item.isActive);
+      if (profile) profile.priority = Number(values[0]);
       return [{ affectedRows: profile ? 1 : 0 }, []];
     }
     if (normalized.startsWith('UPDATE ai_provider_profiles SET name = ?')) {
@@ -152,7 +166,7 @@ test('Provider 配置只返回密钥状态，并在留空更新时保留密文',
   assert.deepEqual(database.profiles[0]!.apiKeyCiphertext, encryptedBeforeUpdate);
 });
 
-test('启用项切换会取消其他配置的启用状态，并支持删除', async () => {
+test('多个启用项构成可排序候选池，并支持移出与删除', async () => {
   const database = new FakeAiProviderDatabase();
   const service = new AiProviderServiceImpl({ database, encryptionSecret });
   const first = await service.create({
@@ -162,9 +176,16 @@ test('启用项切换会取消其他配置的启用状态，并支持删除', as
     name: 'DeepSeek', provider: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', apiKey: 'second-key', isActive: false,
   });
 
-  const switched = await service.activate(second.profiles.find((profile) => profile.name === 'DeepSeek')!.id);
-  assert.equal(switched.profiles.find((profile) => profile.name === 'OpenAI')?.isActive, false);
-  assert.equal(switched.profiles.find((profile) => profile.name === 'DeepSeek')?.isActive, true);
+  const deepSeekId = second.profiles.find((profile) => profile.name === 'DeepSeek')!.id;
+  const enabled = await service.setState(deepSeekId, { isActive: true });
+  assert.equal(enabled.profiles.find((profile) => profile.name === 'OpenAI')?.isActive, true);
+  assert.equal(enabled.profiles.find((profile) => profile.name === 'DeepSeek')?.priority, 2);
+
+  const reordered = await service.reorder({ profileIds: [deepSeekId, first.profiles.find((profile) => profile.name === 'OpenAI')!.id] });
+  assert.deepEqual(reordered.profiles.filter((profile) => profile.isActive).map((profile) => profile.name), ['DeepSeek', 'OpenAI']);
+
+  const disabled = await service.setState(deepSeekId, { isActive: false });
+  assert.equal(disabled.profiles.find((profile) => profile.name === 'DeepSeek')?.isActive, false);
 
   const removed = await service.remove(first.profiles[0]!.id);
   assert.equal(removed.profiles.length, 1);

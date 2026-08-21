@@ -117,10 +117,11 @@ test('JSON v2 恢复题库、题目 AI 版本和作答快照，并保留题目�
     materials: [], chapters: [], sections: [], cards: [], resources: [], highlights: [], reviewRecords: [], aiExplanations: [], trashItems: [], appSettings: [],
     questionBanks: [{ id: 'bank-1', subjectId: '00000000-0000-4000-8000-000000000002', kind: 'chapter', name: '章节题', sortOrder: 0, deletedAt: null, createdAt: timestamp, updatedAt: timestamp }],
     questionChapters: [{ id: 'question-chapter-1', questionBankId: 'bank-1', title: '第一章', sortOrder: 0, deletedAt: null, createdAt: timestamp, updatedAt: timestamp }],
-    questions: [{ id: 'question-1', questionBankId: 'bank-1', questionChapterId: 'question-chapter-1', stem: [{ type: 'paragraph', children: [{ type: 'text', value: '题干' }] }], type: 'single', options: [{ key: 'A', content: [{ type: 'text', value: '对' }] }, { key: 'B', content: [{ type: 'text', value: '错' }] }], answer: ['A'], analysis: null, knowledgePoints: ['知识点'], version: 3, sortOrder: 0, deletedAt: null, createdAt: timestamp, updatedAt: timestamp }],
+    questions: [{ id: 'question-1', questionBankId: 'bank-1', questionChapterId: 'question-chapter-1', stem: [{ type: 'paragraph', children: [{ type: 'text', value: '题干' }] }], type: 'single', options: [{ key: 'A', content: [{ type: 'text', value: '对' }] }, { key: 'B', content: [{ type: 'text', value: '错' }] }], answer: ['A'], analysis: null, knowledgePoints: ['知识点'], isFavorite: true, version: 3, sortOrder: 0, deletedAt: null, createdAt: timestamp, updatedAt: timestamp }],
     questionAiExplanations: [{ id: 'question-ai-1', questionId: 'question-1', questionVersion: 3, provider: 'deepseek', model: 'model-1', promptText: '', content: '讲解', generatedAt: timestamp }],
-    practiceSessions: [{ id: 'session-1', questionBankId: 'bank-1', questionChapterId: 'question-chapter-1', mode: 'test', source: 'full', scope: { questionIds: ['question-1'] }, status: 'completed', startedAt: timestamp, completedAt: timestamp, createdAt: timestamp, updatedAt: timestamp }],
+    practiceSessions: [{ id: 'session-1', questionBankId: null, subjectId: '00000000-0000-4000-8000-000000000002', questionChapterId: null, mode: 'test', source: 'favorite', scope: { subjectId: '00000000-0000-4000-8000-000000000002', questionIds: ['question-1'] }, status: 'completed', startedAt: timestamp, completedAt: timestamp, createdAt: timestamp, updatedAt: timestamp }],
     practiceAttempts: [{ id: 'attempt-1', practiceSessionId: 'session-1', questionId: 'question-1', questionVersion: 3, sortOrder: 0, snapshot: { stem: '题干', options: { A: '对', B: '错' }, answer: ['A'] }, answer: ['B'], result: 'incorrect', answeredAt: timestamp, createdAt: timestamp, updatedAt: timestamp }],
+    questionReviewNotes: [{ questionId: 'question-1', noteText: '易错点', strokes: [{ points: [{ x: 10, y: 20 }] }], updatedAt: timestamp }],
   };
   const result = await new DataGovernanceServiceImpl(database, path.join(os.tmpdir(), 'missing-resources'), path.join(os.tmpdir(), 'missing-backups')).restoreJson(payload);
   assert.deepEqual(result.questionBankCount, 1);
@@ -129,8 +130,12 @@ test('JSON v2 恢复题库、题目 AI 版本和作答快照，并保留题目�
   assert.deepEqual(result.questionAiExplanationCount, 1);
   assert.deepEqual(result.practiceSessionCount, 1);
   assert.deepEqual(result.practiceAttemptCount, 1);
+  assert.deepEqual(result.questionReviewNoteCount, 1);
+  assert.ok(statements.some((sql) => sql.startsWith('INSERT INTO question_review_notes')));
   assert.ok(statements.findIndex((sql) => sql.startsWith('INSERT INTO questions')) < statements.findIndex((sql) => sql.startsWith('INSERT INTO question_ai_explanations')));
   assert.ok(statements.findIndex((sql) => sql.startsWith('INSERT INTO questions')) < statements.findIndex((sql) => sql.startsWith('INSERT INTO practice_attempts')));
+  assert.ok(statements.some((sql) => sql.startsWith('INSERT INTO questions') && sql.includes('is_favorite')));
+  assert.ok(statements.some((sql) => sql.startsWith('INSERT INTO practice_sessions') && sql.includes('subject_id')));
 });
 
 test('JSON 恢复会校验敏感字段并执行事务替换', async () => {

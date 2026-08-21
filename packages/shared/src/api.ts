@@ -233,12 +233,16 @@ export interface QuestionImportAppliedResponse {
 }
 
 export const reviewDashboardPath = '/api/review/dashboard';
+export const reviewWorkspacePath = '/api/review/workspace';
+export const learningInsightsPath = '/api/review/insights';
 export const reviewStartPath = '/api/review/start';
 export const reviewCardPath = '/api/review/cards';
 export const reviewCardsPath = '/api/review/cards';
+export const reviewCardNotesPath = '/api/review/cards';
 export const reviewResourcePath = '/api/review/resources';
 export const reviewCardHighlightPath = '/api/review/cards';
 export const reviewCardExplanationPath = '/api/review/cards';
+export const studyAssistantPath = '/api/study-assistant';
 
 export type ReviewStartScope = 'all' | 'unassessed' | 'effort';
 export type ReviewMasteryStatus = 'unassessed' | 'mastered' | 'familiar' | 'effort';
@@ -286,6 +290,19 @@ export interface ReviewAiExplanationGenerateRequest {
 export interface ReviewAiExplanationResponse {
   explanation: ReviewAiExplanation;
 }
+
+export interface StudyAssistantAskRequest {
+  prompt: string;
+}
+
+export interface StudyAssistantResponse {
+  content: string;
+}
+
+export type StudyAssistantStreamEvent =
+  | { type: 'delta'; content: string }
+  | { type: 'done' }
+  | { type: 'error'; error: string };
 
 export interface ReviewContentNode {
   type: string;
@@ -357,6 +374,164 @@ export interface ReviewDashboardResponse {
   materials: ReviewMaterialSummary[];
 }
 
+export type ReviewWorkspaceMode = 'flashcards' | 'questions';
+
+export interface ReviewWorkspaceContext {
+  courseId: string;
+  subjectId: string | null;
+  mode: ReviewWorkspaceMode;
+  expandedMaterialId: string | null;
+}
+
+export interface ReviewWorkspaceCourseSummary {
+  id: string;
+  name: string;
+  isSystem: boolean;
+  subjectCount: number;
+  materialCount: number;
+  flashcardCount: number;
+  questionBankCount: number;
+  questionCount: number;
+  hasContinue: boolean;
+}
+
+export interface ReviewWorkspaceSubjectSummary {
+  id: string;
+  courseId: string;
+  name: string;
+  isSystem: boolean;
+  materialCount: number;
+  flashcardCount: number;
+  questionBankCount: number;
+  questionCount: number;
+}
+
+export interface ReviewWorkspaceMaterialSummary {
+  id: string;
+  subjectId: string;
+  name: string;
+  cardCount: number;
+  masteredCount: number;
+  familiarCount: number;
+  effortCount: number;
+  unassessedCount: number;
+  lastCardId: string | null;
+  lastCardTitle: string | null;
+  lastViewedAt: string | null;
+  cover: CatalogMaterialCover | null;
+}
+
+export interface ReviewWorkspaceQuestionBankSummary {
+  id: string;
+  subjectId: string;
+  kind: QuestionBankKind;
+  name: string;
+  questionCount: number;
+  chapterCount: number;
+  chapters: Array<{
+    id: string;
+    title: string;
+    questionCount: number;
+  }>;
+  inProgressCount: number;
+  latestSessionId: string | null;
+  latestSessionMode: PracticeMode | null;
+  latestSessionUpdatedAt: string | null;
+}
+
+export interface ReviewWorkspaceFavoritePracticeSummary {
+  subjectId: string;
+  questionCount: number;
+  inProgressCount: number;
+  latestSessionId: string | null;
+  latestSessionMode: PracticeMode | null;
+  latestSessionUpdatedAt: string | null;
+}
+
+export type ReviewWorkspaceContinue =
+  | {
+      kind: 'flashcard';
+      courseId: string;
+      subjectId: string;
+      materialId: string;
+      cardId: string;
+      materialName: string;
+      cardTitle: string;
+      updatedAt: string;
+    }
+  | {
+      kind: 'practice';
+      courseId: string;
+      subjectId: string;
+      questionBankId: string | null;
+      questionBankName: string;
+      sessionId: string;
+      mode: PracticeMode;
+      source: PracticeSource;
+      updatedAt: string;
+    };
+
+export interface ReviewWorkspaceResponse {
+  context: ReviewWorkspaceContext;
+  courses: ReviewWorkspaceCourseSummary[];
+  currentCourse: ReviewWorkspaceCourseSummary;
+  subjects: ReviewWorkspaceSubjectSummary[];
+  flashcards: {
+    materialCount: number;
+    cardCount: number;
+    unassessedCount: number;
+    effortCount: number;
+    materials: ReviewWorkspaceMaterialSummary[];
+  };
+  questions: {
+    questionBankCount: number;
+    questionCount: number;
+    inProgressCount: number;
+    aggregateWrongCount: number;
+    banks: ReviewWorkspaceQuestionBankSummary[];
+    favorites: ReviewWorkspaceFavoritePracticeSummary[];
+  };
+  continue: ReviewWorkspaceContinue | null;
+}
+
+export interface ReviewWorkspaceContextUpdateRequest {
+  courseId: string;
+  subjectId: string | null;
+  mode: ReviewWorkspaceMode;
+  expandedMaterialId: string | null;
+}
+
+export type LearningInsightsPeriod = 7 | 30;
+
+export interface LearningInsightsResponse {
+  periodDays: LearningInsightsPeriod;
+  timezone: 'Asia/Shanghai';
+  from: string;
+  to: string;
+  flashcards: {
+    reviewedCount: number;
+    daily: Array<{ date: string; count: number }>;
+  };
+  masteryChanges: {
+    total: number;
+    daily: Array<{ date: string; count: number }>;
+    byStatus: Record<ReviewMasteryStatus, number>;
+  };
+  practice: {
+    answeredCount: number;
+    correctCount: number;
+    incorrectCount: number;
+    accuracy: number | null;
+    daily: Array<{ date: string; answeredCount: number; correctCount: number }>;
+  };
+  weakKnowledgePoints: Array<{
+    knowledgePoint: string;
+    answeredCount: number;
+    incorrectCount: number;
+    accuracy: number;
+  }>;
+}
+
 export interface ReviewCardResponse {
   card: ReviewCardSummary;
   navigation: ReviewCardNavigation;
@@ -410,6 +585,35 @@ export interface ReviewStatusUpdateRequest {
 
 export const reviewCardStatusPath = '/api/review/cards';
 
+export const globalSearchPath = '/api/search';
+export type GlobalSearchContentType = 'material' | 'card' | 'question';
+
+export interface GlobalSearchFilters {
+  query: string;
+  courseId?: string;
+  subjectId?: string;
+  types?: GlobalSearchContentType[];
+}
+
+export interface GlobalSearchResult {
+  type: GlobalSearchContentType;
+  id: string;
+  title: string;
+  summary: string;
+  course: { id: string; name: string };
+  subject: { id: string; name: string };
+  materialId: string | null;
+  cardId: string | null;
+  questionBankId: string | null;
+  questionId: string | null;
+}
+
+export interface GlobalSearchResponse {
+  query: string;
+  resultLimitPerType: number;
+  results: GlobalSearchResult[];
+}
+
 export const hierarchyPath = '/api/hierarchy';
 export const hierarchyTrashPath = '/api/trash';
 
@@ -420,9 +624,13 @@ export const catalogMaterialsPath = '/api/catalog/materials';
 export const questionBanksPath = '/api/question-banks';
 export const questionChaptersPath = '/api/question-chapters';
 export const questionsPath = '/api/questions';
+export const questionFavoritePath = '/api/questions';
+export const questionReviewNotesPath = '/api/questions';
 export const questionAiExplanationsPath = '/api/question-ai-explanations';
 export const practiceSessionsPath = '/api/practice/sessions';
 export const practiceQuestionBanksPath = '/api/practice/question-banks';
+export const practiceSubjectFavoritesPath = '/api/practice/subjects';
+export const wrongAnswerReviewPath = '/api/practice/wrong-answers';
 
 export type CatalogSortDirection = 'up' | 'down';
 
@@ -623,10 +831,62 @@ export interface QuestionQuestion {
   answer: string[];
   analysis: ReviewContentNode[] | null;
   knowledgePoints: string[];
+  isFavorite: boolean;
   version: number;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+  reviewNote: string | null;
+}
+
+export interface HandwrittenPoint {
+  x: number;
+  y: number;
+}
+
+export interface HandwrittenStroke {
+  points: HandwrittenPoint[];
+}
+
+export interface CardReviewNote {
+  cardId: string;
+  noteText: string;
+  strokes: HandwrittenStroke[];
+  updatedAt: string;
+}
+
+export interface CardReviewNoteUpdateRequest {
+  noteText: string;
+  strokes: HandwrittenStroke[];
+}
+
+export interface QuestionReviewNote {
+  questionId: string;
+  noteText: string;
+  strokes: HandwrittenStroke[];
+  updatedAt: string;
+}
+
+export interface QuestionReviewNoteUpdateRequest {
+  noteText?: string;
+  strokes?: HandwrittenStroke[];
+}
+
+export interface WrongAnswerFilterRequest {
+  subjectId: string;
+  knowledgePoint?: string;
+  type?: QuestionType;
+  since?: string;
+}
+
+export interface WrongAnswerFilterResponse {
+  subjectId: string;
+  items: Array<{
+    question: QuestionQuestion;
+    knowledgePoints: string[];
+    latestWrongAt: string;
+    note: QuestionReviewNote | null;
+  }>;
 }
 
 export interface QuestionAiExplanation {
@@ -693,6 +953,10 @@ export interface QuestionMutationResponse {
   questions: QuestionBankQuestionsResponse;
 }
 
+export interface QuestionFavoriteUpdateRequest {
+  isFavorite: boolean;
+}
+
 export interface QuestionTrashItem {
   id: string;
   questionBankId: string;
@@ -717,17 +981,20 @@ export interface PracticeAttemptView {
 export interface PracticeQuestionView {
   id: string;
   questionChapterId: string | null;
+  isFavorite: boolean;
   stem: ReviewContentNode[];
   type: QuestionType;
   options: QuestionOptionContent[];
   analysis: ReviewContentNode[] | null;
+  reviewNote: QuestionReviewNote | null;
   attempt: PracticeAttemptView;
   correctAnswer?: string[];
 }
 
 export interface PracticeSessionSummary {
   id: string;
-  questionBankId: string;
+  questionBankId: string | null;
+  subjectId: string | null;
   questionChapterId: string | null;
   mode: PracticeMode;
   source: PracticeSource;
@@ -746,6 +1013,11 @@ export interface PracticeSessionResponse {
   result?: PracticeResultSummary;
 }
 
+export interface PracticeAnswerResponse {
+  session: PracticeSessionSummary;
+  question: PracticeQuestionView;
+}
+
 export interface PracticeSessionListResponse {
   sessions: PracticeSessionSummary[];
 }
@@ -756,7 +1028,23 @@ export interface PracticeSessionStartRequest {
   mode: PracticeMode;
   source?: PracticeSource;
   sourceSessionId?: string | null;
+  questionCount?: number | null;
+  shuffle?: boolean;
+  unattemptedOnly?: boolean;
 }
+
+export interface PracticeSessionOptions {
+  questionCount?: number | null;
+  shuffle?: boolean;
+  unattemptedOnly?: boolean;
+}
+
+export interface PracticeFavoriteSessionStartRequest extends PracticeSessionOptions {
+  subjectId: string;
+  mode: PracticeMode;
+}
+
+export interface WrongAnswerPracticeStartRequest extends WrongAnswerFilterRequest, PracticeSessionOptions { mode: PracticeMode; }
 
 export interface PracticeAnswerRequest {
   answer: string[];
@@ -798,6 +1086,7 @@ export interface AiProviderProfile {
   model: string;
   hasApiKey: boolean;
   isActive: boolean;
+  priority: number;
 }
 
 export interface AiProviderProfilesResponse {
@@ -823,6 +1112,14 @@ export interface AiProviderProfileUpdateRequest {
   baseUrl: string;
   model: string;
   apiKey?: string;
+}
+
+export interface AiProviderProfileStateUpdateRequest {
+  isActive: boolean;
+}
+
+export interface AiProviderProfilesReorderRequest {
+  profileIds: string[];
 }
 
 export type HierarchyEntityType = 'material' | 'chapter' | 'section' | 'card';
@@ -1025,7 +1322,7 @@ export type DataExportTrashEntityType = HierarchyEntityType | 'question_bank' | 
 export type QuestionBankKind = 'chapter' | 'official' | 'mock';
 export type QuestionType = 'single' | 'multiple' | 'true_false';
 export type PracticeMode = 'cram' | 'test';
-export type PracticeSource = 'full' | 'current_wrong' | 'aggregate_wrong';
+export type PracticeSource = 'full' | 'current_wrong' | 'aggregate_wrong' | 'favorite';
 export type PracticeSessionStatus = 'in_progress' | 'completed' | 'abandoned';
 export type PracticeAttemptResult = 'unanswered' | 'correct' | 'incorrect';
 
@@ -1065,10 +1362,26 @@ export interface DataExportQuestion {
   answer: string[];
   analysis: ReviewContentNode[] | null;
   knowledgePoints: string[];
+  isFavorite: boolean;
   version: number;
   sortOrder: number;
   deletedAt: string | null;
   createdAt: string;
+  updatedAt: string;
+  reviewNote?: string | null;
+}
+
+export interface DataExportQuestionReviewNote {
+  questionId: string;
+  noteText: string;
+  strokes?: HandwrittenStroke[];
+  updatedAt: string;
+}
+
+export interface DataExportCardReviewNote {
+  cardId: string;
+  noteText: string;
+  strokes: HandwrittenStroke[];
   updatedAt: string;
 }
 
@@ -1085,7 +1398,8 @@ export interface DataExportQuestionAiExplanation {
 
 export interface DataExportPracticeSession {
   id: string;
-  questionBankId: string;
+  questionBankId: string | null;
+  subjectId: string | null;
   questionChapterId: string | null;
   mode: PracticeMode;
   source: PracticeSource;
@@ -1123,7 +1437,16 @@ export interface DataExportTrashItem {
 
 export type DataExportAppSetting =
   | { settingKey: 'review.lastCardId'; settingValue: { cardId: string } }
-  | { settingKey: 'review.lastCards'; settingValue: { cardIdsByMaterial: Record<string, string> } };
+  | { settingKey: 'review.lastCards'; settingValue: { cardIdsByMaterial: Record<string, string> } }
+  | {
+      settingKey: 'review.workspaceContext';
+      settingValue: {
+        courseId: string | null;
+        subjectsByCourse: Record<string, string | null>;
+        modesByCourse: Record<string, ReviewWorkspaceMode>;
+        expandedMaterialsByCourse: Record<string, string | null>;
+      };
+    };
 
 export interface DataJsonExportV1 {
   format: 'knowledge-flashcards-json';
@@ -1153,6 +1476,8 @@ export interface DataJsonExportV2 extends Omit<DataJsonExportV1, 'version'> {
   questionAiExplanations: DataExportQuestionAiExplanation[];
   practiceSessions: DataExportPracticeSession[];
   practiceAttempts: DataExportPracticeAttempt[];
+  questionReviewNotes?: DataExportQuestionReviewNote[];
+  cardReviewNotes?: DataExportCardReviewNote[];
 }
 
 export type DataJsonExport = DataJsonExportV1 | DataJsonExportV2;
@@ -1174,6 +1499,8 @@ export interface DataRestoreResponse {
   questionAiExplanationCount?: number;
   practiceSessionCount?: number;
   practiceAttemptCount?: number;
+  questionReviewNoteCount?: number;
+  cardReviewNoteCount?: number;
 }
 
 export type DataBackupStatus = 'running' | 'succeeded' | 'failed';

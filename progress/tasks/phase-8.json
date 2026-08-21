@@ -1,0 +1,74 @@
+{
+  "phaseId": "phase-8",
+  "tasks": [
+    {
+      "id": "PH8-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "实现闪卡与题目的文字、手写备注",
+      "priority": "P1",
+      "moduleIds": [
+        "handwritten-annotations",
+        "review-experience",
+        "question-bank",
+        "practice-experience",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M8"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-20",
+      "completedOn": "2026-08-20",
+      "lastProgressOn": "2026-08-20",
+      "acceptance": "用户可为任一闪卡和题目保存当前文字、手写备注，并在刷新、跨设备读取、完整 JSON 导出恢复和每日备份恢复后保持一致；题目文字与笔迹仅在背题提交后或检测完成后紧随解析显示，检测作答过程不泄露备注、解析或答案。",
+      "result": "闪卡和题目均支持当前文字备注与归一化矢量手写笔迹；刷题工具区提供题目备注入口，题目备注在背题提交后或检测会话完成后的解析下方以同款内容块显示，检测作答阶段继续隐藏答案、解析和备注。备注独立于正文、题目版本和作答快照，并纳入完整 JSON 与每日备份恢复。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，145 项 API 测试全部通过，覆盖闪卡备注读写/清除/规模校验、题目备注合并更新、检测隐藏与背题/完成后显示。",
+        "npm run db:migrate 通过，已执行 010_phase_8_handwritten_notes.sql。",
+        "npm run build 通过。",
+        "npm run progress:build 与 npm run progress:check 通过。",
+        "认证态真实浏览器与真实设备回归仍受 RISK-021/RISK-028 环境限制，未伪造通过。"
+      ],
+      "affectedFiles": [
+        "database/migrations/010_phase_8_handwritten_notes.sql",
+        "packages/shared/src/api.ts",
+        "apps/api/src/card-review-note-service.ts",
+        "apps/api/src/question-service.ts",
+        "apps/api/src/practice-service.ts",
+        "apps/api/src/data-governance-service.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "apps/api/src/card-review-note-service.test.ts",
+        "apps/api/src/question-service.test.ts",
+        "apps/api/src/practice-service.test.ts",
+        "apps/api/src/data-governance-service.test.ts"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-20",
+        "summary": "以一份当前文字与矢量笔迹记录满足随手书写，不改变正文、题目版本或作答快照。",
+        "inScope": [
+          "为闪卡新建当前文字与手写备注，为既有题目当前文字备注增加手写笔迹字段；文字和归一化矢量笔画均可新增、撤销、清除和保存。",
+          "提供认证读写 API、输入规模校验和移动端画板 Sheet；闪卡从复习页次级工具区进入，题目从题库单题工具区进入。",
+          "在背题提交后及检测会话完成后，将题目的当前文字与手写备注放在解析之后显示；检测作答中不得返回或显示备注。",
+          "将两类当前备注纳入完整 JSON、每日备份和恢复，保持旧 JSON 及现有题目纯文字备注兼容；补充迁移、服务、HTTP、数据治理、类型、构建和响应式验收。"
+        ],
+        "outOfScope": [
+          "不实现手写识别、文字转写、笔迹搜索、AI 处理、图片或 PDF 导入、附件、录音、协作分享、权限细分或备注历史版本。",
+          "不修改闪卡正文、题目题干/解析、题目版本、题目 AI 讲解版本、复习记录、统计口径或不可变作答快照。",
+          "不在检测作答阶段显示题目答案、解析、文字备注或手写笔迹，不改变既有背题和检测判题语义。"
+        ],
+        "deferredTo": [
+          "多颜色、压感、荧光笔、橡皮擦区域擦除、画布背景模板和笔迹历史另立编辑器能力任务。",
+          "手写识别、笔迹检索和 AI 归纳另立智能输入任务。"
+        ]
+      },
+      "next": "后续若需多颜色、压感、荧光笔、区域擦除、画布背景或笔迹历史，另立编辑器能力任务；认证态真实设备验收沿用 RISK-021/RISK-028。"
+    }
+  ]
+}

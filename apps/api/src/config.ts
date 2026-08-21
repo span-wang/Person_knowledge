@@ -87,6 +87,8 @@ export const config = {
   },
   ai: {
     providerKeyEncryptionSecret: process.env.AI_PROVIDER_KEY_ENCRYPTION_SECRET ?? '',
+    studyAssistantFirstTokenTimeoutMs: readNumber(process.env.AI_STUDY_ASSISTANT_FIRST_TOKEN_TIMEOUT_SECONDS, 30, 'AI_STUDY_ASSISTANT_FIRST_TOKEN_TIMEOUT_SECONDS') * 1000,
+    studyAssistantStreamIdleTimeoutMs: readNumber(process.env.AI_STUDY_ASSISTANT_STREAM_IDLE_TIMEOUT_SECONDS, 45, 'AI_STUDY_ASSISTANT_STREAM_IDLE_TIMEOUT_SECONDS') * 1000,
   },
   auth: {
     enabled: Boolean(authUsername && authPasswordHash),

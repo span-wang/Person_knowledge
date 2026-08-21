@@ -18,7 +18,15 @@ class FakeAiExplanationDatabase implements AiExplanationSqlExecutor {
     model: 'gpt-test',
     apiKeyCiphertext: encryptAiProviderApiKey(this.providerKey, encryptionSecret),
   };
+  readonly fallbackProvider = {
+    id: 'provider-2', provider: 'deepseek', baseUrl: 'https://fallback.example.test/v1', model: 'fallback-model', apiKeyCiphertext: encryptAiProviderApiKey('sk-fallback-secret', encryptionSecret),
+  };
+  providerRows: Array<Record<string, unknown>>;
   explanation: Record<string, unknown> | null = null;
+
+  constructor() {
+    this.providerRows = [{ id: this.provider.id, provider: this.provider.provider, base_url: this.provider.baseUrl, model: this.provider.model, api_key_ciphertext: this.provider.apiKeyCiphertext }];
+  }
 
   async execute(sql: string, values: readonly unknown[] = []): Promise<[unknown, unknown]> {
     const normalized = sql.replace(/\s+/g, ' ').trim();
@@ -26,13 +34,7 @@ class FakeAiExplanationDatabase implements AiExplanationSqlExecutor {
       return [[{ title: '函数闪卡', content_json: [{ type: 'paragraph', children: [{ type: 'text', value: '函数是映射。' }] }] }], []];
     }
     if (normalized.startsWith('SELECT id, provider, base_url, model')) {
-      return [[{
-        id: this.provider.id,
-        provider: this.provider.provider,
-        base_url: this.provider.baseUrl,
-        model: this.provider.model,
-        api_key_ciphertext: this.provider.apiKeyCiphertext,
-      }], []];
+      return [this.providerRows, []];
     }
     if (normalized.startsWith('INSERT INTO ai_explanations')) {
       this.explanation = {
@@ -97,6 +99,26 @@ test('Provider 返回错误时不会写入讲解', async () => {
     (error: unknown) => error instanceof AiExplanationApiError && error.statusCode === 502,
   );
   assert.equal(database.explanation, null);
+});
+
+test('首选 Provider 失败时会保存备用 Provider 的有效讲解', async () => {
+  const database = new FakeAiExplanationDatabase();
+  database.providerRows.push({ id: database.fallbackProvider.id, provider: database.fallbackProvider.provider, base_url: database.fallbackProvider.baseUrl, model: database.fallbackProvider.model, api_key_ciphertext: database.fallbackProvider.apiKeyCiphertext });
+  const calls: string[] = [];
+  const service = new AiExplanationServiceImpl({
+    database,
+    encryptionSecret,
+    fetchImplementation: async (input) => {
+      calls.push(String(input));
+      return calls.length === 1
+        ? new Response('{"error":"upstream"}', { status: 429 })
+        : new Response(JSON.stringify({ choices: [{ message: { content: '备用讲解' } }] }), { status: 200 });
+    },
+  });
+  const result = await service.generate('card-1');
+  assert.equal(result.explanation.content, '备用讲解');
+  assert.equal(result.explanation.model, 'fallback-model');
+  assert.deepEqual(calls, ['https://api.example.test/v1/chat/completions', 'https://fallback.example.test/v1/chat/completions']);
 });
 
 test('取消生成会中止 Provider 请求且不写入半成品', async () => {

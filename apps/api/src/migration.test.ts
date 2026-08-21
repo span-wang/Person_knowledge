@@ -50,3 +50,10 @@ test('题库回收站迁移扩展题库实体枚举', async () => {
   assert.match(sql, /ALTER TABLE `trash_items`/);
   assert.match(sql, /'question_bank', 'question_chapter', 'question'/);
 });
+
+test('Provider 降级迁移为候选池增加优先级索引', async () => {
+  const sql = await fs.readFile(path.resolve(currentDirectory, '../../../database/migrations/011_ai_provider_failover.sql'), 'utf8');
+  assert.match(sql, /ADD COLUMN `priority` INT UNSIGNED NOT NULL DEFAULT 0/);
+  assert.match(sql, /idx_ai_provider_profiles_failover/);
+  assert.doesNotMatch(sql, /API_KEY|PASSWORD|CLOUDFLARE|CIPHERTEXT|SECRET/i);
+});

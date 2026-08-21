@@ -99,6 +99,20 @@
       "label": "第六阶段：题库与刷题",
       "goal": "完成章节题、真题和模拟题的题库导入、管理、双模式刷题、统计、错题专项、AI 讲解与完整备份",
       "plannedCycle": "4-6 周",
+      "status": "进行中"
+    },
+    {
+      "id": "phase-7",
+      "label": "第七阶段：检索、巩固与洞察",
+      "goal": "在发布与题库主链路稳定后，完成全局检索、错题巩固和学习洞察",
+      "plannedCycle": "3-5 周",
+      "status": "进行中"
+    },
+    {
+      "id": "phase-8",
+      "label": "第八阶段：文字与手写备注",
+      "goal": "为闪卡和题目提供可恢复的当前文字与手写备注，并在题目解析阶段呈现",
+      "plannedCycle": "1-2 周",
       "status": "已完成"
     }
   ],
@@ -143,13 +157,25 @@
       "id": "M6",
       "label": "M6 题库可刷可追溯",
       "completion": "题库导入、题目管理、背题/检测、统计、错题专项、AI 题目讲解历史和备份恢复闭环可用",
-      "status": "已完成"
+      "status": "进行中"
     },
     {
       "id": "GA",
       "label": "GA 可安全发布",
       "completion": "iPhone PWA、Cloudflare Tunnel、登录保护和 Windows 发布包通过验收",
       "status": "进行中"
+    },
+    {
+      "id": "M7",
+      "label": "M7 学习效率可定位可复盘",
+      "completion": "全局检索、可备注错题巩固和基于既有记录的周期学习洞察通过数据、交互与备份验收",
+      "status": "进行中"
+    },
+    {
+      "id": "M8",
+      "label": "M8 备注可随手记",
+      "completion": "闪卡和题目文字、手写备注可跨设备保存恢复，题目备注在解析阶段可见且不泄露检测答案",
+      "status": "已完成"
     }
   ],
   "modules": [
@@ -236,6 +262,34 @@
       "capabilityLayer": "智能服务层",
       "status": "进行中",
       "summary": "复用当前启用 Provider，为单题提供带作答上下文的讲解、取消和持久化版本历史。"
+    },
+    {
+      "id": "global-search",
+      "name": "全局检索",
+      "capabilityLayer": "业务层",
+      "status": "已完成",
+      "summary": "已完成跨课程检索有效资料、闪卡和题目，并以受控摘要定位到具体内容。"
+    },
+    {
+      "id": "wrong-answer-reinforcement",
+      "name": "错题巩固",
+      "capabilityLayer": "业务层",
+      "status": "已完成",
+      "summary": "以累计错题口径提供个人备注、维度筛选与复练入口，不改写作答快照。"
+    },
+    {
+      "id": "learning-insights",
+      "name": "学习洞察",
+      "capabilityLayer": "业务层",
+      "status": "进行中",
+      "summary": "已基于有效复习记录和已完成会话展示 7/30 天学习量、状态变化、正确率与薄弱知识点。"
+    },
+    {
+      "id": "handwritten-annotations",
+      "name": "文字与手写备注",
+      "capabilityLayer": "交互层",
+      "status": "已完成",
+      "summary": "已为闪卡与题目保存当前文字和矢量笔迹备注，并在题目解析阶段显示；高级笔迹编辑能力另立任务。"
     },
     {
       "id": "delivery-security",

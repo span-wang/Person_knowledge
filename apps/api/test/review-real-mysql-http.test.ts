@@ -9,15 +9,18 @@ import {
   reviewCardPath,
   reviewCardsPath,
   reviewDashboardPath,
+  reviewWorkspacePath,
   reviewStartPath,
   type ReviewCardResponse,
   type ReviewCardContentUpdateResponse,
   type ReviewCardsResponse,
   type ReviewDashboardResponse,
+  type ReviewWorkspaceResponse,
 } from '@knowledge-flashcards/shared';
 import { createApp } from '../src/app.js';
 import { createDatabasePool } from '../src/database.js';
 import { createReviewDatabase, createReviewService, type ReviewService } from '../src/review-service.js';
+import { createReviewWorkspaceService, type ReviewWorkspaceService } from '../src/review-workspace-service.js';
 
 interface StartedServer {
   baseUrl: string;
@@ -25,6 +28,8 @@ interface StartedServer {
 }
 
 interface ReviewFixture {
+  courseId: string;
+  subjectId: string;
   materialId: string;
   chapterId: string;
   sectionId: string;
@@ -40,8 +45,8 @@ interface ReviewProgressSetting {
   value: string;
 }
 
-async function startServer(reviewService: ReviewService): Promise<StartedServer> {
-  const server = createServer(createApp(new Date(), { reviewService }));
+async function startServer(reviewService: ReviewService, reviewWorkspaceService?: ReviewWorkspaceService): Promise<StartedServer> {
+  const server = createServer(createApp(new Date(), { reviewService, reviewWorkspaceService }));
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const address = server.address() as AddressInfo;
@@ -93,6 +98,8 @@ async function restoreReviewProgressSettings(pool: Pool, settings: ReviewProgres
 async function createFixture(pool: Pool): Promise<ReviewFixture> {
   const runId = randomUUID();
   const fixture: ReviewFixture = {
+    courseId: randomUUID(),
+    subjectId: randomUUID(),
     materialId: randomUUID(),
     chapterId: randomUUID(),
     sectionId: randomUUID(),
@@ -128,8 +135,16 @@ async function createFixture(pool: Pool): Promise<ReviewFixture> {
   const plainContent = [{ type: 'paragraph', children: [{ type: 'text', value: fixture.keyword }] }];
 
   await pool.execute(
-    'INSERT INTO materials (id, name, source_filename, source_sha256) VALUES (?, ?, ?, ?)',
-    [fixture.materialId, 'M2 验收资料 ' + runId, 'm2-' + runId + '.md', sourceSha256],
+    'INSERT INTO courses (id, name, sort_order) VALUES (?, ?, ?)',
+    [fixture.courseId, 'M2 验收课程 ' + runId, 1000000],
+  );
+  await pool.execute(
+    'INSERT INTO subjects (id, course_id, name, sort_order) VALUES (?, ?, ?, ?)',
+    [fixture.subjectId, fixture.courseId, 'M2 验收科目 ' + runId, 0],
+  );
+  await pool.execute(
+    'INSERT INTO materials (id, subject_id, name, source_filename, source_sha256) VALUES (?, ?, ?, ?, ?)',
+    [fixture.materialId, fixture.subjectId, 'M2 验收资料 ' + runId, 'm2-' + runId + '.md', sourceSha256],
   );
   await pool.execute(
     'INSERT INTO resources (id, relative_path, mime_type, sha256) VALUES (?, ?, ?, ?)',
@@ -182,6 +197,8 @@ async function cleanupFixture(pool: Pool, fixture: ReviewFixture) {
     await connection.execute('DELETE FROM sections WHERE chapter_id = ?', [fixture.chapterId]);
     await connection.execute('DELETE FROM chapters WHERE id = ?', [fixture.chapterId]);
     await connection.execute('DELETE FROM materials WHERE id = ?', [fixture.materialId]);
+    await connection.execute('DELETE FROM subjects WHERE id = ?', [fixture.subjectId]);
+    await connection.execute('DELETE FROM courses WHERE id = ?', [fixture.courseId]);
     await connection.commit();
   } catch (error) {
     await connection.rollback().catch(() => undefined);
@@ -201,7 +218,10 @@ test('M2 连续复习主链路通过真实 MySQL 与 HTTP 验收', { timeout: 60
   try {
     fixture = await createFixture(pool);
     secondFixture = await createFixture(pool);
-    const started = await startServer(createReviewService({ database: createReviewDatabase(pool) }));
+    const started = await startServer(
+      createReviewService({ database: createReviewDatabase(pool) }),
+      createReviewWorkspaceService({ database: pool }),
+    );
     server = started.server;
     const lockUrl = started.baseUrl + reviewCardPath + '/' + encodeURIComponent(fixture.firstCardId) + '/edit-lock';
     const lock = await requestJson<{ lock: { lockToken: string } }>(lockUrl, {
@@ -383,6 +403,16 @@ test('M2 连续复习主链路通过真实 MySQL 与 HTTP 验收', { timeout: 60
       started.baseUrl + reviewStartPath + '?scope=all&materialId=' + encodeURIComponent(secondFixture.materialId),
     );
     assert.equal(resumedSecondMaterial.body.card.id, secondFixture.lastCardId);
+
+    const workspace = await requestJson<ReviewWorkspaceResponse>(
+      started.baseUrl + reviewWorkspacePath + '?' + new URLSearchParams({
+        courseId: fixture.courseId,
+        subjectId: fixture.subjectId,
+      }).toString(),
+    );
+    assert.equal(workspace.response.status, 200);
+    const workspaceMaterial = workspace.body.flashcards.materials.find((item) => item.id === fixture.materialId);
+    assert.equal(workspaceMaterial?.lastCardId, fixture.secondCardId);
 
     const resumedDashboard = await requestJson<ReviewDashboardResponse>(started.baseUrl + reviewDashboardPath);
     assert.equal(resumedDashboard.body.materials.find((item) => item.id === fixture.materialId)?.continueCard?.id, fixture.secondCardId);

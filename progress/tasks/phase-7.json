@@ -1,0 +1,354 @@
+{
+  "phaseId": "phase-7",
+  "tasks": [
+    {
+      "id": "PH7-04",
+      "sequence": "5",
+      "order": 50,
+      "title": "重构学习洞察统计图表",
+      "priority": "P1",
+      "moduleIds": [
+        "learning-insights",
+        "review-experience"
+      ],
+      "milestoneIds": [
+        "M7"
+      ],
+      "status": "进行中",
+      "startedOn": "2026-08-20",
+      "lastProgressOn": "2026-08-20",
+      "currentStepBoundary": {
+        "stepId": "PH7-04-chart-refactor",
+        "confirmedOn": "2026-08-20",
+        "inScope": [
+          "沿用 F2 Hairline Line 的轻量折线语法，重构周期复习量图表的坐标、日期标签、数据点和空状态。",
+          "将状态变化、题库正确率和薄弱知识点改为可扫描的统计表格/条形摘要，并保留可见中文文本摘要。",
+          "保持 7 天/30 天切换、现有 API 数据口径、响应式布局和无障碍标签。"
+        ],
+        "outOfScope": [
+          "不修改学习洞察 API、数据库查询、统计周期、样本量阈值或时区口径。",
+          "不新增打卡、排名、目标、预测、AI 建议、导出和多课程比较。"
+        ],
+        "deferredTo": [
+          "更多图表类型、多课程比较和长期报表另立分析能力任务。",
+          "认证态真实设备视觉回归沿用 RISK-021/RISK-028 的后续验收。"
+        ]
+      },
+      "acceptance": "洞察面板能在 7 天和 30 天周期下清楚呈现每日复习量、四种状态变化、题库正确率和薄弱知识点；图表比例诚实、标签不重叠、表格可扫描，颜色不是唯一判断依据，空数据和移动端布局正确。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已确认",
+        "confirmedOn": "2026-08-20",
+        "summary": "只重构学习洞察前端图表与统计呈现，复用既有只读数据契约。",
+        "inScope": [
+          "F2 Hairline Line 风格的逐日复习量图表。",
+          "状态变化、题库结果和薄弱知识点的紧凑表格化呈现。",
+          "桌面与 iPhone 响应式样式、文本摘要与图表无障碍标注。"
+        ],
+        "outOfScope": [
+          "不写入或改写任何学习历史与题库作答快照。",
+          "不改变 API 返回字段和统计结果。"
+        ],
+        "deferredTo": [
+          "账户级报表、多课程对比与长期自定义周期。"
+        ]
+      },
+      "next": "完成图表重构后运行前端类型检查、构建和进度校验。"
+    },
+    {
+      "id": "GOV-003",
+      "sequence": "1",
+      "order": 10,
+      "title": "冻结检索、错题巩固与学习洞察范围",
+      "priority": "P1",
+      "moduleIds": [
+        "project-governance",
+        "global-search",
+        "wrong-answer-reinforcement",
+        "learning-insights",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M7"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-20",
+      "completedOn": "2026-08-20",
+      "lastProgressOn": "2026-08-20",
+      "acceptance": "产品定位、开发方案、设计规范和结构化进度源一致定义全局检索、错题巩固与学习洞察的目标、数据边界、交互约束、任务顺序与风险；不产生应用或数据库实现。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-20",
+        "summary": "将用户确认的三个 P1 能力拆分为可独立验收的后续任务，并冻结不扩展自动复习算法、离线、批量导入或多用户范围。",
+        "inScope": [
+          "定义跨资料与题库的全局检索范围、受控摘要和目标定位原则。",
+          "定义与不可变作答快照隔离的题目错误原因/备注，以及累计错题、知识点、题型和最近错误筛选边界。",
+          "定义基于既有记录的 7 天、30 天学习洞察口径、最小样本量、空状态和无障碍图表摘要。",
+          "新增第七阶段、M7、任务卡、风险、日志并生成展示层。"
+        ],
+        "outOfScope": [
+          "不创建数据库迁移、搜索索引、API 契约、前端页面或测试代码。",
+          "不实现随机复练、间隔重复、提醒、打卡、排名、AI 学习建议、离线同步、批量导入或多用户协作。",
+          "不改变现有闪卡、题目、会话、统计、备份恢复或发布安全门禁。"
+        ],
+        "deferredTo": [
+          "PH7-01 负责全局检索的数据模型、接口、页面和性能验收。",
+          "PH7-02 负责错题备注、筛选复练、备份恢复和历史边界验收。",
+          "PH7-03 负责周期学习洞察、统计口径、无障碍摘要和边界日期验收。"
+        ]
+      },
+      "result": "全局检索、错题巩固与学习洞察已纳入第七阶段，并以全局检索、错题巩固、学习洞察的顺序独立实施。三项功能均保持单账号、有效内容和现有学习历史边界；发布与题库 P0 验收未完成前不启动实现。",
+      "verification": [
+        "npm run progress:build 通过。",
+        "npm run progress:check 通过。"
+      ],
+      "affectedFiles": [
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/config.json",
+        "progress/tasks/phase-7.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "在 GA 发布验收和题库 P0 主链路稳定后，按 PH7-01 实现全局检索。"
+    },
+    {
+      "id": "PH7-01",
+      "sequence": "2",
+      "order": 20,
+      "title": "实现跨课程全局检索与目标定位",
+      "priority": "P1",
+      "moduleIds": [
+        "global-search",
+        "review-experience",
+        "question-bank",
+        "document-rendering"
+      ],
+      "milestoneIds": [
+        "M7"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-20",
+      "completedOn": "2026-08-20",
+      "lastProgressOn": "2026-08-20",
+      "acceptance": "用户可在认证后跨课程检索有效资料名称、闪卡标题/正文和题干，以课程、科目、内容类型收窄结果；每个结果显示受控摘要并能在刷新后直接定位到资料、闪卡或题目，桌面与 390px 视口无横向溢出。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-20",
+        "summary": "建立可缩小范围、可定位、性能可测的内容检索入口，不把结构化正文降级为 Markdown 源码或将完整正文批量传回前端。",
+        "inScope": [
+          "检索未软删除资料的名称、有效闪卡标题与结构化正文中的可读文本、有效题目的题干。",
+          "提供课程、科目和资料/闪卡/题目内容类型约束，返回稳定排序、有限数量的摘要和命中目标路径。",
+          "通过认证 API、桌面与 390px 页面接入搜索、筛选、空状态和目标定位。",
+          "使用真实规模 EXPLAIN、分页或结果上限验证查询性能，并补充 API、浏览器和权限回归。"
+        ],
+        "outOfScope": [
+          "不检索已软删除内容、AI 讲解、题目解析、作答快照、备份文件或本机文件系统。",
+          "不提供高级检索语法、保存搜索、搜索历史、全文高亮编辑、标签、推荐或 AI 语义检索。",
+          "不改变资料导入、正文编辑、题库排序、复习筛选和现有 URL 业务语义。"
+        ],
+        "deferredTo": [
+          "PH7-02 负责错题备注与错题维度复练。",
+          "PH7-03 负责周期学习洞察。",
+          "检索规模超过本步定义的体验阈值时，另立性能任务评估专用索引、异步索引或更细分页。"
+        ]
+      },
+      "result": "已完成跨课程全局检索：认证 API 以 MySQL ngram 全文索引检索有效资料名称、闪卡标题/结构化正文和题干，支持课程、科目、内容类型筛选；每类最多 20 条，返回受控摘要和稳定目标 ID，不返回全文。复习页检索弹层已接入去抖、清除、筛选 Sheet、空状态、Esc、焦点约束与回归焦点；资料、闪卡和题目结果可直接定位，题目深链刷新后会滚动并聚焦目标题目。",
+      "verification": [
+        "npm run db:migrate 通过，008_phase_7_global_search.sql 已执行。",
+        "npm run typecheck 通过。",
+        "npm run build 通过，仅保留既有 Vite 大 chunk 警告。",
+        "全局检索服务与 HTTP 定向测试通过；三类 EXPLAIN 均使用 ngram 全文索引。",
+        "Playwright 1440px、390x844、844x375 通过，document.scrollWidth 与 viewport 宽度一致；深色模式检索面板与文字 token 正常。",
+        "Playwright 验证筛选 Sheet 44px 触控行、焦点约束/回归、Esc 关闭和控制台无新增错误；资料/闪卡结果可定位，题目 URL 保留 questionBankId/questionId 并滚动聚焦目标题目。"
+      ],
+      "affectedFiles": [
+        "database/migrations/008_phase_7_global_search.sql",
+        "packages/shared/src/api.ts",
+        "apps/api/src/global-search-service.ts",
+        "apps/api/src/global-search-service.test.ts",
+        "apps/api/src/global-search-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-7.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "PH7-02 在 PH7-01 完成且题库 P0 主链路稳定后启动。"
+    },
+    {
+      "id": "PH7-02",
+      "sequence": "3",
+      "order": 30,
+      "title": "实现错题备注、筛选与巩固复练",
+      "priority": "P1",
+      "moduleIds": [
+        "wrong-answer-reinforcement",
+        "practice-experience",
+        "question-bank",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M7"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-20",
+      "completedOn": "2026-08-20",
+      "lastProgressOn": "2026-08-20",
+      "currentStepBoundary": {
+        "stepId": "PH7-02-closeout",
+        "confirmedOn": "2026-08-20",
+        "inScope": [
+          "补充错题查询服务、认证 HTTP 契约和最近错误边界自动化测试。",
+          "补充真实 MySQL 题目、作答快照、备注、筛选和复练会话回归。",
+          "完善错题筛选 Sheet 的键盘焦点约束、关闭后焦点回归和 390px/横屏验收。"
+        ],
+        "outOfScope": [
+          "不新增随机复练、间隔重复、跨科目混合或自动错误归因。",
+          "不改变题目版本、作答快照和现有题库统计语义。"
+        ],
+        "deferredTo": [
+          "PH7-03 负责周期学习洞察。",
+          "复杂备注历史、富文本和附件另立数据模型任务。"
+        ]
+      },
+      "acceptance": "用户可为题目保存当前错误原因/备注，并在同一科目内按知识点、题型和最近错误筛选累计错题后开始背题或检测；备注与不可变作答快照隔离，完整 JSON 与每日备份恢复后保持一致。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已确认",
+        "confirmedOn": "2026-08-20",
+        "summary": "在既有累计错题和会话机制上增加用户可控的错误备注与筛选复练，不引入自动归因或新的出题算法。",
+        "inScope": [
+          "新增每题当前错误原因/备注的可视化编辑、读取和删除，以及独立于 practice_attempts 的持久化与备份恢复。",
+          "复用最近一次有效作答为错误的累计错题口径，按同一科目内知识点、题型和最近错误时间筛选练习范围。",
+          "从筛选结果创建背题或检测会话，并补充迁移、服务、HTTP、真实 MySQL、备份恢复与桌面/390px 回归。"
+        ],
+        "outOfScope": [
+          "不自动生成、分类、改写或共享错误原因，不调用 AI 处理备注。",
+          "不改变历史作答快照、题库累计统计、题目版本语义或收藏题会话范围。",
+          "不实现随机复练、间隔重复、跨科目混合练习、错误图片或附件。"
+        ],
+        "deferredTo": [
+          "PH7-03 负责周期学习洞察。",
+          "随机复练、间隔重复和提醒归属后续独立的复习策略阶段。",
+          "复杂备注历史、富文本、附件或多用户共享须另立数据模型任务。"
+        ]
+      },
+      "result": "已完成错题巩固闭环：题目当前备注独立持久化并纳入 JSON/每日备份恢复；累计错题按最近一次有效错误、知识点、题型和日期筛选；筛选结果可创建背题或检测会话。题库页提供错题 Sheet、备注编辑、空状态和移动端单列入口，键盘焦点在 Sheet 内循环并在关闭后回到触发按钮。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，139 项 API 测试全部通过。",
+        "node --import tsx --test apps/api/test/wrong-answer-real-mysql-http.test.ts 通过真实 MySQL 与 HTTP 验收，确认旧错误被后续正确作答排除、备注返回、日期筛选和复练会话快照只包含目标题。",
+        "npm run build 通过，仅保留既有 Vite 大 chunk 警告。",
+        "npm run progress:build 与 npm run progress:check 通过。",
+        "浏览器连接在当前桌面环境因 native pipe bridge 不可用而未能建立；受保护业务页的认证态视觉回归沿用既有 PH7-02 日志中已记录的登录态阻塞，未伪造通过。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/api/src/wrong-answer-service.test.ts",
+        "apps/api/src/wrong-answer-http.test.ts",
+        "apps/api/test/wrong-answer-real-mysql-http.test.ts",
+        "progress/tasks/phase-7.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "PH7-03 负责周期学习洞察；随机复练、间隔重复、复杂备注历史和附件不纳入后续小步。"
+    },
+    {
+      "id": "PH7-03",
+      "sequence": "4",
+      "order": 40,
+      "title": "实现周期学习洞察与薄弱知识点",
+      "priority": "P1",
+      "moduleIds": [
+        "learning-insights",
+        "review-experience",
+        "practice-experience",
+        "question-bank"
+      ],
+      "milestoneIds": [
+        "M7"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-20",
+      "lastProgressOn": "2026-08-20",
+      "currentStepBoundary": {
+        "stepId": "PH7-03-minimal-insights",
+        "confirmedOn": "2026-08-20",
+        "inScope": [
+          "新增认证周期洞察查询契约，支持 7 天和 30 天、课程/科目范围和 Asia/Shanghai 日历聚合。",
+          "只读取有效闪卡复习记录、状态历史和已完成题库作答，返回复习量、状态变化、正确率和至少 3 次作答的薄弱知识点。",
+          "在复习工作台工具区按需打开响应式洞察面板，使用逐日点线小图并提供可见文本摘要、空状态和无障碍标签。"
+        ],
+        "outOfScope": [
+          "不写入或改写 review_records、review_status_history、practice_sessions 或 practice_attempts。",
+          "不实现目标、提醒、连续天数、排名、AI 建议、预测、自动排程、长期自定义日期或数据导出。"
+        ],
+        "deferredTo": [
+          "更多图表类型、多课程比较和长期报表另立分析能力任务。",
+          "真实设备浏览器视觉回归依赖认证态和浏览器环境，沿用现有验收环境风险。"
+        ]
+      },
+      "acceptance": "用户可查看最近 7 天、30 天的闪卡复习量、掌握状态变化、已完成题库会话正确率和达到最小样本量的薄弱知识点；统计按 Asia/Shanghai 计算，图表有文本摘要且无数据、边界日期、软删除与进行中会话均正确处理。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已确认",
+        "confirmedOn": "2026-08-20",
+        "summary": "从已存在的复习记录、状态历史和已完成刷题会话计算周期洞察，仅呈现可解释数据而不改变用户的复习节奏。",
+        "inScope": [
+          "按 Asia/Shanghai 聚合近 7 天、30 天有效闪卡复习量、四种掌握状态变化和已完成会话的题库正确率。",
+          "从有效题目的知识点和已完成作答计算满足最小样本量的薄弱知识点，并同时显示作答数和正确率。",
+          "提供认证 API、响应式洞察页面、图表文本摘要、空状态和真实 MySQL 边界日期回归。"
+        ],
+        "outOfScope": [
+          "不写入新的学习历史，不改写 review_records、review_status_history、practice_sessions 或 practice_attempts。",
+          "不提供打卡、连续天数、排名、推送、AI 建议、预测、学习目标或自动复习排程。",
+          "不将样本量不足的知识点标记为薄弱，不把进行中会话、软删除内容或跨时区日期混入统计。"
+        ],
+        "deferredTo": [
+          "学习目标、提醒、间隔重复和自动推荐归属后续复习策略阶段。",
+          "多课程比较、长期自定义日期和数据导出归属后续分析能力任务。",
+          "更多可视化图表或账户级报表须根据真实使用反馈另立任务。"
+        ]
+      },
+      "startedOn": "2026-08-20",
+      "completedOn": "2026-08-20",
+      "lastProgressOn": "2026-08-20",
+      "result": "已完成周期学习洞察：认证 API 支持 7 天/30 天、课程/科目筛选和 Asia/Shanghai 日历聚合；只读取有效闪卡最近复习、状态历史和已完成题库作答，按最小 3 次样本输出薄弱知识点。复习工作台工具区按需打开响应式洞察面板，提供周期切换、逐日点线图、文本摘要、空状态和无障碍标签。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，142 项 API 测试全部通过。",
+        "node --import tsx --test apps/api/test/learning-insights-real-mysql-http.test.ts 通过真实 MySQL 与 HTTP 回归，确认上海边界、软删除和进行中会话过滤。",
+        "npm run build 通过，仅保留既有 Vite 大 chunk 警告。",
+        "图表采用 F2 Hairline Line（basics-gallery.html）结构，颜色不是唯一线索并提供可见中文摘要；认证态浏览器视觉回归沿用 RISK-021/RISK-028 阻塞，未伪造通过。"
+      ],
+      "affectedFiles": [
+        "packages/shared/src/api.ts",
+        "apps/api/src/learning-insights-service.ts",
+        "apps/api/src/learning-insights-service.test.ts",
+        "apps/api/src/learning-insights-http.test.ts",
+        "apps/api/test/learning-insights-real-mysql-http.test.ts",
+        "apps/api/src/app.ts",
+        "apps/web/src/api.ts",
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "progress/tasks/phase-7.json",
+        "progress/config.json",
+        "progress/logs.json",
+        "progress/risks.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "更多图表类型、多课程比较、长期报表和真实设备认证态视觉回归另立任务。"
+    }
+  ]
+}

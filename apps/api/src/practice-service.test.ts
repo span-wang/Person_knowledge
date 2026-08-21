@@ -11,13 +11,21 @@ class FakePracticeDatabase implements PracticeDatabase {
   private readonly sessions: Row[] = [];
   private readonly attempts: Row[] = [];
   private sequence = 0;
+  private questionNote: Row | null = null;
   constructor(private readonly bankKind: 'chapter' | 'official' = 'chapter', private readonly chapterBelongsToBank = true) {}
+
+  setQuestionNote(note: { noteText: string; strokes: unknown[]; updatedAt: string }) {
+    this.questionNote = { note_text: note.noteText, ink_json: JSON.stringify(note.strokes), note_updated_at: note.updatedAt };
+  }
 
   async execute(sql: string, values: readonly unknown[] = []): Promise<[unknown, unknown]> {
     const normalized = sql.replace(/\s+/g, ' ').trim();
     const lower = normalized.toLowerCase();
     if (lower.startsWith('select id, subject_id') && lower.includes('from question_banks')) {
       return [[{ id: 'bank-1', subject_id: 'subject-1', kind: this.bankKind, name: '题库', sort_order: 0, question_count: 2, chapter_count: 1 }], []];
+    }
+    if (lower.startsWith('select id from subjects')) {
+      return [[{ id: 'subject-1' }], []];
     }
     if (lower.startsWith('select id, question_bank_id') && lower.includes('from question_chapters')) {
       if (!this.chapterBelongsToBank) return [[], []];
@@ -29,16 +37,22 @@ class FakePracticeDatabase implements PracticeDatabase {
         const sourceSessionId = String(values[0]);
         rows = rows.filter((row) => this.attempts.some((attempt) => attempt.practice_session_id === sourceSessionId && attempt.question_id === row.id && attempt.result === 'incorrect'));
       }
-      if (lower.includes('not exists')) {
+      if (lower.includes('previous_attempt.answer_json is not null')) {
+        rows = rows.filter((row) => !this.attempts.some((attempt) => attempt.question_id === row.id && attempt.answer_json !== null));
+      } else if (lower.includes('not exists')) {
         const latestByQuestion = new Map<string, Row>();
         for (const attempt of this.attempts.filter((item) => item.answer_json !== null)) latestByQuestion.set(String(attempt.question_id), attempt);
         rows = rows.filter((row) => latestByQuestion.get(String(row.id))?.result === 'incorrect');
       }
+      if (lower.includes('q.is_favorite = 1')) rows = rows.filter((row) => row.is_favorite === 1);
       return [rows, []];
     }
     if (lower.startsWith('insert into practice_sessions')) {
       this.writes.push(normalized);
-      this.sessions.push({ id: String(values[0]), question_bank_id: values[1], question_chapter_id: values[2], mode: values[3], source: values[4], status: 'in_progress', started_at: this.nextDate(), completed_at: null, updated_at: this.nextDate() });
+      const favorite = normalized.includes("'favorite'");
+      this.sessions.push(favorite
+        ? { id: String(values[0]), question_bank_id: null, subject_id: values[1], question_chapter_id: null, mode: values[2], source: 'favorite', status: 'in_progress', started_at: this.nextDate(), completed_at: null, updated_at: this.nextDate() }
+        : { id: String(values[0]), question_bank_id: values[1], subject_id: null, question_chapter_id: values[2], mode: values[3], source: values[4], status: 'in_progress', started_at: this.nextDate(), completed_at: null, updated_at: this.nextDate() });
       return [[], []];
     }
     if (lower.startsWith('insert into practice_attempts')) {
@@ -46,7 +60,7 @@ class FakePracticeDatabase implements PracticeDatabase {
       this.attempts.push({ id: String(values[0]), practice_session_id: values[1], question_id: values[2], question_version: values[3], sort_order: values[4], snapshot_json: values[5], answer_json: null, result: 'unanswered', answered_at: null });
       return [[], []];
     }
-    if (lower.startsWith('select id, question_bank_id, question_chapter_id, mode, source, status, started_at')) {
+    if (lower.startsWith('select id, question_bank_id, subject_id, question_chapter_id, mode, source, status, started_at')) {
       const id = String(values[0]);
       return [this.sessions.filter((row) => row.id === id), []];
     }
@@ -54,9 +68,21 @@ class FakePracticeDatabase implements PracticeDatabase {
       const id = String(values[0]);
       return [this.sessions.filter((row) => row.id === id), []];
     }
-    if (lower.startsWith('select question_id, question_version, sort_order, snapshot_json')) {
+    if (lower.startsWith('select question_id, question_version, sort_order, snapshot_json') || lower.startsWith('select a.question_id, a.question_version, a.sort_order, a.snapshot_json')) {
       const id = String(values[0]);
-      return [this.attempts.filter((row) => row.practice_session_id === id).sort((left, right) => Number(left.sort_order) - Number(right.sort_order)), []];
+      const questionId = values[1] === undefined ? null : String(values[1]);
+      const rows = this.attempts
+        .filter((row) => row.practice_session_id === id && (questionId === null || row.question_id === questionId))
+        .sort((left, right) => Number(left.sort_order) - Number(right.sort_order))
+        .map((row) => lower.startsWith('select a.') ? { ...row, note_text: this.questionNote?.note_text ?? null, ink_json: this.questionNote?.ink_json ?? null, note_updated_at: this.questionNote?.note_updated_at ?? null } : row);
+      return [rows, []];
+    }
+    if (lower.startsWith('select count(*) as question_count, sum(answer_json is not null) as answered_count')) {
+      const id = String(values[0]);
+      const attempts = this.attempts.filter((row) => row.practice_session_id === id);
+      const firstUnanswered = attempts.find((row) => row.answer_json === null);
+      const last = attempts.at(-1);
+      return [[{ question_count: attempts.length, answered_count: attempts.filter((row) => row.answer_json !== null).length, current_index: firstUnanswered?.sort_order ?? last?.sort_order ?? 0 }], []];
     }
     if (lower.startsWith('update practice_attempts set answer_json')) {
       this.writes.push(normalized);
@@ -88,7 +114,7 @@ class FakePracticeDatabase implements PracticeDatabase {
 
   private nextDate() { this.sequence += 1; return `2026-08-19T00:00:0${this.sequence}.000Z`; }
   private questionRow(id: string, sortOrder: number, correct: string): Row {
-    return { id, question_bank_id: 'bank-1', question_chapter_id: 'chapter-1', stem_json: JSON.stringify(paragraph(`题干 ${id}`)), question_type: 'single', options_json: JSON.stringify([{ key: 'A', content: paragraph('甲') }, { key: 'B', content: paragraph('乙') }]), answer_json: JSON.stringify([correct]), analysis_json: JSON.stringify(paragraph(`解析 ${id}`)), version: 1, sort_order: sortOrder, created_at: '2026-08-19T00:00:00.000Z' };
+    return { id, question_bank_id: 'bank-1', question_chapter_id: 'chapter-1', stem_json: JSON.stringify(paragraph(`题干 ${id}`)), question_type: 'single', options_json: JSON.stringify([{ key: 'A', content: paragraph('甲') }, { key: 'B', content: paragraph('乙') }]), answer_json: JSON.stringify([correct]), analysis_json: JSON.stringify(paragraph(`解析 ${id}`)), is_favorite: id === 'question-1' ? 1 : 0, version: 1, sort_order: sortOrder, created_at: '2026-08-19T00:00:00.000Z' };
   }
 }
 
@@ -102,28 +128,49 @@ test('非法答案在写入前被拒绝', async () => {
 });
 
 test('检测作答隐藏答案，完成后才揭示结果', async () => {
-  const service = createPracticeService({ database: new FakePracticeDatabase() });
+  const database = new FakePracticeDatabase();
+  database.setQuestionNote({ noteText: '  记住定义域  ', strokes: [{ points: [{ x: 10, y: 20 }] }], updatedAt: '2026-08-19T00:00:00.000Z' });
+  const service = createPracticeService({ database });
   const session = await service.start({ questionBankId: 'bank-1', questionChapterId: null, mode: 'test' });
   assert.equal(session.questions[0].correctAnswer, undefined);
   assert.equal(session.questions[0].analysis, null);
+  assert.equal(session.questions[0].reviewNote, null);
   const answered = await service.answer(session.session.id, 'question-1', { answer: ['A'] });
-  assert.equal(answered.questions[0].attempt.result, 'unanswered');
-  assert.equal(answered.questions[0].correctAnswer, undefined);
+  assert.equal(answered.question.attempt.result, 'unanswered');
+  assert.equal(answered.question.correctAnswer, undefined);
   const completed = await service.complete(session.session.id);
   assert.equal(completed.session.status, 'completed');
   assert.deepEqual(completed.questions[0].correctAnswer, ['A']);
   assert.equal(completed.questions[0].attempt.result, 'correct');
   assert.notEqual(completed.questions[0].analysis, null);
+  assert.equal(completed.questions[0].reviewNote?.noteText, '  记住定义域  ');
+  assert.deepEqual(completed.questions[0].reviewNote?.strokes, [{ points: [{ x: 10, y: 20 }] }]);
   assert.deepEqual(completed.result, { questionCount: 2, answeredCount: 1, unansweredCount: 1, correctCount: 1, incorrectCount: 0, accuracy: 100 });
 });
 
 test('背题提交立即返回正确答案和结果', async () => {
-  const service = createPracticeService({ database: new FakePracticeDatabase() });
+  const database = new FakePracticeDatabase();
+  database.setQuestionNote({ noteText: '背题提示', strokes: [], updatedAt: '2026-08-19T00:00:00.000Z' });
+  const service = createPracticeService({ database });
   const session = await service.start({ questionBankId: 'bank-1', questionChapterId: null, mode: 'cram' });
   const answered = await service.answer(session.session.id, 'question-1', { answer: ['B'] });
-  assert.equal(answered.questions[0].attempt.result, 'incorrect');
-  assert.deepEqual(answered.questions[0].correctAnswer, ['A']);
-  assert.notEqual(answered.questions[0].analysis, null);
+  assert.equal(answered.question.attempt.result, 'incorrect');
+  assert.deepEqual(answered.question.correctAnswer, ['A']);
+  assert.notEqual(answered.question.analysis, null);
+  assert.equal(answered.question.reviewNote?.noteText, '背题提示');
+});
+
+test('科目收藏题会话按创建时收藏范围建立独立快照', async () => {
+  const service = createPracticeService({ database: new FakePracticeDatabase() });
+  const session = await service.startFavorite({ subjectId: 'subject-1', mode: 'cram' });
+  assert.equal(session.session.source, 'favorite');
+  assert.equal(session.session.questionBankId, null);
+  assert.equal(session.session.subjectId, 'subject-1');
+  assert.deepEqual(session.questions.map((question) => question.id), ['question-1']);
+  assert.equal(session.questions[0]?.isFavorite, true);
+  const resumed = await service.get(session.session.id);
+  assert.equal(resumed.session.source, 'favorite');
+  assert.equal(resumed.questions[0]?.isFavorite, true);
 });
 
 test('本次与累计错题专项只保留最近一次仍答错的题目', async () => {
@@ -146,4 +193,46 @@ test('章节范围只允许章节题库且必须属于当前题库', async () =>
   await assert.rejects(() => official.start({ questionBankId: 'bank-1', questionChapterId: 'chapter-1', mode: 'test' }), (error: unknown) => error instanceof PracticeApiError && error.statusCode === 400);
   const missingChapter = createPracticeService({ database: new FakePracticeDatabase('chapter', false) });
   await assert.rejects(() => missingChapter.start({ questionBankId: 'bank-1', questionChapterId: 'chapter-1', mode: 'test' }), (error: unknown) => error instanceof PracticeApiError && error.statusCode === 404);
+});
+
+test('固定题数按可用题目截取，乱序顺序在会话创建时固化', async () => {
+  const database = new FakePracticeDatabase();
+  const service = createPracticeService({ database });
+  const previousRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    const session = await service.start({ questionBankId: 'bank-1', questionChapterId: null, mode: 'test', questionCount: 1, shuffle: true });
+    assert.equal(session.questions.length, 1);
+    assert.equal(session.questions[0]?.id, 'question-2');
+    const resumed = await service.get(session.session.id);
+    assert.deepEqual(resumed.questions.map((question) => question.id), ['question-2']);
+    const capped = await service.start({ questionBankId: 'bank-1', questionChapterId: null, mode: 'cram', questionCount: 99, shuffle: false });
+    assert.deepEqual(capped.questions.map((question) => question.id), ['question-1', 'question-2']);
+  } finally {
+    Math.random = previousRandom;
+  }
+});
+
+test('只练未做排除已有提交答案的题目，且不影响不区分范围', async () => {
+  const database = new FakePracticeDatabase();
+  const service = createPracticeService({ database });
+  const previous = await service.start({ questionBankId: 'bank-1', questionChapterId: null, mode: 'cram' });
+  await service.answer(previous.session.id, 'question-1', { answer: ['A'] });
+
+  const unattempted = await service.start({ questionBankId: 'bank-1', questionChapterId: null, mode: 'test', unattemptedOnly: true });
+  assert.deepEqual(unattempted.questions.map((question) => question.id), ['question-2']);
+  const unrestricted = await service.start({ questionBankId: 'bank-1', questionChapterId: null, mode: 'test', unattemptedOnly: false });
+  assert.deepEqual(unrestricted.questions.map((question) => question.id), ['question-1', 'question-2']);
+});
+
+test('未做筛选不能用于错题会话', async () => {
+  const service = createPracticeService({ database: new FakePracticeDatabase() });
+  await assert.rejects(() => service.start({ questionBankId: 'bank-1', questionChapterId: null, mode: 'test', source: 'aggregate_wrong', unattemptedOnly: true }), (error: unknown) => error instanceof PracticeApiError && error.statusCode === 400);
+  await assert.rejects(() => service.startWrong({ subjectId: 'subject-1', mode: 'test', unattemptedOnly: true }), (error: unknown) => error instanceof PracticeApiError && error.statusCode === 400);
+});
+
+test('题目数量必须是 1 到 1000 之间的整数', async () => {
+  const service = createPracticeService({ database: new FakePracticeDatabase() });
+  await assert.rejects(() => service.start({ questionBankId: 'bank-1', questionChapterId: null, mode: 'test', questionCount: 0 }), (error: unknown) => error instanceof PracticeApiError && error.statusCode === 400);
+  await assert.rejects(() => service.start({ questionBankId: 'bank-1', questionChapterId: null, mode: 'test', questionCount: 1001 }), (error: unknown) => error instanceof PracticeApiError && error.statusCode === 400);
 });

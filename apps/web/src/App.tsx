@@ -1,6 +1,6 @@
-import { type ElementType, type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ElementType, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { renderToString } from 'katex';
-import { Archive, ArrowDown, ArrowUp, Download, FolderOpen, LogOut, Merge, MoreHorizontal, MoveRight, Pencil, Plus, RefreshCw, SlidersHorizontal, Sparkles, Trash2, Upload } from 'lucide-react';
+import { Archive, ArrowDown, ArrowUp, BarChart3, Check, ChevronDown, Copy, Download, FolderOpen, LogOut, Merge, MoreHorizontal, MoveRight, Pencil, PenLine, Plus, RefreshCw, RotateCcw, Search, Send, SlidersHorizontal, Sparkles, Star, Trash2, Undo2, Upload, X } from 'lucide-react';
 import { unified } from 'unified';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -19,11 +19,19 @@ import type {
   ReviewCardContentUpdateResponse,
   ReviewEditLock,
   ReviewDashboardResponse,
+  ReviewWorkspaceContextUpdateRequest,
+  ReviewWorkspaceResponse,
+  LearningInsightsPeriod,
+  LearningInsightsResponse,
+  ReviewWorkspaceContinue,
   ReviewFilters,
   ReviewHighlight,
   ReviewHighlightCreateRequest,
   ReviewAiExplanation,
   ReviewMasteryStatus,
+  CardReviewNote,
+  HandwrittenStroke,
+  QuestionReviewNote,
   ReviewStartScope,
   AiProviderKind,
   AiProviderProfile,
@@ -53,10 +61,15 @@ import type {
   QuestionType,
   PracticeMode,
   PracticeSource,
+  PracticeSessionOptions,
   PracticeStatisticsResponse,
+  PracticeQuestionView,
   PracticeSessionResponse,
   QuestionImportPreviewResponse,
   QuestionImportTemplateFormat,
+  GlobalSearchContentType,
+  GlobalSearchResponse,
+  GlobalSearchResult,
 } from '@knowledge-flashcards/shared';
 import { reviewResourcePath } from '@knowledge-flashcards/shared';
 import {
@@ -70,12 +83,20 @@ import {
   fetchReviewCard,
   fetchFirstReviewCard,
   fetchReviewDashboard,
+  fetchGlobalSearch,
+  fetchReviewWorkspace,
+  fetchLearningInsights,
+  updateReviewWorkspace,
   generateReviewAiExplanation,
+  streamFlashcardStudyAssistant,
+  streamPracticeStudyAssistant,
   previewImport,
   releaseReviewEditLock,
   renewReviewEditLock,
   startReview,
   updateReviewContent,
+  fetchCardReviewNote,
+  saveCardReviewNote,
   updateReviewStatus,
   uploadReviewResource,
   createHierarchy,
@@ -112,9 +133,15 @@ import {
   reorderQuestion,
   deleteQuestion,
   restoreQuestion,
+  setQuestionFavorite,
+  fetchWrongAnswers,
+  startWrongAnswerPractice,
+  saveQuestionReviewNote,
+  fetchQuestionReviewNote,
   fetchInProgressPracticeSessions,
   fetchPracticeStatistics,
   startPracticeSession,
+  startFavoritePracticeSession,
   fetchPracticeSession,
   answerPracticeQuestion,
   completePracticeSession,
@@ -132,11 +159,12 @@ import {
   reorderCatalogCourse,
   reorderCatalogSubject,
   reorderHierarchy,
-  activateAiProviderProfile,
   createAiProviderProfile,
   deleteAiProviderProfile,
   fetchAiProviderProfiles,
   updateAiProviderProfile,
+  updateAiProviderProfileState,
+  reorderAiProviderProfiles,
   testAiProviderProfile,
   downloadMaterialMarkdown,
   fetchDataJsonExport,
@@ -154,7 +182,11 @@ import {
 
 type ImportState = 'idle' | 'previewing' | 'ready' | 'applying' | 'finished' | 'error';
 type ImportFormat = 'markdown' | 'json' | 'excel';
-type Appearance = 'minimal' | 'autumn';
+type PracticeLaunchOptions = Required<PracticeSessionOptions>;
+
+const defaultPracticeLaunchOptions: PracticeLaunchOptions = { questionCount: null, shuffle: false, unattemptedOnly: false };
+const practiceQuestionCountOptions = [5, 10, 20, 50, 100];
+type Appearance = 'minimal' | 'autumn' | 'kuromi';
 type ColorMode = 'system' | 'light' | 'dark';
 type CatalogManagementTarget = {
   kind: 'course' | 'subject';
@@ -189,7 +221,8 @@ const importFormatOptions: Array<{ value: ImportFormat; label: string; accept: s
 
 function storedAppearance(): Appearance {
   try {
-    return window.localStorage.getItem(appearanceStorageKey) === 'autumn' ? 'autumn' : 'minimal';
+    const appearance = window.localStorage.getItem(appearanceStorageKey);
+    return appearance === 'autumn' || appearance === 'kuromi' ? appearance : 'minimal';
   } catch {
     return 'minimal';
   }
@@ -217,9 +250,18 @@ type MaterialsRoute =
   | { kind: 'courses' }
   | { kind: 'course'; courseId: string }
   | { kind: 'subject'; courseId: string; subjectId: string }
-  | { kind: 'question-banks'; courseId: string; subjectId: string }
+  | { kind: 'question-banks'; courseId: string; subjectId: string; questionBankId?: string; questionId?: string }
   | { kind: 'material'; courseId: string; subjectId: string; materialId: string }
   | { kind: 'manage' };
+
+type ReviewRoute =
+  | { kind: 'workspace'; courseId?: string; subjectId?: string | null; mode?: 'flashcards' | 'questions' }
+  | { kind: 'flashcard'; cardId: string; mode: 'read' | 'memorize'; materialId: string | null; scope: ReviewStartScope }
+  | { kind: 'practice'; sessionId: string };
+
+type PracticeReturnTarget =
+  | { kind: 'workspace' }
+  | { kind: 'question-banks'; courseId: string; subjectId: string };
 
 function decodeRouteSegment(value: string): string | null {
   try {
@@ -231,7 +273,9 @@ function decodeRouteSegment(value: string): string | null {
 }
 
 function materialsRouteFromLocation(): MaterialsRoute | null {
-  const segments = window.location.hash.slice(1).split('/').filter(Boolean);
+  const [path, query = ''] = window.location.hash.slice(1).split('?');
+  const segments = (path ?? '').split('/').filter(Boolean);
+  const params = new URLSearchParams(query);
   if (segments[0] !== 'materials') {
     return null;
   }
@@ -253,7 +297,9 @@ function materialsRouteFromLocation(): MaterialsRoute | null {
   if (segments.length === 6 && segments[1] === 'courses' && segments[3] === 'subjects' && segments[5] === 'question-banks') {
     const courseId = decodeRouteSegment(segments[2]!);
     const subjectId = decodeRouteSegment(segments[4]!);
-    return courseId && subjectId ? { kind: 'question-banks', courseId, subjectId } : { kind: 'courses' };
+    const questionBankId = params.get('questionBankId') || undefined;
+    const questionId = params.get('questionId') || undefined;
+    return courseId && subjectId ? { kind: 'question-banks', courseId, subjectId, questionBankId, questionId } : { kind: 'courses' };
   }
   if (segments.length === 7 && segments[1] === 'courses' && segments[3] === 'subjects' && segments[5] === 'materials') {
     const courseId = decodeRouteSegment(segments[2]!);
@@ -264,6 +310,50 @@ function materialsRouteFromLocation(): MaterialsRoute | null {
   return { kind: 'courses' };
 }
 
+function reviewRouteFromLocation(): ReviewRoute {
+  const hash = window.location.hash.slice(1);
+  const [path, query = ''] = hash.split('?');
+  const segments = (path ?? '').split('/').filter(Boolean);
+  if (segments[0] !== 'review') return { kind: 'workspace' };
+  if (segments.length === 1) {
+    const params = new URLSearchParams(query);
+    const courseId = params.get('courseId') || undefined;
+    const subjectId = params.has('subjectId') ? params.get('subjectId') : undefined;
+    const mode = params.get('mode') === 'questions' ? 'questions' : params.get('mode') === 'flashcards' ? 'flashcards' : undefined;
+    return { kind: 'workspace', courseId, subjectId, mode };
+  }
+  if (segments[1] === 'practice' && segments[2]) {
+    const sessionId = decodeRouteSegment(segments[2]);
+    return sessionId ? { kind: 'practice', sessionId } : { kind: 'workspace' };
+  }
+  if (segments[1] === 'card' && segments[2]) {
+    const cardId = decodeRouteSegment(segments[2]);
+    if (!cardId) return { kind: 'workspace' };
+    const params = new URLSearchParams(query);
+    const mode = params.get('mode') === 'memorize' ? 'memorize' : 'read';
+    const scope = params.get('scope') === 'unassessed' || params.get('scope') === 'effort' ? params.get('scope') as ReviewStartScope : 'all';
+    return { kind: 'flashcard', cardId, mode, materialId: params.get('materialId'), scope };
+  }
+  return { kind: 'workspace' };
+}
+
+function reviewRouteUrl(route: ReviewRoute): string {
+  if (route.kind === 'practice') return `#/review/practice/${encodeURIComponent(route.sessionId)}`;
+  if (route.kind === 'flashcard') {
+    const params = new URLSearchParams({ mode: route.mode, scope: route.scope });
+    if (route.materialId) params.set('materialId', route.materialId);
+    return `#/review/card/${encodeURIComponent(route.cardId)}?${params.toString()}`;
+  }
+  if (route.courseId || route.subjectId !== undefined || route.mode) {
+    const params = new URLSearchParams();
+    if (route.courseId) params.set('courseId', route.courseId);
+    if (route.subjectId !== undefined) params.set('subjectId', route.subjectId ?? 'all');
+    if (route.mode) params.set('mode', route.mode);
+    return `#/review?${params.toString()}`;
+  }
+  return '#/review';
+}
+
 function materialsRouteUrl(route: MaterialsRoute): string {
   if (route.kind === 'course') {
     return `#/materials/courses/${encodeURIComponent(route.courseId)}`;
@@ -272,7 +362,11 @@ function materialsRouteUrl(route: MaterialsRoute): string {
     return `#/materials/courses/${encodeURIComponent(route.courseId)}/subjects/${encodeURIComponent(route.subjectId)}`;
   }
   if (route.kind === 'question-banks') {
-    return `#/materials/courses/${encodeURIComponent(route.courseId)}/subjects/${encodeURIComponent(route.subjectId)}/question-banks`;
+    const params = new URLSearchParams();
+    if (route.questionBankId) params.set('questionBankId', route.questionBankId);
+    if (route.questionId) params.set('questionId', route.questionId);
+    const suffix = params.size ? `?${params.toString()}` : '';
+    return `#/materials/courses/${encodeURIComponent(route.courseId)}/subjects/${encodeURIComponent(route.subjectId)}/question-banks${suffix}`;
   }
   if (route.kind === 'material') {
     return `#/materials/courses/${encodeURIComponent(route.courseId)}/subjects/${encodeURIComponent(route.subjectId)}/materials/${encodeURIComponent(route.materialId)}`;
@@ -2974,11 +3068,13 @@ function QuestionBankPanel({
   route,
   onNavigate,
   onOpenImport,
+  onOpenPractice,
   onAuthExpired,
 }: {
   route: Extract<MaterialsRoute, { kind: 'question-banks' }>;
   onNavigate: (next: MaterialsRoute) => void;
   onOpenImport: () => void;
+  onOpenPractice: (session: PracticeSessionResponse) => void;
   onAuthExpired: () => void;
 }) {
   const [directory, setDirectory] = useState<QuestionBankDirectoryResponse | null>(null);
@@ -2996,6 +3092,8 @@ function QuestionBankPanel({
   const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
+
+  useEffect(() => { setSelectedBankId(route.questionBankId ?? null); }, [route.questionBankId]);
 
   async function load() {
     setLoading(true); setError('');
@@ -3022,7 +3120,8 @@ function QuestionBankPanel({
     <form className="question-bank-create" onSubmit={(event) => { void submitBank(event); }}><select value={draftKind} onChange={(event) => setDraftKind(event.target.value as QuestionBankKind)} disabled={busy}><option value="chapter">章节题</option><option value="official">真题</option><option value="mock">模拟题</option></select><input value={draftName} onChange={(event) => setDraftName(event.target.value)} placeholder="题库名称" maxLength={255} disabled={busy} /><button className="button-primary" type="submit" disabled={busy || !draftName.trim()}>新增</button></form>
     {!loading && directory ? <label className="field-column question-bank-selector"><span>打开题库</span><select value={selectedBankId ?? ''} onChange={(event) => setSelectedBankId(event.target.value || null)}><option value="">请选择题库</option>{(['chapter', 'official', 'mock'] as const).flatMap((kind) => directory.banks[kind].map((bank) => <option key={bank.id} value={bank.id}>{labels[kind]} · {bank.name}</option>))}</select></label> : null}
     {!loading && directory ? <div className="question-bank-groups">{(['chapter', 'official', 'mock'] as const).map((kind) => <section className="question-bank-group" key={kind} aria-labelledby={`question-bank-${kind}`}><div className="section-heading"><h2 id={`question-bank-${kind}`}>{labels[kind]}</h2><span>{directory.banks[kind].length}</span></div>{directory.banks[kind].length ? <ul className="catalog-list">{directory.banks[kind].map((bank, index, list) => <li className="question-bank-row" key={bank.id}><div className="question-bank-row-main"><strong>{bank.name}</strong><small>{bank.questionCount} 道题 · {bank.chapterCount} 个章节</small>{kind === 'chapter' && bank.chapters.length ? <ul className="question-chapter-list">{bank.chapters.map((chapter, chapterIndex) => <li key={chapter.id}><span>{chapter.title}</span><small>{chapter.questionCount} 道题</small><button type="button" onClick={() => { setRenameTarget({ type: 'chapter', id: chapter.id, name: chapter.title }); setRenameName(chapter.title); }} disabled={busy}>改名</button><button type="button" onClick={() => { setMoveChapterId(chapter.id); setMoveTargetBankId(bank.id); }} disabled={busy || directory.banks.chapter.length < 2}>移动</button><button type="button" onClick={() => void runMutation(() => reorderQuestionChapter(chapter.id, 'up'), '章节顺序已更新')} disabled={busy || chapterIndex === 0}>上移</button><button type="button" onClick={() => void runMutation(() => reorderQuestionChapter(chapter.id, 'down'), '章节顺序已更新')} disabled={busy || chapterIndex + 1 >= bank.chapters.length}>下移</button><button type="button" onClick={() => void runMutation(() => deleteQuestionChapter(chapter.id), '章节已移入回收站')} disabled={busy}>删除</button></li>)}</ul> : null}</div><div className="question-bank-actions"><button type="button" onClick={() => { setRenameTarget({ type: 'bank', id: bank.id, name: bank.name }); setRenameName(bank.name); }} disabled={busy}>改名</button><button type="button" onClick={() => void runMutation(() => reorderQuestionBank(bank.id, 'up'), '题库顺序已更新')} disabled={busy || index === 0}>上移</button><button type="button" onClick={() => void runMutation(() => reorderQuestionBank(bank.id, 'down'), '题库顺序已更新')} disabled={busy || index + 1 >= list.length}>下移</button><button className="danger-action" type="button" onClick={() => setDeleteTarget({ id: bank.id, name: bank.name })} disabled={busy}>删除</button>{kind === 'chapter' ? <button type="button" onClick={() => setDraftChapter(bank.id)} disabled={busy}>新增章节</button> : null}</div></li>)}</ul> : <p className="empty-state">暂无题库</p>}</section>)}</div> : null}
-    {!loading && directory && selectedBankId ? <QuestionWorkspace bankId={selectedBankId} directory={directory} onClose={() => setSelectedBankId(null)} /> : null}
+    {!loading && directory ? <WrongAnswerReviewPanel subjectId={route.subjectId} onOpenPractice={onOpenPractice} /> : null}
+    {!loading && directory && selectedBankId ? <QuestionWorkspace bankId={selectedBankId} directory={directory} focusQuestionId={route.questionId} onClose={() => setSelectedBankId(null)} onOpenPractice={onOpenPractice} /> : null}
     {!loading && trash?.items.length ? <section className="question-bank-trash" aria-labelledby="question-bank-trash-title"><div className="section-heading"><h2 id="question-bank-trash-title">最近删除</h2><span>{trash.items.length}</span></div><ul className="catalog-list">{trash.items.map((item) => <li className="question-bank-row" key={`${item.entityType}:${item.entityId}`}><div><strong>{item.title}</strong><small>{item.entityType === 'question_bank' ? '题库' : '章节'}</small></div><button type="button" onClick={() => void runMutation(() => item.entityType === 'question_bank' ? restoreQuestionBank(item.entityId) : restoreQuestionChapter(item.entityId), '已恢复')} disabled={busy}>恢复</button></li>)}</ul></section> : null}
     {draftChapter ? <form className="sheet-inline-form" onSubmit={(event) => { event.preventDefault(); const input = (event.currentTarget.elements.namedItem('title') as HTMLInputElement).value.trim(); if (input) void runMutation(() => createQuestionChapter(draftChapter, input), '章节已新增').then(() => setDraftChapter(null)); }}><input name="title" placeholder="章节名称" autoFocus /><button className="button-secondary" type="button" onClick={() => setDraftChapter(null)}>取消</button><button className="button-primary" type="submit">新增</button></form> : null}
     {renameTarget ? <div className="sheet-backdrop" role="presentation"><section className="sheet" role="dialog" aria-modal="true" aria-labelledby="question-bank-rename-title"><form onSubmit={(event) => { event.preventDefault(); const target = renameTarget; const name = renameName.trim(); if (name) void runMutation(() => target.type === 'bank' ? renameQuestionBank(target.id, name) : renameQuestionChapter(target.id, name), '已更新').then(() => setRenameTarget(null)); }}><h2 id="question-bank-rename-title">改名</h2><label className="field-column"><span>名称</span><input autoFocus value={renameName} maxLength={255} onChange={(event) => setRenameName(event.target.value)} /></label><div className="action-row"><button className="button-secondary" type="button" onClick={() => setRenameTarget(null)} disabled={busy}>取消</button><button className="button-primary" type="submit" disabled={busy || !renameName.trim()}>应用</button></div></form></section></div> : null}
@@ -3154,14 +3253,58 @@ function QuestionEditor({
   );
 }
 
+function WrongAnswerReviewPanel({ subjectId, onOpenPractice }: { subjectId: string; onOpenPractice: (session: PracticeSessionResponse) => void }) {
+  const [open, setOpen] = useState(false);
+  const [knowledgePoint, setKnowledgePoint] = useState('');
+  const [type, setType] = useState<QuestionType | ''>('');
+  const [since, setSince] = useState('');
+  const [practiceOptions, setPracticeOptions] = useState<PracticeLaunchOptions>(defaultPracticeLaunchOptions);
+  const [items, setItems] = useState<Awaited<ReturnType<typeof fetchWrongAnswers>>['items']>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const sheetRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (!open) return; const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); }; document.addEventListener('keydown', onKeyDown); window.setTimeout(() => sheetRef.current?.querySelector<HTMLElement>('input, select, button')?.focus(), 0); return () => document.removeEventListener('keydown', onKeyDown); }, [open]);
+  useEffect(() => { if (!open) triggerRef.current?.focus(); }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !sheetRef.current) return;
+      const focusable = Array.from(sheetRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)'));
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open, editingNote]);
+  async function search() { setLoading(true); setError(''); try { const result = await fetchWrongAnswers({ subjectId, knowledgePoint: knowledgePoint.trim() || undefined, type: type || undefined, since: since ? new Date(`${since}T00:00:00+08:00`).toISOString() : undefined }); setItems(result.items); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : '错题加载失败。'); } finally { setLoading(false); } }
+  async function start(mode: PracticeMode) { setLoading(true); setError(''); try { onOpenPractice(await startWrongAnswerPractice({ subjectId, knowledgePoint: knowledgePoint.trim() || undefined, type: type || undefined, since: since ? new Date(`${since}T00:00:00+08:00`).toISOString() : undefined, mode, ...practiceOptions })); setOpen(false); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : '无法开始复练。'); } finally { setLoading(false); } }
+  async function saveNote(questionId: string) { setLoading(true); setError(''); try { await saveQuestionReviewNote(questionId, noteDraft); setItems((current) => current.map((item) => item.question.id === questionId ? { ...item, question: { ...item.question, reviewNote: noteDraft.trim() || null }, note: noteDraft.trim() ? { questionId, noteText: noteDraft.trim(), strokes: [], updatedAt: new Date().toISOString() } : null } : item)); setEditingNote(null); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : '备注保存失败。'); } finally { setLoading(false); } }
+  return <section className="wrong-answer-entry" aria-labelledby="wrong-answer-entry-title"><div><h2 id="wrong-answer-entry-title">错题巩固</h2><p>按同一科目的最近错误记录筛选并复练。</p></div><button ref={triggerRef} className="button-secondary" type="button" onClick={() => setOpen(true)}>筛选错题</button>{open ? <div className="sheet-backdrop" role="presentation"><section ref={sheetRef} className="sheet wrong-answer-sheet" role="dialog" aria-modal="true" aria-labelledby="wrong-answer-sheet-title"><div className="sheet-header"><div><h2 id="wrong-answer-sheet-title">累计错题</h2><p>只统计已完成会话中最近一次仍为错误的题目。</p></div><button className="icon-button" type="button" aria-label="关闭筛选" title="关闭" onClick={() => setOpen(false)}><X size={18} aria-hidden="true" /></button></div><div className="wrong-answer-filters"><label className="field-column"><span>知识点</span><input value={knowledgePoint} onChange={(event) => setKnowledgePoint(event.target.value)} placeholder="例如：函数" /></label><label className="field-column"><span>题型</span><select value={type} onChange={(event) => setType(event.target.value as QuestionType | '')}><option value="">全部题型</option><option value="single">单选</option><option value="multiple">多选</option><option value="true_false">判断</option></select></label><label className="field-column"><span>最近错误不早于</span><input type="date" value={since} onChange={(event) => setSince(event.target.value)} /></label><button className="button-primary" type="button" onClick={() => void search()} disabled={loading}>应用筛选</button></div>{error ? <p className="feedback-error" role="alert">{error}</p> : null}{items.length ? <><div className="wrong-answer-actions"><span>{items.length} 道题</span><PracticeLaunchControls value={practiceOptions} availableCount={items.length} onChange={setPracticeOptions} /><div><button className="button-secondary" type="button" onClick={() => void start('cram')} disabled={loading}>背题</button><button className="button-primary" type="button" onClick={() => void start('test')} disabled={loading}>检测</button></div></div><div className="wrong-answer-list">{items.map((item) => <article className="wrong-answer-item" key={item.question.id}><div><div className="question-meta"><span>{item.question.type === 'single' ? '单选' : item.question.type === 'multiple' ? '多选' : '判断'}</span><span>最近错误 {new Date(item.latestWrongAt).toLocaleDateString('zh-CN')}</span></div><div className="question-stem"><ContentNodes nodes={item.question.stem} options={aiExplanationContentOptions} /></div>{item.note ? <p className="review-note"><strong>备注：</strong>{item.note.noteText}</p> : null}</div><button className="button-secondary" type="button" onClick={() => { setEditingNote(item.question.id); setNoteDraft(item.note?.noteText ?? ''); }}>备注</button>{editingNote === item.question.id ? <div className="note-editor"><label className="field-column"><span>错误原因/备注</span><textarea value={noteDraft} maxLength={2000} onChange={(event) => setNoteDraft(event.target.value)} autoFocus /></label><div className="action-row"><button className="button-secondary" type="button" onClick={() => setEditingNote(null)}>取消</button><button className="button-primary" type="button" onClick={() => void saveNote(item.question.id)} disabled={loading}>保存</button></div></div> : null}</article>)}</div></> : <p className="empty-state">{loading ? '加载中' : '应用筛选后显示累计错题。'}</p>}</section></div> : null}</section>;
+}
+
 function QuestionWorkspace({
   bankId,
   directory,
+  focusQuestionId,
   onClose,
+  onOpenPractice,
 }: {
   bankId: string;
   directory: QuestionBankDirectoryResponse;
+  focusQuestionId?: string;
   onClose: () => void;
+  onOpenPractice: (session: PracticeSessionResponse) => void;
 }) {
   const allBanks = [...directory.banks.chapter, ...directory.banks.official, ...directory.banks.mock];
   const bank = allBanks.find((item) => item.id === bankId);
@@ -3174,19 +3317,26 @@ function QuestionWorkspace({
   const [practiceSessions, setPracticeSessions] = useState<Awaited<ReturnType<typeof fetchInProgressPracticeSessions>>['sessions']>([]);
   const [statistics, setStatistics] = useState<PracticeStatisticsResponse | null>(null);
   const [practiceScope, setPracticeScope] = useState('');
-  const [activePractice, setActivePractice] = useState<PracticeSessionResponse | null>(null);
+  const [practiceOptions, setPracticeOptions] = useState<PracticeLaunchOptions>(defaultPracticeLaunchOptions);
   const [aiQuestionId, setAiQuestionId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const load = useCallback(async () => { if (!bank) return; setLoading(true); setError(''); try { const [nextData, nextTrash, nextSessions, nextStatistics] = await Promise.all([fetchQuestionBankQuestions(bank.id), fetchQuestionTrash(bank.id), fetchInProgressPracticeSessions(bank.id), fetchPracticeStatistics(bank.id)]); setData(nextData); setTrash(nextTrash); setPracticeSessions(nextSessions.sessions); setStatistics(nextStatistics); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : '题目加载失败。'); } finally { setLoading(false); } }, [bank?.id]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!focusQuestionId || !data?.questions.some((question) => question.id === focusQuestionId)) return;
+    const target = document.getElementById(`question-${focusQuestionId}`);
+    target?.scrollIntoView({ block: 'center' });
+    target?.focus({ preventScroll: true });
+  }, [data, focusQuestionId]);
   if (!bank) return null;
   const currentBank = bank;
   async function mutate(action: () => Promise<unknown>, message: string) { setBusy(true); setError(''); try { await action(); await load(); setStatus(message); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : '操作失败。'); } finally { setBusy(false); } }
   async function saveQuestion(request: QuestionCreateRequest | QuestionUpdateRequest, questionId?: string) { await mutate(() => questionId ? updateQuestion(questionId, request) : createQuestion(request as QuestionCreateRequest), questionId ? '题目已保存' : '题目已新增'); }
-  async function startPractice(mode: PracticeMode, source: PracticeSource = 'full', sourceSessionId: string | null = null) { setBusy(true); setError(''); try { setActivePractice(await startPracticeSession(currentBank.id, source === 'full' ? practiceScope || null : null, mode, source, sourceSessionId)); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : '无法开始会话。'); } finally { setBusy(false); } }
-  async function resumePractice(sessionId: string) { setBusy(true); setError(''); try { setActivePractice(await fetchPracticeSession(sessionId)); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : '无法继续会话。'); } finally { setBusy(false); } }
+  async function startPractice(mode: PracticeMode, source: PracticeSource = 'full', sourceSessionId: string | null = null) { setBusy(true); setError(''); try { onOpenPractice(await startPracticeSession(currentBank.id, source === 'full' ? practiceScope || null : null, mode, source, sourceSessionId, practiceOptions)); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : '无法开始会话。'); } finally { setBusy(false); } }
+  async function resumePractice(sessionId: string) { setBusy(true); setError(''); try { onOpenPractice(await fetchPracticeSession(sessionId)); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : '无法继续会话。'); } finally { setBusy(false); } }
   const typeLabels: Record<QuestionType, string> = { single: '单选', multiple: '多选', true_false: '判断' };
-  return <section className="catalog-panel question-workspace" aria-labelledby="question-workspace-title"><header className="page-header"><div><button className="catalog-back" type="button" onClick={onClose}>返回题库</button><h1 id="question-workspace-title">{bank.name}</h1></div><button className="button-primary" type="button" onClick={() => setEditor(null)} disabled={busy}>新增题目</button></header><div className="feedback" aria-live="polite">{loading ? <p className="feedback-muted">加载中</p> : null}{status ? <p className="feedback-success">{status}</p> : null}{error ? <p className="feedback-error" role="alert">{error}</p> : null}</div><section className="practice-launch" aria-labelledby="practice-launch-title"><div className="section-heading"><h2 id="practice-launch-title">刷题</h2><span>{data?.questions.length ?? 0} 道题</span></div><div className="practice-launch-row"><label className="field-column"><span>范围</span><select value={practiceScope} onChange={(event) => setPracticeScope(event.target.value)} disabled={busy}><option value="">整套题库</option>{bank.kind === 'chapter' ? data?.chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>) : null}</select></label><div className="practice-launch-actions"><button className="button-secondary" type="button" onClick={() => { void startPractice('cram'); }} disabled={busy || loading || !data?.questions.length}>背题</button><button className="button-primary" type="button" onClick={() => { void startPractice('test'); }} disabled={busy || loading || !data?.questions.length}>检测</button><button className="button-secondary" type="button" onClick={() => { void startPractice('test', 'aggregate_wrong'); }} disabled={busy || loading || !statistics?.aggregateWrongCount}>累计错题</button></div></div>{practiceSessions.length ? <div className="practice-resume-list"><h3>未完成</h3>{practiceSessions.map((item) => <div className="practice-resume-item" key={item.id}><span>{item.mode === 'cram' ? '背题' : '检测'} · {item.questionChapterId ? data?.chapters.find((chapter) => chapter.id === item.questionChapterId)?.title ?? '章节' : item.source === 'aggregate_wrong' ? '累计错题' : '整套题库'}</span><small>{item.answeredCount} / {item.questionCount} 已答</small><button type="button" onClick={() => { void resumePractice(item.id); }} disabled={busy}>继续</button></div>)}</div> : null}</section>{statistics ? <PracticeStatisticsPanel statistics={statistics} /> : null}{!loading && data ? <><div className="question-toolbar"><span>{data.questions.length} 道题</span><span>{data.chapters.length} 个章节</span></div><div className="question-list">{data.questions.length ? data.questions.map((question, index, list) => <article className="question-list-item" key={question.id}><div className="question-list-copy"><div className="question-meta"><span>{typeLabels[question.type]}</span><span>第 {question.version} 版</span>{question.questionChapterId ? <span>{data.chapters.find((chapter) => chapter.id === question.questionChapterId)?.title ?? '章节'}</span> : null}</div><div className="question-stem"><ContentNodes nodes={question.stem} options={aiExplanationContentOptions} /></div><small>答案：{question.answer.join('、')}</small></div><div className="question-row-actions"><button type="button" onClick={() => setEditor(question)} disabled={busy}>编辑</button><button type="button" onClick={() => setAiQuestionId((current) => current === question.id ? null : question.id)} disabled={busy}>{aiQuestionId === question.id ? '收起 AI' : 'AI 讲解'}</button><button type="button" onClick={() => void mutate(() => reorderQuestion(question.id, 'up'), '顺序已更新')} disabled={busy || index === 0}>上移</button><button type="button" onClick={() => void mutate(() => reorderQuestion(question.id, 'down'), '顺序已更新')} disabled={busy || index + 1 >= list.length}>下移</button><button className="danger-action" type="button" onClick={() => void mutate(() => deleteQuestion(question.id), '题目已移入回收站')} disabled={busy}>删除</button></div>{aiQuestionId === question.id ? <QuestionAiPanel question={question} /> : null}</article>) : <p className="empty-state">暂无题目</p>}</div>{trash?.items.length ? <section className="question-trash"><div className="section-heading"><h2>最近删除</h2><span>{trash.items.length}</span></div>{trash.items.map((item) => <div className="question-trash-item" key={item.id}><span>{item.title}</span><small>{typeLabels[item.type]}</small><button type="button" onClick={() => void mutate(() => restoreQuestion(item.id), '题目已恢复')} disabled={busy}>恢复</button></div>)}</section> : null}</> : null}{editor !== undefined ? <QuestionEditor bank={bank} banks={allBanks} chapters={data?.chapters ?? bank.chapters} question={editor} onCancel={() => setEditor(undefined)} onSave={saveQuestion} /> : null}{activePractice ? <PracticeSessionPanel initialSession={activePractice} onClose={() => setActivePractice(null)} onFinished={() => { void load(); }} onStartWrong={(sessionId) => { void startPractice('test', 'current_wrong', sessionId); }} /> : null}</section>;
+    const practiceAvailableCount = practiceScope ? data?.questions.filter((question) => question.questionChapterId === practiceScope).length ?? 0 : data?.questions.length ?? 0;
+    return <section className="catalog-panel question-workspace" aria-labelledby="question-workspace-title"><header className="page-header"><div><button className="catalog-back" type="button" onClick={onClose}>返回题库</button><h1 id="question-workspace-title">{bank.name}</h1></div><button className="button-primary" type="button" onClick={() => setEditor(null)} disabled={busy}>新增题目</button></header><div className="feedback" aria-live="polite">{loading ? <p className="feedback-muted">加载中</p> : null}{status ? <p className="feedback-success">{status}</p> : null}{error ? <p className="feedback-error" role="alert">{error}</p> : null}</div><section className="practice-launch" aria-labelledby="practice-launch-title"><div className="section-heading"><h2 id="practice-launch-title">刷题</h2><span>{data?.questions.length ?? 0} 道题</span></div><div className="practice-launch-row"><label className="field-column"><span>范围</span><select value={practiceScope} onChange={(event) => setPracticeScope(event.target.value)} disabled={busy}><option value="">整套题库</option>{bank.kind === 'chapter' ? data?.chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>) : null}</select></label><PracticeLaunchControls value={practiceOptions} availableCount={practiceAvailableCount} onChange={setPracticeOptions} /><div className="practice-launch-actions"><button className="button-secondary" type="button" onClick={() => { void startPractice('cram'); }} disabled={busy || loading || !data?.questions.length}>背题</button><button className="button-primary" type="button" onClick={() => { void startPractice('test'); }} disabled={busy || loading || !data?.questions.length}>检测</button><button className="button-secondary" type="button" onClick={() => { void startPractice('test', 'aggregate_wrong'); }} disabled={busy || loading || !statistics?.aggregateWrongCount}>累计错题</button></div></div>{practiceSessions.length ? <div className="practice-resume-list"><h3>未完成</h3>{practiceSessions.map((item) => <div className="practice-resume-item" key={item.id}><span>{item.mode === 'cram' ? '背题' : '检测'} · {item.questionChapterId ? data?.chapters.find((chapter) => chapter.id === item.questionChapterId)?.title ?? '章节' : item.source === 'aggregate_wrong' ? '累计错题' : '整套题库'}</span><small>{item.answeredCount} / {item.questionCount} 已答</small><button type="button" onClick={() => { void resumePractice(item.id); }} disabled={busy}>继续</button></div>)}</div> : null}</section>{statistics ? <PracticeStatisticsPanel statistics={statistics} /> : null}{!loading && data ? <><div className="question-toolbar"><span>{data.questions.length} 道题</span><span>{data.chapters.length} 个章节</span></div><div className="question-list">{data.questions.length ? data.questions.map((question, index, list) => <article className="question-list-item" id={`question-${question.id}`} tabIndex={question.id === focusQuestionId ? -1 : undefined} key={question.id}><div className="question-list-copy"><div className="question-meta"><span>{typeLabels[question.type]}</span><span>第 {question.version} 版</span>{question.questionChapterId ? <span>{data.chapters.find((chapter) => chapter.id === question.questionChapterId)?.title ?? '章节'}</span> : null}</div><div className="question-stem"><ContentNodes nodes={question.stem} options={aiExplanationContentOptions} /></div><small>答案：{question.answer.join('、')}</small></div><div className="question-row-actions"><button className="icon-button" type="button" onClick={() => void mutate(() => setQuestionFavorite(question.id, !question.isFavorite), question.isFavorite ? '已取消收藏' : '已收藏')} disabled={busy} aria-label={question.isFavorite ? '取消收藏' : '收藏'} title={question.isFavorite ? '取消收藏' : '收藏'}><Star size={17} fill={question.isFavorite ? 'currentColor' : 'none'} aria-hidden="true" /></button><QuestionNoteButton question={question} /><button type="button" onClick={() => setEditor(question)} disabled={busy}>编辑</button><button type="button" onClick={() => setAiQuestionId((current) => current === question.id ? null : question.id)} disabled={busy}>{aiQuestionId === question.id ? '收起 AI' : 'AI 讲解'}</button><button type="button" onClick={() => void mutate(() => reorderQuestion(question.id, 'up'), '顺序已更新')} disabled={busy || index === 0}>上移</button><button type="button" onClick={() => void mutate(() => reorderQuestion(question.id, 'down'), '顺序已更新')} disabled={busy || index + 1 >= list.length}>下移</button><button className="danger-action" type="button" onClick={() => void mutate(() => deleteQuestion(question.id), '题目已移入回收站')} disabled={busy}>删除</button></div>{aiQuestionId === question.id ? <QuestionAiPanel question={question} /> : null}</article>) : <p className="empty-state">暂无题目</p>}</div>{trash?.items.length ? <section className="question-trash"><div className="section-heading"><h2>最近删除</h2><span>{trash.items.length}</span></div>{trash.items.map((item) => <div className="question-trash-item" key={item.id}><span>{item.title}</span><small>{typeLabels[item.type]}</small><button type="button" onClick={() => void mutate(() => restoreQuestion(item.id), '题目已恢复')} disabled={busy}>恢复</button></div>)}</section> : null}</> : null}{editor !== undefined ? <QuestionEditor bank={bank} banks={allBanks} chapters={data?.chapters ?? bank.chapters} question={editor} onCancel={() => setEditor(undefined)} onSave={saveQuestion} /> : null}</section>;
 }
 
 function QuestionAiPanel({ question }: { question: QuestionQuestion }) {
@@ -3223,6 +3373,372 @@ function PracticeStatisticsPanel({ statistics }: { statistics: PracticeStatistic
   return <section className="practice-statistics" aria-labelledby="practice-statistics-title"><div className="section-heading"><h2 id="practice-statistics-title">统计</h2><span>累计错题 {statistics.aggregateWrongCount}</span></div><div className="practice-stat-overview">{renderLine(statistics.overall)}</div>{statistics.chapters.length ? <details><summary>章节</summary><div className="practice-stat-list">{statistics.chapters.map(renderLine)}</div></details> : null}<details><summary>题型</summary><div className="practice-stat-list">{statistics.types.map(renderLine)}</div></details><details><summary>模式</summary><div className="practice-stat-list">{statistics.modes.map(renderLine)}</div></details></section>;
 }
 
+function PracticeLaunchControls({ value, availableCount, onChange }: { value: PracticeLaunchOptions; availableCount: number; onChange: (next: PracticeLaunchOptions) => void }) {
+  return <div className="practice-launch-settings" role="group" aria-label="练习设置">
+    <div className="practice-setting-field practice-question-count-setting"><span>题数</span><div className="practice-question-count-controls"><select value={value.questionCount ?? ''} onChange={(event) => onChange({ ...value, questionCount: event.target.value ? Number(event.target.value) : null })} aria-label="练习题数">
+      <option value="">全部（{availableCount}）</option>
+      {practiceQuestionCountOptions.map((count) => <option key={count} value={count}>{count} 题</option>)}
+    </select><label className="practice-shuffle-option"><input type="checkbox" checked={value.shuffle} onChange={(event) => onChange({ ...value, shuffle: event.target.checked })} aria-label="乱序" /><span>乱序</span></label></div></div><div className="practice-setting-field practice-attempt-filter"><span>作答</span><div className="practice-attempt-filter-options" role="group" aria-label="作答状态"><button className={!value.unattemptedOnly ? 'is-selected' : ''} type="button" aria-pressed={!value.unattemptedOnly} onClick={() => onChange({ ...value, unattemptedOnly: false })}>不区分</button><button className={value.unattemptedOnly ? 'is-selected' : ''} type="button" aria-pressed={value.unattemptedOnly} onClick={() => onChange({ ...value, unattemptedOnly: true })}>只练未做</button></div></div>
+  </div>;
+}
+
+function PracticeAiPanel({
+  questionId,
+  attempt,
+}: {
+  questionId: string;
+  attempt: PracticeQuestionView['attempt'];
+}) {
+  const [history, setHistory] = useState<QuestionAiExplanationHistoryResponse | null>(null);
+  const [prompt, setPrompt] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError('');
+    setHistory(null);
+    void fetchQuestionAiExplanations(questionId)
+      .then((next) => { if (active) setHistory(next); })
+      .catch((requestError) => { if (active) setError(requestError instanceof Error ? requestError.message : 'AI 历史加载失败。'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => {
+      active = false;
+      abortRef.current?.abort();
+    };
+  }, [questionId]);
+
+  async function generate() {
+    if (busy) return;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await generateQuestionAiExplanation(
+        questionId,
+        { prompt: prompt.trim() || undefined, attempt },
+        controller.signal,
+      );
+      setHistory((current) => current
+        ? { ...current, explanations: [result.explanation, ...current.explanations] }
+        : { questionId, currentQuestionVersion: result.explanation.questionVersion, explanations: [result.explanation] });
+      setPrompt('');
+    } catch (requestError) {
+      if (!isRequestCancelled(requestError)) setError(requestError instanceof Error ? requestError.message : 'AI 讲解失败。');
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setBusy(false);
+      }
+    }
+  }
+
+  const explanations = history?.explanations ?? [];
+  return <section className="practice-ai-panel" aria-label="题目 AI 解析">
+    <div className="practice-ai-heading">
+      <div>
+        <h2>AI 解析</h2>
+        <small>{explanations.length ? String(explanations.length) + ' 个版本' : '按当前题目生成'}</small>
+      </div>
+      {busy ? <span className="ai-generation-spinner" role="status" aria-label="正在生成 AI 解析" /> : null}
+    </div>
+    {loading ? <p className="feedback-muted">加载中</p> : null}
+    {!loading && !explanations.length ? <p className="empty-state">暂无解析</p> : null}
+    {explanations.map((explanation) => <details className="question-ai-version" key={explanation.id} open={explanation === explanations[0]}>
+      <summary>第 {explanation.questionVersion} 版 · {new Date(explanation.generatedAt).toLocaleString('zh-CN')}{explanation.stale ? ' · 题目已更新，解析可能过时' : ''}</summary>
+      <div className="ai-explanation-content"><AiExplanationContent content={explanation.content} /></div>
+    </details>)}
+    <label className="field-column">
+      <span>临时提示词</span>
+      <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={4000} rows={3} placeholder="可选" disabled={busy} />
+    </label>
+    {error ? <p className="feedback-error" role="alert">{error}</p> : null}
+    <div className="action-row practice-ai-actions">
+      {busy
+        ? <button className="button-secondary" type="button" onClick={() => abortRef.current?.abort()}>停止</button>
+        : <button className="button-primary" type="button" onClick={() => { void generate(); }}>{explanations.length ? '重新生成' : '生成解析'}</button>}
+    </div>
+  </section>;
+}
+
+type StudyAssistantMessage = {
+  id: number;
+  prompt: string;
+  answer: string | null;
+  complete: boolean;
+};
+
+type StudyAssistantPosition = {
+  x: number;
+  y: number;
+};
+
+const STUDY_ASSISTANT_SIZE = 56;
+const STUDY_ASSISTANT_DRAG_THRESHOLD = 6;
+
+function clampStudyAssistantPosition(position: StudyAssistantPosition, placement: 'flashcard' | 'practice') {
+  const edgeInset = 8;
+  const bottomInset = placement === 'practice' ? 88 : 24;
+  return {
+    x: Math.min(Math.max(position.x, edgeInset), Math.max(edgeInset, window.innerWidth - STUDY_ASSISTANT_SIZE - edgeInset)),
+    y: Math.min(Math.max(position.y, edgeInset), Math.max(edgeInset, window.innerHeight - STUDY_ASSISTANT_SIZE - bottomInset)),
+  };
+}
+
+function readStudyAssistantPosition(storageKey: string, placement: 'flashcard' | 'practice') {
+  try {
+    const stored = window.localStorage.getItem(storageKey);
+    if (!stored) return null;
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== 'object' || !('x' in parsed) || !('y' in parsed) || typeof parsed.x !== 'number' || typeof parsed.y !== 'number') return null;
+    return clampStudyAssistantPosition({ x: parsed.x, y: parsed.y }, placement);
+  } catch {
+    return null;
+  }
+}
+
+function StudyAssistant({
+  contextId,
+  placement,
+  onAsk,
+}: {
+  contextId: string;
+  placement: 'flashcard' | 'practice';
+  onAsk: (prompt: string, signal: AbortSignal, onDelta: (content: string) => void | Promise<void>) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [prompt, setPrompt] = useState('');
+  const [messages, setMessages] = useState<StudyAssistantMessage[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null);
+  const positionStorageKey = `study-assistant-position:${placement}`;
+  const [position, setPosition] = useState<StudyAssistantPosition | null>(() => readStudyAssistantPosition(positionStorageKey, placement));
+  const [panelOffset, setPanelOffset] = useState<StudyAssistantPosition | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const copyFeedbackTimerRef = useRef<number | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const petRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const positionRef = useRef<StudyAssistantPosition | null>(position);
+  const dragRef = useRef<{ pointerId: number; startX: number; startY: number; origin: StudyAssistantPosition; dragging: boolean } | null>(null);
+  const suppressToggleRef = useRef(false);
+  const panelId = `study-assistant-${placement}`;
+
+  useEffect(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setOpen(false);
+    setPrompt('');
+    setMessages([]);
+    setBusy(false);
+    setError('');
+    if (copyFeedbackTimerRef.current !== null) window.clearTimeout(copyFeedbackTimerRef.current);
+    copyFeedbackTimerRef.current = null;
+    setCopiedMessageId(null);
+  }, [contextId]);
+
+  useEffect(() => () => {
+    abortRef.current?.abort();
+    if (copyFeedbackTimerRef.current !== null) window.clearTimeout(copyFeedbackTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (open) window.setTimeout(() => inputRef.current?.focus(), 0);
+  }, [open]);
+
+  useEffect(() => {
+    function constrainPosition() {
+      if (!positionRef.current) return;
+      const next = clampStudyAssistantPosition(positionRef.current, placement);
+      positionRef.current = next;
+      setPosition(next);
+      try { window.localStorage.setItem(positionStorageKey, JSON.stringify(next)); } catch { /* 本地存储不可用时仅保留当前会话位置。 */ }
+    }
+    window.addEventListener('resize', constrainPosition);
+    return () => window.removeEventListener('resize', constrainPosition);
+  }, [placement, positionStorageKey]);
+
+  useLayoutEffect(() => {
+    if (!open || !position || !panelRef.current) {
+      setPanelOffset(null);
+      return;
+    }
+    const panelBounds = panelRef.current.getBoundingClientRect();
+    const edgeInset = 8;
+    const aboveTop = position.y - panelBounds.height - 12;
+    const belowTop = position.y + STUDY_ASSISTANT_SIZE + 12;
+    const targetTop = belowTop + panelBounds.height <= window.innerHeight - edgeInset || aboveTop < edgeInset ? belowTop : aboveTop;
+    const targetLeft = position.x + STUDY_ASSISTANT_SIZE / 2 >= window.innerWidth / 2 ? position.x + STUDY_ASSISTANT_SIZE - panelBounds.width : position.x;
+    const next = {
+      x: Math.min(Math.max(targetLeft, edgeInset), Math.max(edgeInset, window.innerWidth - panelBounds.width - edgeInset)) - position.x,
+      y: Math.min(Math.max(targetTop, edgeInset), Math.max(edgeInset, window.innerHeight - panelBounds.height - edgeInset)) - position.y,
+    };
+    setPanelOffset((current) => current?.x === next.x && current.y === next.y ? current : next);
+  }, [busy, error, messages, open, position]);
+
+  function updatePosition(next: StudyAssistantPosition, persist = false) {
+    const clamped = clampStudyAssistantPosition(next, placement);
+    positionRef.current = clamped;
+    setPosition(clamped);
+    if (persist) {
+      try { window.localStorage.setItem(positionStorageKey, JSON.stringify(clamped)); } catch { /* 本地存储不可用时仅保留当前会话位置。 */ }
+    }
+  }
+
+  function currentPetPosition() {
+    const bounds = petRef.current?.getBoundingClientRect();
+    return bounds ? { x: bounds.left, y: bounds.top } : { x: 16, y: 16 };
+  }
+
+  function handlePetPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0) return;
+    const origin = currentPetPosition();
+    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, origin, dragging: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePetPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    if (!drag.dragging && Math.hypot(deltaX, deltaY) < STUDY_ASSISTANT_DRAG_THRESHOLD) return;
+    drag.dragging = true;
+    setDragging(true);
+    updatePosition({ x: drag.origin.x + deltaX, y: drag.origin.y + deltaY });
+  }
+
+  function finishPetDrag(event: ReactPointerEvent<HTMLButtonElement>, cancelled = false) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (drag.dragging) {
+      if (!cancelled && positionRef.current) {
+        try { window.localStorage.setItem(positionStorageKey, JSON.stringify(positionRef.current)); } catch { /* 本地存储不可用时仅保留当前会话位置。 */ }
+      }
+      suppressToggleRef.current = true;
+      window.setTimeout(() => { suppressToggleRef.current = false; }, 0);
+    }
+    dragRef.current = null;
+    setDragging(false);
+  }
+
+  function handlePetKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    const offsetByKey: Record<string, StudyAssistantPosition> = {
+      ArrowUp: { x: 0, y: -16 },
+      ArrowDown: { x: 0, y: 16 },
+      ArrowLeft: { x: -16, y: 0 },
+      ArrowRight: { x: 16, y: 0 },
+    };
+    const offset = offsetByKey[event.key];
+    if (!offset) return;
+    event.preventDefault();
+    const current = positionRef.current ?? currentPetPosition();
+    updatePosition({ x: current.x + offset.x, y: current.y + offset.y }, true);
+  }
+
+  function resetPosition() {
+    positionRef.current = null;
+    setPosition(null);
+    try { window.localStorage.removeItem(positionStorageKey); } catch { /* 本地存储不可用时无需清理。 */ }
+  }
+
+  function close() {
+    abortRef.current?.abort();
+    setOpen(false);
+  }
+
+  async function revealAnswer(messageId: number, content: string, signal: AbortSignal) {
+    const characters = Array.from(content);
+    for (let index = 0; index < characters.length && !signal.aborted; index += 8) {
+      const next = characters.slice(index, index + 8).join('');
+      setMessages((current) => current.map((message) => message.id === messageId ? { ...message, answer: `${message.answer ?? ''}${next}` } : message));
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 22));
+    }
+  }
+
+  async function copyAnswer(messageId: number, answer: string) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(answer);
+      } else {
+        const field = document.createElement('textarea');
+        field.value = answer;
+        field.setAttribute('readonly', '');
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.append(field);
+        field.select();
+        const copied = document.execCommand('copy');
+        field.remove();
+        if (!copied) throw new Error('复制失败。');
+      }
+      if (copyFeedbackTimerRef.current !== null) window.clearTimeout(copyFeedbackTimerRef.current);
+      setCopiedMessageId(messageId);
+      copyFeedbackTimerRef.current = window.setTimeout(() => {
+        setCopiedMessageId(null);
+        copyFeedbackTimerRef.current = null;
+      }, 1_500);
+    } catch {
+      setError('复制失败，请手动选择文本。');
+    }
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextPrompt = prompt.trim();
+    if (!nextPrompt || busy) return;
+    const id = Date.now();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setPrompt('');
+    setError('');
+    setBusy(true);
+    setMessages((current) => [...current, { id, prompt: nextPrompt, answer: null, complete: false }]);
+    try {
+      await onAsk(nextPrompt, controller.signal, (content) => revealAnswer(id, content, controller.signal));
+      if (!controller.signal.aborted) {
+        setMessages((current) => current.map((message) => message.id === id ? { ...message, complete: true } : message));
+      }
+    } catch (requestError) {
+      if (!isRequestCancelled(requestError)) {
+        setMessages((current) => current.map((message) => message.id === id ? { ...message, answer: '' } : message));
+        setError(requestError instanceof Error ? requestError.message : '问答失败。');
+      }
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setBusy(false);
+      }
+    }
+  }
+
+  return <aside className={`study-assistant study-assistant-${placement}`} aria-label="学习助手" style={position ? { left: `${position.x}px`, top: `${position.y}px`, right: 'auto', bottom: 'auto' } : undefined}>
+    <button ref={petRef} className={`study-assistant-pet ${dragging ? 'is-dragging' : ''}`} type="button" onClick={() => { if (suppressToggleRef.current) { suppressToggleRef.current = false; return; } setOpen((current) => !current); }} onPointerDown={handlePetPointerDown} onPointerMove={handlePetPointerMove} onPointerUp={finishPetDrag} onPointerCancel={(event) => finishPetDrag(event, true)} onKeyDown={handlePetKeyDown} aria-label="学习助手" aria-description="可拖动移动位置。获得焦点后可使用方向键微调位置。" title="学习助手（可拖动移动）" aria-expanded={open} aria-controls={panelId}>
+      <img className="study-assistant-pet-image" src="/study-assistant-cat.svg" alt="" width="56" height="56" draggable={false} />
+    </button>
+    {open ? <section ref={panelRef} id={panelId} className="study-assistant-panel" style={panelOffset ? { right: 'auto', bottom: 'auto', left: `${panelOffset.x}px`, top: `${panelOffset.y}px` } : undefined} aria-labelledby={`${panelId}-title`} onKeyDown={(event) => { if (event.key === 'Escape') close(); }}>
+      <header className="study-assistant-heading"><h2 id={`${panelId}-title`}>提问</h2><div className="study-assistant-heading-actions"><button className="icon-button study-assistant-reset" type="button" onClick={resetPosition} disabled={!position} aria-label="还原小猫位置" title="还原位置"><RotateCcw size={17} aria-hidden="true" /></button><button className="icon-button" type="button" onClick={close} aria-label="收起学习助手" title="收起"><X size={18} aria-hidden="true" /></button></div></header>
+      <ol className="study-assistant-messages">
+        {messages.map((message) => <li key={message.id}><p className="study-assistant-question">{message.prompt}</p>{message.answer === null ? <p className="study-assistant-pending" role="status">正在思考</p> : <div className={`study-assistant-answer ${message.answer && !message.complete ? 'is-streaming' : ''}`}><div className="study-assistant-answer-actions"><button className={`icon-button study-assistant-copy ${copiedMessageId === message.id ? 'is-copied' : ''}`} type="button" onClick={() => { void copyAnswer(message.id, message.answer ?? ''); }} disabled={!message.complete || !message.answer} aria-label={copiedMessageId === message.id ? '已复制回答' : message.complete ? '复制回答' : '回答生成中，暂不可复制'} title={copiedMessageId === message.id ? '已复制' : message.complete ? '复制回答' : '生成中'}>{copiedMessageId === message.id ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}</button></div><AiExplanationContent content={message.answer} />{message.answer && !message.complete ? <span className="study-assistant-caret" aria-hidden="true" /> : null}</div>}</li>)}
+      </ol>
+      <p className="visually-hidden" role="status">{busy ? '正在生成回答。' : copiedMessageId === null ? '' : '回答已复制。'}</p>
+      {error ? <p className="feedback-error" role="alert">{error}</p> : null}
+      <form className="study-assistant-form" onSubmit={(event) => { void submit(event); }}>
+        <label className="visually-hidden" htmlFor={`${panelId}-input`}>输入问题</label>
+        <textarea id={`${panelId}-input`} ref={inputRef} value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={2000} rows={2} placeholder="输入问题" disabled={busy} />
+        {busy ? <button className="icon-button study-assistant-stop" type="button" onClick={() => abortRef.current?.abort()} aria-label="停止回答" title="停止"><X size={18} aria-hidden="true" /></button> : <button className="icon-button study-assistant-send" type="submit" disabled={!prompt.trim()} aria-label="发送问题" title="发送"><Send size={18} aria-hidden="true" /></button>}
+      </form>
+    </section> : null}
+  </aside>;
+}
+
 function PracticeSessionPanel({
   initialSession,
   onClose,
@@ -3238,8 +3754,11 @@ function PracticeSessionPanel({
   const [index, setIndex] = useState(initialSession.session.currentIndex);
   const [selected, setSelected] = useState<string[]>(initialSession.questions[initialSession.session.currentIndex]?.attempt.answer ?? []);
   const [busy, setBusy] = useState(false);
+  const pendingAnswers = useRef(0);
+  const [pendingQuestionIds, setPendingQuestionIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
+  const [showAi, setShowAi] = useState(false);
   const maybeQuestion = session.questions[index];
   const completed = session.session.status === 'completed';
 
@@ -3256,9 +3775,22 @@ function PracticeSessionPanel({
   const isMultiple = question.type === 'multiple';
   const isCram = session.session.mode === 'cram';
   const last = index + 1 >= session.questions.length;
+  const answered = question.attempt.answer !== null;
+
+  function advance() {
+    setIndex((current) => Math.min(current + 1, session.questions.length - 1));
+  }
+
+  function handleNext() {
+    if (isCram && answered) {
+      advance();
+      return;
+    }
+    void submit(selected, !isCram);
+  }
 
   function choose(key: string) {
-    if (completed || busy || (isCram && question.attempt.answer !== null)) return;
+    if (completed || busy || pendingQuestionIds.has(question.id) || (isCram && question.attempt.answer !== null)) return;
     if (isMultiple) {
       setSelected((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
       return;
@@ -3270,25 +3802,60 @@ function PracticeSessionPanel({
 
   async function submit(answerValue: string[] = selected, autoAdvance = false) {
     if (!answerValue.length || completed) return;
-    setBusy(true); setError('');
+    const questionId = question.id;
+    const mode = session.session.mode;
+    const holdBusy = mode === 'cram' || last;
+    pendingAnswers.current += 1;
+    setPendingQuestionIds((current) => new Set(current).add(questionId));
+    setBusy(holdBusy); setError('');
+    if (mode === 'test') {
+      setSession((current) => {
+        const questions = current.questions.map((item) => item.id === questionId
+          ? { ...item, attempt: { ...item.attempt, answer: [...answerValue], result: 'unanswered' as const } }
+          : item);
+        const nextIndex = questions.findIndex((item) => item.attempt.answer === null);
+        return {
+          ...current,
+          questions,
+          session: {
+            ...current.session,
+            answeredCount: questions.filter((item) => item.attempt.answer !== null).length,
+            currentIndex: nextIndex === -1 ? Math.max(0, questions.length - 1) : nextIndex,
+          },
+        };
+      });
+      if (autoAdvance && !last) advance();
+    }
     try {
-      const next = await answerPracticeQuestion(session.session.id, question.id, answerValue);
-      setSession(next);
-      if (isCram) {
-        const result = next.questions[index]?.attempt.result;
+      const next = await answerPracticeQuestion(session.session.id, questionId, answerValue);
+      if (mode === 'cram') {
+        setSession((current) => ({ ...current, session: next.session, questions: current.questions.map((item) => item.id === questionId ? { ...next.question, isFavorite: item.isFavorite } : item) }));
+        const result = next.question.attempt.result;
         setFeedback(result === 'correct' || result === 'incorrect' ? result : null);
-        if (autoAdvance && !last) {
-          window.setTimeout(() => setIndex((current) => Math.min(current + 1, next.questions.length - 1)), 750);
-        }
-      } else if (autoAdvance && !last) {
-        setIndex((current) => Math.min(current + 1, next.questions.length - 1));
       }
     } catch (requestError) {
+      if (mode === 'test') {
+        setSession((current) => {
+          const questions = current.questions.map((item) => item.id === questionId
+            ? { ...item, attempt: { ...item.attempt, answer: null, result: 'unanswered' as const, answeredAt: null } }
+            : item);
+          return { ...current, questions, session: { ...current.session, answeredCount: questions.filter((item) => item.attempt.answer !== null).length } };
+        });
+      }
       setError(requestError instanceof Error ? requestError.message : '作答保存失败。');
-    } finally { setBusy(false); }
+    } finally {
+      pendingAnswers.current -= 1;
+      setPendingQuestionIds((current) => {
+        const next = new Set(current);
+        next.delete(questionId);
+        return next;
+      });
+      if (pendingAnswers.current === 0) setBusy(false);
+    }
   }
 
   async function finish() {
+    if (pendingAnswers.current > 0) { setError('答案保存中，请稍候。'); return; }
     setBusy(true); setError('');
     try { const next = await completePracticeSession(session.session.id); setSession(next); onFinished(next); }
     catch (requestError) { setError(requestError instanceof Error ? requestError.message : '完成会话失败。'); }
@@ -3296,13 +3863,29 @@ function PracticeSessionPanel({
   }
 
   async function abandon() {
+    if (pendingAnswers.current > 0) { setError('答案保存中，请稍候。'); return; }
     setBusy(true); setError('');
     try { const next = await abandonPracticeSession(session.session.id); onFinished(next); onClose(); }
     catch (requestError) { setError(requestError instanceof Error ? requestError.message : '放弃会话失败。'); }
     finally { setBusy(false); }
   }
 
-  return <div className="sheet-backdrop practice-backdrop" role="presentation"><section className="sheet practice-sheet" role="dialog" aria-modal="true" aria-labelledby="practice-title"><header className="practice-header"><button className="catalog-back" type="button" onClick={onClose} disabled={busy}>返回</button><div><h2 id="practice-title">{isCram ? '背题' : '检测'}</h2><p>{index + 1} / {session.questions.length}</p></div>{!completed ? <button className="button-secondary" type="button" onClick={() => { void abandon(); }} disabled={busy}>放弃</button> : null}</header><div className="practice-progress"><span style={{ width: `${((index + 1) / session.questions.length) * 100}%` }} /></div><div className="practice-question"><div className="practice-stem"><ContentNodes nodes={question.stem} options={aiExplanationContentOptions} /></div><div className="practice-options" role={isMultiple ? 'group' : 'radiogroup'} aria-label="题目选项">{question.options.map((option) => { const selectedOption = selected.includes(option.key); const correct = question.correctAnswer?.includes(option.key); const incorrectSelected = Boolean(selectedOption && question.attempt.answer && question.attempt.result === 'incorrect' && !correct); const classes = ['practice-option', selectedOption ? 'practice-option-selected' : '', correct ? 'practice-option-correct' : '', incorrectSelected ? 'practice-option-incorrect' : ''].filter(Boolean).join(' '); return <button className={classes} key={option.key} type="button" onClick={() => choose(option.key)} disabled={busy || completed || (isCram && question.attempt.answer !== null)}><span className="practice-option-key">{option.key}</span><span className="practice-option-content"><ContentNodes nodes={option.content} options={aiExplanationContentOptions} /></span></button>; })}</div>{isCram && feedback ? <p className={feedback === 'correct' ? 'feedback-success' : 'feedback-error'}>{feedback === 'correct' ? '回答正确' : '回答错误'}</p> : null}{(completed || (isCram && question.attempt.answer !== null)) && question.analysis ? <section className="practice-analysis"><h3>解析</h3><ContentNodes nodes={question.analysis} options={aiExplanationContentOptions} /></section> : null}{completed && session.result ? <section className="practice-result" aria-label="检测结果"><strong>本次结果</strong><div><span>正确 {session.result.correctCount}</span><span>错误 {session.result.incorrectCount}</span><span>未答 {session.result.unansweredCount}</span><span>正确率 {session.result.accuracy === null ? '—' : `${session.result.accuracy}%`}</span></div>{session.result.incorrectCount && onStartWrong ? <button className="button-secondary" type="button" onClick={() => onStartWrong(session.session.id)} disabled={busy}>本次错题</button> : null}</section> : null}{error ? <p className="feedback-error" role="alert">{error}</p> : null}</div>{completed ? <footer className="action-row"><button className="button-primary" type="button" onClick={onClose}>完成</button></footer> : <footer className="practice-footer"><button className="button-secondary" type="button" onClick={() => setIndex((current) => Math.max(0, current - 1))} disabled={busy || index === 0}>上一题</button>{last ? <button className="button-primary" type="button" onClick={() => { void finish(); }} disabled={busy}>完成{isCram ? '背题' : '检测'}</button> : <button className="button-primary" type="button" onClick={() => { void submit(selected, !isMultiple); }} disabled={busy || !selected.length}>{isMultiple ? '确认并下一题' : '下一题'}</button>}</footer>}</section></div>;
+  async function toggleFavorite() {
+    if (busy || pendingAnswers.current > 0) return;
+    const questionId = question.id;
+    const isFavorite = question.isFavorite;
+    setBusy(true); setError('');
+    try {
+      await setQuestionFavorite(questionId, !isFavorite);
+      setSession((current) => ({ ...current, questions: current.questions.map((item) => item.id === questionId ? { ...item, isFavorite: !isFavorite } : item) }));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : '收藏状态保存失败。');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+    return <main className="practice-page"><section className="practice-shell" aria-labelledby="practice-title"><header className="practice-header"><button className="catalog-back" type="button" onClick={onClose} disabled={busy}>返回</button><div><h1 id="practice-title">{isCram ? '背题' : '检测'}</h1><p>{index + 1} / {session.questions.length}</p></div>{!completed ? <button className="button-secondary" type="button" onClick={() => { void abandon(); }} disabled={busy}>放弃</button> : null}</header><div className="practice-progress"><span style={{ width: `${((index + 1) / session.questions.length) * 100}%` }} /></div><div className="practice-question"><div className="practice-question-heading"><span className="practice-question-type">{question.type === 'multiple' ? '多选题' : question.type === 'true_false' ? '判断题' : '单选题'}</span><div className="practice-question-tools"><button className={`icon-button practice-favorite-toggle ${question.isFavorite ? 'is-active' : ''}`} type="button" onClick={() => { void toggleFavorite(); }} disabled={busy || pendingAnswers.current > 0} aria-label={question.isFavorite ? '取消收藏' : '收藏'} title={question.isFavorite ? '取消收藏' : '收藏'}><Star size={18} fill={question.isFavorite ? 'currentColor' : 'none'} aria-hidden="true" /></button>{(isCram || completed) ? <PracticeQuestionNoteButton question={question} onSaved={(reviewNote) => setSession((current) => ({ ...current, questions: current.questions.map((item) => item.id === question.id ? { ...item, reviewNote } : item) }))} /> : null}<button className={`button-secondary practice-ai-toggle ${showAi ? 'is-active' : ''}`} type="button" onClick={() => setShowAi((current) => !current)}><Sparkles size={16} aria-hidden="true" />{showAi ? '收起解析' : 'AI 解析'}</button></div></div><div className="practice-stem"><ContentNodes nodes={question.stem} options={aiExplanationContentOptions} /></div><div className="practice-options" role={isMultiple ? 'group' : 'radiogroup'} aria-label="题目选项">{question.options.map((option) => { const selectedOption = selected.includes(option.key); const correct = question.correctAnswer?.includes(option.key); const incorrectSelected = Boolean(selectedOption && question.attempt.answer && question.attempt.result === 'incorrect' && !correct); const classes = ['practice-option', selectedOption ? 'practice-option-selected' : '', correct ? 'practice-option-correct' : '', incorrectSelected ? 'practice-option-incorrect' : ''].filter(Boolean).join(' '); return <button className={classes} key={option.key} type="button" onClick={() => choose(option.key)} disabled={busy || pendingQuestionIds.has(question.id) || completed || (isCram && question.attempt.answer !== null)}><span className="practice-option-key">{option.key}</span><span className="practice-option-content"><ContentNodes nodes={option.content} options={aiExplanationContentOptions} /></span></button>; })}</div>{isCram && feedback ? <p className={feedback === 'correct' ? 'feedback-success' : 'feedback-error'}>{feedback === 'correct' ? '回答正确' : '回答错误'}</p> : null}{(completed || (isCram && question.attempt.answer !== null)) && question.analysis ? <section className="practice-analysis"><h3>解析</h3><ContentNodes nodes={question.analysis} options={aiExplanationContentOptions} /></section> : null}{(completed || (isCram && question.attempt.answer !== null)) ? <ReviewNoteDisplay note={question.reviewNote} /> : null}{showAi ? <PracticeAiPanel questionId={question.id} attempt={question.attempt} /> : null}{completed && session.result ? <section className="practice-result" aria-label="检测结果"><strong>本次结果</strong><div><span>正确 {session.result.correctCount}</span><span>错误 {session.result.incorrectCount}</span><span>未答 {session.result.unansweredCount}</span><span>正确率 {session.result.accuracy === null ? '—' : `${session.result.accuracy}%`}</span></div>{session.result.incorrectCount && onStartWrong ? <button className="button-secondary" type="button" onClick={() => onStartWrong(session.session.id)} disabled={busy}>本次错题</button> : null}</section> : null}{error ? <p className="feedback-error" role="alert">{error}</p> : null}</div>{completed ? <footer className="action-row"><button className="button-primary" type="button" onClick={onClose}>完成</button></footer> : <footer className="practice-footer"><button className="button-secondary" type="button" onClick={() => setIndex((current) => Math.max(0, current - 1))} disabled={busy || index === 0}>上一题</button>{last ? answered ? <button className="button-primary" type="button" onClick={() => { void finish(); }} disabled={busy}>完成{isCram ? '背题' : '检测'}</button> : <button className="button-primary" type="button" onClick={() => { void submit(selected); }} disabled={busy || pendingQuestionIds.has(question.id) || !selected.length}>确认答案</button> : <button className="button-primary" type="button" onClick={handleNext} disabled={busy || pendingQuestionIds.has(question.id) || (isCram && !answered && !selected.length) || (!isCram && !selected.length)}>{isCram && answered ? '下一题' : isMultiple ? '确认并下一题' : '下一题'}</button>}</footer>}<StudyAssistant contextId={`${session.session.id}:${question.id}`} placement="practice" onAsk={(prompt, signal, onDelta) => streamPracticeStudyAssistant(session.session.id, question.id, prompt, onDelta, signal)} /></section></main>;
 }
 
 function QuestionImportPanel({ target, onBack }: { target: { courseId: string; subjectId: string }; onBack: () => void }) {
@@ -3866,6 +4449,412 @@ function ReviewFilterSheet({
   );
 }
 
+function ReviewWorkspacePanel({
+  workspace,
+  loading,
+  error,
+  onRefresh,
+  onUpdateContext,
+  onStartFlashcards,
+  onStartPractice,
+  onStartFavoritePractice,
+  onResumePractice,
+  onContinue,
+}: {
+  workspace: ReviewWorkspaceResponse | null;
+  loading: boolean;
+  error: string;
+  onRefresh: () => void;
+  onUpdateContext: (request: ReviewWorkspaceContextUpdateRequest) => Promise<void>;
+  onStartFlashcards: (materialId: string, scope: ReviewStartScope, mode: 'read' | 'memorize') => void;
+  onStartPractice: (bankId: string, questionChapterId: string | null, mode: PracticeMode, options: PracticeLaunchOptions) => void;
+  onStartFavoritePractice: (subjectId: string, mode: PracticeMode, options: PracticeLaunchOptions) => void;
+  onResumePractice: (sessionId: string) => void;
+  onContinue: (item: ReviewWorkspaceContinue) => void;
+}) {
+  const [courseSheetOpen, setCourseSheetOpen] = useState(false);
+  const [subjectSheetOpen, setSubjectSheetOpen] = useState(false);
+  const [courseQuery, setCourseQuery] = useState('');
+  const [expandedMaterialId, setExpandedMaterialId] = useState<string | null>(workspace?.context.expandedMaterialId ?? null);
+  const [practiceChapterByBank, setPracticeChapterByBank] = useState<Record<string, string>>({});
+  const [practiceOptionsByKey, setPracticeOptionsByKey] = useState<Record<string, PracticeLaunchOptions>>({});
+  const [saving, setSaving] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [insightsPeriod, setInsightsPeriod] = useState<LearningInsightsPeriod>(7);
+  const [insights, setInsights] = useState<LearningInsightsResponse | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState('');
+  const coursePickerRef = useRef<HTMLButtonElement>(null);
+  const subjectPickerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setExpandedMaterialId(workspace?.context.expandedMaterialId ?? null);
+  }, [workspace?.context.expandedMaterialId]);
+
+  useEffect(() => {
+    if (!courseSheetOpen && !subjectSheetOpen) {
+      return;
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (courseSheetOpen) {
+          closeCourseSheet();
+        } else {
+          closeSubjectSheet();
+        }
+      }
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [courseSheetOpen, subjectSheetOpen]);
+
+  if (!workspace) {
+    return <section className="review-panel" aria-labelledby="review-title"><header className="page-header"><div><p className="eyebrow">知识闪卡</p><h1 id="review-title">复习</h1></div><button className="icon-button" type="button" onClick={onRefresh} disabled={loading} aria-label="刷新" title="刷新"><RefreshCw size={20} aria-hidden="true" /></button></header><div className="feedback" aria-live="polite">{loading ? <p className="feedback-muted">加载中</p> : null}{error ? <p className="feedback-error" role="alert">{error}</p> : null}</div></section>;
+  }
+  const activeWorkspace = workspace;
+
+  const selectedSubject = workspace.context.subjectId ? workspace.subjects.find((subject) => subject.id === workspace.context.subjectId) ?? null : null;
+  const subjectNames = new Map(workspace.subjects.map((subject) => [subject.id, subject.name]));
+  const filteredCourses = workspace.courses.filter((course) => course.name.toLocaleLowerCase().includes(courseQuery.trim().toLocaleLowerCase()));
+  const materialsBySubject = workspace.flashcards.materials.reduce((groups, material) => {
+    const list = groups.get(material.subjectId) ?? [];
+    list.push(material);
+    groups.set(material.subjectId, list);
+    return groups;
+  }, new Map<string, typeof workspace.flashcards.materials>());
+  const banksBySubject = workspace.questions.banks.reduce((groups, bank) => {
+    const list = groups.get(bank.subjectId) ?? [];
+    list.push(bank);
+    groups.set(bank.subjectId, list);
+    return groups;
+  }, new Map<string, typeof workspace.questions.banks>());
+  const favoritesBySubject = new Map(workspace.questions.favorites.map((item) => [item.subjectId, item]));
+  function practiceOptions(key: string): PracticeLaunchOptions { return practiceOptionsByKey[key] ?? defaultPracticeLaunchOptions; }
+  function updatePracticeOptions(key: string, next: PracticeLaunchOptions) { setPracticeOptionsByKey((current) => ({ ...current, [key]: next })); }
+
+  async function changeContext(next: Partial<ReviewWorkspaceContextUpdateRequest>) {
+    setSaving(true);
+    try {
+      await onUpdateContext({
+        courseId: next.courseId ?? activeWorkspace.context.courseId,
+        subjectId: next.subjectId === undefined ? activeWorkspace.context.subjectId : next.subjectId,
+        mode: next.mode ?? activeWorkspace.context.mode,
+        expandedMaterialId: next.expandedMaterialId === undefined ? expandedMaterialId : next.expandedMaterialId,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggleMaterial(materialId: string) {
+    const next = expandedMaterialId === materialId ? null : materialId;
+    setExpandedMaterialId(next);
+    void changeContext({ expandedMaterialId: next });
+  }
+
+  function closeCourseSheet() {
+    setCourseSheetOpen(false);
+    window.requestAnimationFrame(() => coursePickerRef.current?.focus());
+  }
+
+  function closeSubjectSheet() {
+    setSubjectSheetOpen(false);
+    window.requestAnimationFrame(() => subjectPickerRef.current?.focus());
+  }
+
+  async function loadInsights(periodDays: LearningInsightsPeriod = insightsPeriod) {
+    setInsightsLoading(true);
+    setInsightsError('');
+    try {
+      setInsights(await fetchLearningInsights({ periodDays, courseId: activeWorkspace.context.courseId, subjectId: activeWorkspace.context.subjectId }));
+    } catch (requestError) {
+      setInsightsError(requestError instanceof Error ? requestError.message : '洞察加载失败。');
+    } finally { setInsightsLoading(false); }
+  }
+
+  function insightDateLabel(value: string) {
+    return value.slice(5).replace('-', '/');
+  }
+
+  function insightLineChart(points: Array<{ date: string; count: number }>) {
+    const width = 640;
+    const height = 180;
+    const left = 38;
+    const right = 12;
+    const top = 14;
+    const bottom = 38;
+    const plotWidth = width - left - right;
+    const plotHeight = height - top - bottom;
+    const maxValue = Math.max(1, ...points.map((point) => point.count));
+    const coordinate = (point: { date: string; count: number }, index: number) => ({
+      x: left + (index / Math.max(1, points.length - 1)) * plotWidth,
+      y: top + plotHeight - (point.count / maxValue) * plotHeight,
+    });
+    const coordinates = points.map(coordinate);
+    const labels = points.length <= 3 ? points.map((_, index) => index) : [0, Math.floor((points.length - 1) / 2), points.length - 1];
+    return { width, height, left, right, top, bottom, plotWidth, plotHeight, maxValue, coordinates, labels };
+  }
+
+  const continueLabel = workspace.continue?.kind === 'flashcard' ? '继续闪卡' : workspace.continue?.kind === 'practice' ? (workspace.continue.mode === 'cram' ? '继续背题' : '继续检测') : '';
+  return (
+    <section className="review-panel review-workspace" aria-labelledby="review-workspace-title">
+      <header className="page-header review-workspace-header">
+        <div>
+          <p className="eyebrow">知识闪卡</p>
+          <h1 id="review-workspace-title">复习</h1>
+        </div>
+        <div className="header-actions">
+          <button className="icon-button" type="button" onClick={onRefresh} disabled={loading || saving} aria-label="刷新" title="刷新">
+            <RefreshCw size={20} aria-hidden="true" />
+          </button>
+          <button className="icon-button" type="button" onClick={() => { const next = !insightsOpen; setInsightsOpen(next); if (next) void loadInsights(); }} disabled={loading || saving} aria-label="洞察" title="洞察" aria-expanded={insightsOpen}>
+            <BarChart3 size={20} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+      {insightsOpen ? <section className="learning-insights-panel" aria-labelledby="learning-insights-title">
+        <div className="workspace-section-heading"><h2 id="learning-insights-title">学习洞察</h2><div className="insights-period" role="group" aria-label="统计周期">
+          {[7, 30].map((period) => <button key={period} type="button" className={insightsPeriod === period ? 'is-active' : ''} onClick={() => { const next = period as LearningInsightsPeriod; setInsightsPeriod(next); void loadInsights(next); }}>{period} 天</button>)}
+        </div></div>
+        {insightsLoading ? <p className="feedback-muted">加载中</p> : insightsError ? <p className="feedback-error" role="alert">{insightsError}</p> : insights ? <>
+          <div className="insights-summary" aria-label="洞察摘要"><div><span>闪卡复习</span><strong>{insights.flashcards.reviewedCount}</strong><small>张</small></div><div><span>状态变化</span><strong>{insights.masteryChanges.total}</strong><small>次</small></div><div><span>题库正确率</span><strong>{insights.practice.accuracy === null ? '暂无' : insights.practice.accuracy}</strong><small>{insights.practice.accuracy === null ? '' : '%'}</small></div></div>
+          {(() => { const chart = insightLineChart(insights.flashcards.daily); return <div className="insights-chart-wrap"><div className="insights-chart-heading"><div><h3>复习节奏</h3><p>每日闪卡复习量 · {insights.periodDays} 天</p></div><strong>{insights.flashcards.reviewedCount} 张</strong></div><svg className="insights-chart" viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label={`逐日闪卡复习量，${insights.flashcards.daily.map((day) => `${day.date} ${day.count}张`).join('，')}`}>
+            {[0, .5, 1].map((ratio) => <g key={ratio}><line x1={chart.left} x2={chart.width - chart.right} y1={chart.top + chart.plotHeight * ratio} y2={chart.top + chart.plotHeight * ratio} className="insights-grid-line" /><text x={chart.left - 8} y={chart.top + chart.plotHeight * ratio + 4} textAnchor="end" className="insights-axis-label">{Math.round(chart.maxValue * (1 - ratio))}</text></g>)}
+            <line x1={chart.left} x2={chart.width - chart.right} y1={chart.top + chart.plotHeight} y2={chart.top + chart.plotHeight} className="insights-baseline" />
+            {chart.coordinates.length > 1 ? <polygon className="insights-area" points={`${chart.coordinates.map((point) => `${point.x},${point.y}`).join(' ')} ${chart.coordinates.at(-1)!.x},${chart.top + chart.plotHeight} ${chart.coordinates[0]!.x},${chart.top + chart.plotHeight}`} /> : null}
+            <polyline fill="none" points={chart.coordinates.map((point) => `${point.x},${point.y}`).join(' ')} />
+            {chart.coordinates.map((point, index) => <circle key={insights.flashcards.daily[index]!.date} cx={point.x} cy={point.y} r={index === chart.coordinates.length - 1 ? 4 : 2.5} />)}
+            {chart.coordinates.length ? <text x={chart.coordinates.at(-1)!.x - 5} y={chart.coordinates.at(-1)!.y - 10} textAnchor="end" className="insights-point-label">{insights.flashcards.daily.at(-1)!.count}</text> : null}
+            {chart.labels.map((index) => { const point = chart.coordinates[index]!; return <text key={insights.flashcards.daily[index]!.date} x={point.x} y={chart.height - 12} textAnchor={index === 0 ? 'start' : index === chart.coordinates.length - 1 ? 'end' : 'middle'} className="insights-axis-label">{insightDateLabel(insights.flashcards.daily[index]!.date)}</text>; })}
+          </svg><p className="insights-caption">峰值 {chart.maxValue} 张 · {insights.flashcards.daily.length ? `${insightDateLabel(insights.flashcards.daily[0]!.date)} 至 ${insightDateLabel(insights.flashcards.daily.at(-1)!.date)}` : '暂无记录'}</p></div>; })()}
+          <div className="insights-detail-grid">
+            <section className="insights-table-section" aria-labelledby="insights-status-title"><div className="insights-section-title"><h3 id="insights-status-title">状态变化</h3><span>{insights.masteryChanges.total} 次</span></div><table className="insights-table"><thead><tr><th scope="col">状态</th><th scope="col">变化</th></tr></thead><tbody>{([['掌握', 'mastered'], ['了解', 'familiar'], ['努力', 'effort'], ['未评估', 'unassessed']] as const).map(([label, key]) => <tr key={key}><th scope="row"><span className={`insights-status-dot status-${key}`} aria-hidden="true" />{label}</th><td><strong>{insights.masteryChanges.byStatus[key]}</strong><span className="insights-meter"><i style={{ width: `${insights.masteryChanges.total ? (insights.masteryChanges.byStatus[key] / insights.masteryChanges.total) * 100 : 0}%` }} /></span></td></tr>)}</tbody></table></section>
+            <section className="insights-table-section" aria-labelledby="insights-practice-title"><div className="insights-section-title"><h3 id="insights-practice-title">题库结果</h3><span>{insights.practice.answeredCount} 道</span></div><table className="insights-table"><tbody><tr><th scope="row">答对</th><td>{insights.practice.correctCount}</td></tr><tr><th scope="row">答错</th><td>{insights.practice.incorrectCount}</td></tr><tr><th scope="row">正确率</th><td>{insights.practice.accuracy === null ? '暂无' : `${insights.practice.accuracy}%`}</td></tr></tbody></table></section>
+          </div>
+          <section className="insights-table-section insights-weak-section" aria-labelledby="insights-weak-title"><div className="insights-section-title"><h3 id="insights-weak-title">薄弱知识点</h3><span>至少 3 次作答</span></div>{insights.weakKnowledgePoints.length ? <table className="insights-table"><thead><tr><th scope="col">知识点</th><th scope="col">作答</th><th scope="col">正确率</th></tr></thead><tbody>{insights.weakKnowledgePoints.map((point) => <tr key={point.knowledgePoint}><th scope="row">{point.knowledgePoint}</th><td>{point.answeredCount}</td><td>{point.accuracy}%</td></tr>)}</tbody></table> : <p className="insights-empty">暂无满足 3 次作答样本的薄弱知识点。</p>}</section>
+        </> : <p className="insights-empty">暂无洞察数据。</p>}
+      </section> : null}
+      <div className="review-workspace-context-bar" aria-label="复习范围">
+        <button
+          className="context-picker"
+          type="button"
+          ref={coursePickerRef}
+          onClick={() => { setCourseSheetOpen(true); setCourseQuery(''); }}
+          disabled={saving}
+          aria-haspopup="dialog"
+          aria-expanded={courseSheetOpen}
+          aria-controls="workspace-course-picker"
+        >
+          <span className="context-picker-label">课程</span>
+          <span className="context-picker-title"><strong>{workspace.currentCourse.name}</strong><ChevronDown size={16} aria-hidden="true" /></span>
+          <span>{workspace.currentCourse.flashcardCount} 张闪卡 · {workspace.currentCourse.questionCount} 道题</span>
+        </button>
+        <button
+          className="context-picker"
+          type="button"
+          ref={subjectPickerRef}
+          onClick={() => setSubjectSheetOpen(true)}
+          disabled={saving}
+          aria-haspopup="dialog"
+          aria-expanded={subjectSheetOpen}
+          aria-controls="workspace-subject-picker"
+        >
+          <span className="context-picker-label">科目</span>
+          <span className="context-picker-title"><strong>{selectedSubject?.name ?? '全部科目'}</strong><ChevronDown size={16} aria-hidden="true" /></span>
+          <span>{selectedSubject ? `${selectedSubject.flashcardCount} 张闪卡 · ${selectedSubject.questionCount} 道题` : `${workspace.subjects.length} 个科目`}</span>
+        </button>
+      </div>
+      <div className="review-workspace-mode" role="tablist" aria-label="复习内容">
+        <button id="workspace-flashcards-tab" className={workspace.context.mode === 'flashcards' ? 'is-active' : ''} type="button" role="tab" aria-selected={workspace.context.mode === 'flashcards'} aria-controls="workspace-flashcards-panel" onClick={() => { void changeContext({ mode: 'flashcards' }); }}>闪卡</button>
+        <button id="workspace-questions-tab" className={workspace.context.mode === 'questions' ? 'is-active' : ''} type="button" role="tab" aria-selected={workspace.context.mode === 'questions'} aria-controls="workspace-questions-panel" onClick={() => { void changeContext({ mode: 'questions' }); }}>题库</button>
+      </div>
+      {workspace.continue ? (
+        <section className="review-workspace-continue" aria-label="继续学习">
+          <div>
+            <span className="workspace-kicker">继续学习</span>
+            <strong>{workspace.continue.kind === 'flashcard' ? workspace.continue.materialName : workspace.continue.questionBankName}</strong>
+            <small>{workspace.continue.kind === 'flashcard' ? workspace.continue.cardTitle : (workspace.continue.mode === 'cram' ? '背题' : '检测')}</small>
+          </div>
+          <button className="button-primary" type="button" onClick={() => onContinue(workspace.continue!)}>{continueLabel}</button>
+        </section>
+      ) : null}
+      <div className="feedback" aria-live="polite">{loading || saving ? <p className="feedback-muted">加载中</p> : null}{error ? <p className="feedback-error" role="alert">{error}</p> : null}</div>
+      {workspace.context.mode === 'flashcards' ? (
+        <section id="workspace-flashcards-panel" className="review-workspace-section" role="tabpanel" aria-labelledby="workspace-flashcards-tab">
+          <div className="workspace-section-heading">
+            <h2>知识闪卡</h2>
+            <span>{workspace.flashcards.materialCount} 份资料 · {workspace.flashcards.cardCount} 张</span>
+          </div>
+          <div className="review-workspace-stats" aria-label="闪卡状态">
+            <span>未评估 {workspace.flashcards.unassessedCount}</span>
+            <span>努力 {workspace.flashcards.effortCount}</span>
+          </div>
+          {workspace.flashcards.materials.length ? (
+            <div className="workspace-material-list">
+              {[...materialsBySubject.entries()].map(([subjectId, materials]) => (
+                <section key={subjectId} className="workspace-subject-group">
+                  <h3>{subjectNames.get(subjectId) ?? '科目'}</h3>
+                  {materials.map((material) => {
+                    const isExpanded = expandedMaterialId === material.id;
+                    return <article className={`workspace-material-row ${isExpanded ? 'is-expanded' : ''}`} key={material.id}>
+                      <button className="workspace-material-main" type="button" onClick={() => toggleMaterial(material.id)} aria-expanded={isExpanded} aria-controls={`workspace-material-actions-${material.id}`}>
+                        <span className="workspace-row-title"><strong>{material.name}</strong><ChevronDown size={16} aria-hidden="true" /></span>
+                        <small>{material.cardCount} 张 · 掌握 {material.masteredCount} · 了解 {material.familiarCount} · 努力 {material.effortCount} · 未评估 {material.unassessedCount}</small>
+                        {material.lastCardTitle ? <small>继续：{material.lastCardTitle}</small> : null}
+                      </button>
+                      {isExpanded ? <div id={`workspace-material-actions-${material.id}`} className="workspace-material-actions">
+                        <div className="review-inline-modes" role="group" aria-label={`${material.name}复习方式`}>
+                          <button type="button" className="is-active" onClick={() => onStartFlashcards(material.id, 'all', 'read')} disabled={!material.cardCount}>阅读</button>
+                          <button type="button" onClick={() => onStartFlashcards(material.id, 'all', 'memorize')} disabled={!material.cardCount}>背默</button>
+                        </div>
+                        <button className="button-secondary" type="button" onClick={() => onStartFlashcards(material.id, 'unassessed', 'read')} disabled={!material.unassessedCount}>未评估</button>
+                        <button className="button-secondary" type="button" onClick={() => onStartFlashcards(material.id, 'effort', 'read')} disabled={!material.effortCount}>努力</button>
+                      </div> : null}
+                    </article>;
+                  })}
+                </section>
+              ))}
+            </div>
+          ) : <p className="empty-state">暂无闪卡</p>}
+        </section>
+      ) : (
+        <section id="workspace-questions-panel" className="review-workspace-section" role="tabpanel" aria-labelledby="workspace-questions-tab">
+          <div className="workspace-section-heading"><h2>题库</h2><span>{workspace.questions.questionBankCount} 个题库 · {workspace.questions.questionCount} 道题</span></div>
+          <div className="review-workspace-stats" aria-label="题库状态"><span>未完成 {workspace.questions.inProgressCount}</span><span>累计错题 {workspace.questions.aggregateWrongCount}</span></div>
+          {workspace.questions.banks.length ? <div className="workspace-bank-list">{[...banksBySubject.entries()].map(([subjectId, banks]) => {
+            const favorite = favoritesBySubject.get(subjectId);
+            return <section key={subjectId} className="workspace-subject-group">
+              <h3>{subjectNames.get(subjectId) ?? '科目'}</h3>
+              {banks.map((bank) => {
+                const requestedChapterId = practiceChapterByBank[bank.id] ?? '';
+                const selectedChapterId = bank.chapters.some((chapter) => chapter.id === requestedChapterId) ? requestedChapterId : '';
+                return <article className="workspace-bank-row" key={bank.id}>
+                  <div className="workspace-bank-copy"><strong>{bank.name}</strong><small>{bank.kind === 'chapter' ? '章节题' : bank.kind === 'official' ? '真题' : '模拟题'} · {bank.questionCount} 道题</small>{bank.inProgressCount ? <small>未完成 {bank.inProgressCount} 个会话</small> : null}{bank.kind === 'chapter' && bank.chapters.length ? <label className="workspace-bank-chapter-picker"><span>范围</span><select value={selectedChapterId} onChange={(event) => setPracticeChapterByBank((current) => ({ ...current, [bank.id]: event.target.value }))} aria-label={`${bank.name}刷题范围`}><option value="">整套题库</option>{bank.chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.title} · {chapter.questionCount} 题</option>)}</select></label> : null}<PracticeLaunchControls value={practiceOptions(bank.id)} availableCount={selectedChapterId ? bank.chapters.find((chapter) => chapter.id === selectedChapterId)?.questionCount ?? bank.questionCount : bank.questionCount} onChange={(next) => updatePracticeOptions(bank.id, next)} /></div>
+                  <div className="workspace-bank-actions">{bank.latestSessionId ? <button className="button-primary" type="button" onClick={() => onResumePractice(bank.latestSessionId!)}>继续</button> : null}<button className="button-secondary" type="button" onClick={() => onStartPractice(bank.id, selectedChapterId || null, 'cram', practiceOptions(bank.id))} disabled={!bank.questionCount}>背题</button><button className="button-secondary" type="button" onClick={() => onStartPractice(bank.id, selectedChapterId || null, 'test', practiceOptions(bank.id))} disabled={!bank.questionCount}>检测</button></div>
+                </article>;
+              })}
+              {favorite ? <article className="workspace-bank-row workspace-favorite-row">
+                <div className="workspace-bank-copy"><span className="workspace-favorite-title"><Star size={16} aria-hidden="true" fill="currentColor" /><strong>收藏题</strong></span><small>{favorite.questionCount} 道题</small>{favorite.inProgressCount ? <small>未完成 {favorite.inProgressCount} 个会话</small> : null}<PracticeLaunchControls value={practiceOptions(`favorite:${subjectId}`)} availableCount={favorite.questionCount} onChange={(next) => updatePracticeOptions(`favorite:${subjectId}`, next)} /></div>
+                <div className="workspace-bank-actions">{favorite.latestSessionId ? <button className="button-primary" type="button" onClick={() => onResumePractice(favorite.latestSessionId!)}>继续</button> : null}<button className="button-secondary" type="button" onClick={() => onStartFavoritePractice(subjectId, 'cram', practiceOptions(`favorite:${subjectId}`))}>背题</button><button className="button-secondary" type="button" onClick={() => onStartFavoritePractice(subjectId, 'test', practiceOptions(`favorite:${subjectId}`))}>检测</button></div>
+              </article> : null}
+            </section>;
+          })}</div> : <p className="empty-state">暂无题库</p>}
+        </section>
+      )}
+      {courseSheetOpen ? <div className="sheet-backdrop" role="presentation"><section id="workspace-course-picker" className="sheet workspace-picker-sheet" role="dialog" aria-modal="true" aria-labelledby="workspace-course-picker-title"><div className="sheet-heading"><h2 id="workspace-course-picker-title">选择课程</h2><button className="icon-button" type="button" onClick={closeCourseSheet} aria-label="关闭" title="关闭"><X size={20} aria-hidden="true" /></button></div><label className="search-field"><Search size={18} aria-hidden="true" /><input autoFocus value={courseQuery} onChange={(event) => setCourseQuery(event.target.value)} placeholder="搜索课程" aria-label="搜索课程" /></label><ul className="workspace-picker-list">{filteredCourses.map((course) => <li key={course.id}><button type="button" onClick={() => { setCourseSheetOpen(false); void changeContext({ courseId: course.id, subjectId: null, expandedMaterialId: null }); }}><strong>{course.name}</strong><small>{course.flashcardCount} 张闪卡 · {course.questionCount} 道题</small></button></li>)}{filteredCourses.length === 0 ? <li className="empty-state">暂无课程</li> : null}</ul></section></div> : null}
+      {subjectSheetOpen ? <div className="sheet-backdrop" role="presentation"><section id="workspace-subject-picker" className="sheet workspace-picker-sheet" role="dialog" aria-modal="true" aria-labelledby="workspace-subject-picker-title"><div className="sheet-heading"><h2 id="workspace-subject-picker-title">选择科目</h2><button className="icon-button" type="button" onClick={closeSubjectSheet} aria-label="关闭" title="关闭" autoFocus><X size={20} aria-hidden="true" /></button></div><ul className="workspace-picker-list"><li><button type="button" onClick={() => { setSubjectSheetOpen(false); void changeContext({ subjectId: null, expandedMaterialId: null }); }}><strong>全部科目</strong><small>{workspace.currentCourse.flashcardCount} 张闪卡 · {workspace.currentCourse.questionCount} 道题</small></button></li>{workspace.subjects.map((subject) => <li key={subject.id}><button type="button" onClick={() => { setSubjectSheetOpen(false); void changeContext({ subjectId: subject.id, expandedMaterialId: null }); }}><strong>{subject.name}</strong><small>{subject.flashcardCount} 张闪卡 · {subject.questionCount} 道题</small></button></li>)}</ul></section></div> : null}
+    </section>
+  );
+}
+
+function InkCanvas({
+  strokes,
+  onChange,
+  disabled = false,
+}: {
+  strokes: HandwrittenStroke[];
+  onChange: (strokes: HandwrittenStroke[]) => void;
+  disabled?: boolean;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef<HandwrittenStroke | null>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.strokeStyle = getComputedStyle(canvas).color;
+    context.lineWidth = Math.max(3, 4 * Math.max(scaleX, scaleY));
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    for (const stroke of strokes) {
+      const [first, ...rest] = stroke.points;
+      if (!first) continue;
+      context.beginPath();
+      context.moveTo(first.x / 1000 * canvas.width, first.y / 1000 * canvas.height);
+      for (const point of rest) context.lineTo(point.x / 1000 * canvas.width, point.y / 1000 * canvas.height);
+      context.stroke();
+    }
+  }, [strokes]);
+  function pointFromEvent(event: ReactPointerEvent<HTMLCanvasElement>): { x: number; y: number } {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return { x: Math.max(0, Math.min(1000, Math.round((event.clientX - rect.left) / rect.width * 1000))), y: Math.max(0, Math.min(1000, Math.round((event.clientY - rect.top) / rect.height * 1000))) };
+  }
+  return <canvas
+    ref={canvasRef}
+    className="ink-canvas"
+    width={1000}
+    height={750}
+    aria-label="手写画板"
+    onPointerDown={(event) => {
+      if (disabled) return;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      drawingRef.current = { points: [pointFromEvent(event)] };
+      onChange([...strokes, drawingRef.current]);
+    }}
+    onPointerMove={(event) => {
+      if (!drawingRef.current || disabled) return;
+      const nextPoint = pointFromEvent(event);
+      const points = drawingRef.current.points;
+      if (points.at(-1)?.x === nextPoint.x && points.at(-1)?.y === nextPoint.y) return;
+      drawingRef.current = { points: [...points, nextPoint] };
+      onChange([...strokes.slice(0, -1), drawingRef.current]);
+    }}
+    onPointerUp={() => { drawingRef.current = null; }}
+    onPointerCancel={() => { drawingRef.current = null; }}
+  />;
+}
+
+function ReviewNoteDisplay({ note }: { note: CardReviewNote | QuestionReviewNote | null | undefined }) {
+  if (!note || (!note.noteText.trim() && note.strokes.length === 0)) return null;
+  return <section className="practice-analysis practice-review-note" aria-label="备注"><h3>备注</h3>{note.noteText.trim() ? <p>{note.noteText}</p> : null}{note.strokes.length ? <svg className="review-note-ink" viewBox="0 0 1000 750" role="img" aria-label="手写备注">{note.strokes.map((stroke, index) => <polyline key={index} points={stroke.points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />)}</svg> : null}</section>;
+}
+
+function NoteEditorSheet({
+  title,
+  initialNote,
+  onLoad,
+  onSave,
+  onClose,
+}: {
+  title: string;
+  initialNote?: CardReviewNote | QuestionReviewNote | null;
+  onLoad?: () => Promise<CardReviewNote | QuestionReviewNote | null>;
+  onSave: (request: { noteText: string; strokes: HandwrittenStroke[] }) => Promise<CardReviewNote | QuestionReviewNote | null>;
+  onClose: () => void;
+}) {
+  const [text, setText] = useState(initialNote?.noteText ?? '');
+  const [strokes, setStrokes] = useState<HandwrittenStroke[]>(initialNote?.strokes ?? []);
+  const [loading, setLoading] = useState(Boolean(onLoad && !initialNote));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (!onLoad || initialNote) return;
+    void onLoad().then((result) => { setText(result?.noteText ?? ''); setStrokes(result?.strokes ?? []); }).catch((requestError) => setError(requestError instanceof Error ? requestError.message : '备注加载失败。')).finally(() => setLoading(false));
+  }, [onLoad, initialNote]);
+  async function save() {
+    setSaving(true); setError('');
+    try { await onSave({ noteText: text, strokes }); onClose(); }
+    catch (requestError) { setError(requestError instanceof Error ? requestError.message : '备注保存失败。'); }
+    finally { setSaving(false); }
+  }
+  return <div className="sheet-backdrop" role="presentation"><section className="sheet note-editor-sheet" role="dialog" aria-modal="true" aria-labelledby="note-editor-title"><header className="sheet-header"><h2 id="note-editor-title">{title}</h2><button className="icon-button" type="button" aria-label="关闭备注" title="关闭" onClick={onClose}><X size={18} aria-hidden="true" /></button></header>{loading ? <p className="feedback-muted">加载中</p> : <><label className="field-column"><span>文字备注</span><textarea value={text} maxLength={2000} rows={4} onChange={(event) => setText(event.target.value)} placeholder="写下重点" /></label><div className="ink-editor"><div className="ink-editor-heading"><span>手写备注</span><div><button className="icon-button" type="button" onClick={() => setStrokes((current) => current.slice(0, -1))} disabled={!strokes.length} aria-label="撤销笔画" title="撤销"><Undo2 size={18} aria-hidden="true" /></button><button className="icon-button" type="button" onClick={() => setStrokes([])} disabled={!strokes.length} aria-label="清除笔迹" title="清除"><Trash2 size={18} aria-hidden="true" /></button></div></div><InkCanvas strokes={strokes} onChange={setStrokes} disabled={saving} /></div>{error ? <p className="feedback-error" role="alert">{error}</p> : null}<div className="action-row"><button className="button-secondary" type="button" onClick={onClose} disabled={saving}>取消</button><button className="button-primary" type="button" onClick={() => { void save(); }} disabled={saving}>{saving ? '保存中' : '保存'}</button></div></>}</section></div>;
+}
+
+function QuestionNoteButton({ question }: { question: QuestionQuestion }) {
+  const [open, setOpen] = useState(false);
+  return <>{<button className="button-secondary question-note-button" type="button" onClick={() => setOpen(true)} aria-label="备注" title="备注"><PenLine size={17} aria-hidden="true" />备注</button>}{open ? <NoteEditorSheet title="题目备注" onLoad={() => fetchQuestionReviewNote(question.id)} onSave={(request) => saveQuestionReviewNote(question.id, request)} onClose={() => setOpen(false)} /> : null}</>;
+}
+
+function PracticeQuestionNoteButton({ question, onSaved }: { question: PracticeQuestionView; onSaved: (note: QuestionReviewNote | null) => void }) {
+  const [open, setOpen] = useState(false);
+  return <>{<button className="button-secondary practice-note-toggle" type="button" onClick={() => setOpen(true)} aria-label="题目备注" title="题目备注"><PenLine size={16} aria-hidden="true" />备注</button>}{open ? <NoteEditorSheet title="题目备注" initialNote={question.reviewNote} onLoad={() => fetchQuestionReviewNote(question.id)} onSave={async (request) => { const saved = await saveQuestionReviewNote(question.id, request); onSaved(saved); return saved; }} onClose={() => setOpen(false)} /> : null}</>;
+}
+
 function ReviewPanel({
   dashboard,
   card,
@@ -3889,6 +4878,8 @@ function ReviewPanel({
   onUploadResource,
   onShowFilters,
   onBack,
+  initialMemorizationMode,
+  onMemorizationModeChange,
 }: {
   dashboard: ReviewDashboardResponse | null;
   card: ReviewCardSummary | null;
@@ -3912,12 +4903,14 @@ function ReviewPanel({
   onUploadResource: (file: File) => Promise<{ id: string }>;
   onShowFilters: () => void;
   onBack: () => void;
+  initialMemorizationMode?: boolean;
+  onMemorizationModeChange?: (enabled: boolean) => void;
 }) {
   const [pendingTextHighlights, setPendingTextHighlights] = useState<PendingTextHighlight[]>([]);
   const [currentMaterialId, setCurrentMaterialId] = useState('');
   const [clozeMode, setClozeMode] = useState(false);
   const [revealedHighlightIds, setRevealedHighlightIds] = useState<Set<string>>(() => new Set());
-  const [memorizationMode, setMemorizationMode] = useState(false);
+  const [memorizationMode, setMemorizationMode] = useState(initialMemorizationMode ?? false);
   const [editing, setEditing] = useState(false);
   const [editLock, setEditLock] = useState<ReviewEditLock | null>(null);
   const [editLockLoading, setEditLockLoading] = useState(false);
@@ -3926,6 +4919,7 @@ function ReviewPanel({
   const [explanationPrompt, setExplanationPrompt] = useState('');
   const [explanationSaving, setExplanationSaving] = useState(false);
   const [explanationError, setExplanationError] = useState('');
+  const [noteOpen, setNoteOpen] = useState(false);
   const editLockRef = useRef<{ cardId: string; lock: ReviewEditLock } | null>(null);
   const explanationAbortRef = useRef<AbortController | null>(null);
   const activeCardIdRef = useRef<string | null>(card?.id ?? null);
@@ -3934,6 +4928,10 @@ function ReviewPanel({
   activeCardIdRef.current = card?.id ?? null;
   renewEditLockRef.current = onRenewEditLock;
   releaseEditLockRef.current = onReleaseEditLock;
+
+  useEffect(() => {
+    setMemorizationMode(initialMemorizationMode ?? false);
+  }, [initialMemorizationMode]);
 
   useEffect(() => {
     if (!dashboard) {
@@ -3973,6 +4971,7 @@ function ReviewPanel({
     setExplanationOpen(false);
     setExplanationPrompt('');
     setExplanationError('');
+    setNoteOpen(false);
     if (memorizationMode && card) {
       setClozeMode(true);
     } else if (!card) {
@@ -4103,7 +5102,7 @@ function ReviewPanel({
         <div className="review-card-toolbar">
           <button className="button-secondary" type="button" onClick={onBack}>返回</button>
           <span className="review-context">{card.materialName} / {card.chapterTitle} / {card.sectionTitle}</span>
-          {!editing ? <button className="button-secondary" type="button" disabled={editLockLoading} onClick={() => { void beginEditing(); }}>{editLockLoading ? '锁定中' : '编辑'}</button> : <span className="review-edit-lock" role="status">本机编辑</span>}
+          {!editing ? <><button className="button-secondary" type="button" onClick={() => setNoteOpen(true)} aria-label="备注" title="备注"><PenLine size={17} aria-hidden="true" />备注</button><button className="button-secondary" type="button" disabled={editLockLoading} onClick={() => { void beginEditing(); }}>{editLockLoading ? '锁定中' : '编辑'}</button></> : <span className="review-edit-lock" role="status">本机编辑</span>}
         </div>
         {editLockError ? <p className="review-edit-lock-error" role="alert">{editLockError}</p> : null}
         {editing ? (
@@ -4259,6 +5258,8 @@ function ReviewPanel({
           </nav>
         ) : null}
         </> : null}
+        {noteOpen ? <NoteEditorSheet title="闪卡备注" onLoad={() => fetchCardReviewNote(card.id)} onSave={(request) => saveCardReviewNote(card.id, request)} onClose={() => setNoteOpen(false)} /> : null}
+        {!editing ? <StudyAssistant contextId={card.id} placement="flashcard" onAsk={(prompt, signal, onDelta) => streamFlashcardStudyAssistant(card.id, prompt, onDelta, signal)} /> : null}
       </section>
     );
   }
@@ -4319,7 +5320,9 @@ function ReviewPanel({
                 type="checkbox"
                 checked={memorizationMode}
                 onChange={(event) => {
-                  setMemorizationMode(event.target.checked);
+                  const enabled = event.target.checked;
+                  setMemorizationMode(enabled);
+                  onMemorizationModeChange?.(enabled);
                   setClozeMode(false);
                   setRevealedHighlightIds(new Set());
                 }}
@@ -4435,7 +5438,7 @@ function AiProviderSettingsPanel({
   function openNew() {
     setStatusMessage('');
     setError('');
-    setDraft(newAiProviderDraft(profiles.length === 0));
+    setDraft(newAiProviderDraft(!profiles.some((profile) => profile.isActive)));
   }
 
   function openEdit(profile: AiProviderProfile) {
@@ -4486,16 +5489,37 @@ function AiProviderSettingsPanel({
     }
   }
 
-  async function activate(profileId: string) {
+  async function updateProfileState(profileId: string, isActive: boolean) {
     setBusy(true);
     setError('');
     setStatusMessage('');
     try {
-      const result = await activateAiProviderProfile(profileId);
+      const result = await updateAiProviderProfileState(profileId, { isActive });
       setProfiles(result.profiles);
-      setStatusMessage('已切换');
+      setStatusMessage(isActive ? '已纳入候选池' : '已移出候选池');
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : '切换失败。');
+      setError(requestError instanceof Error ? requestError.message : '更新失败。');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function moveProfile(profileId: string, direction: -1 | 1) {
+    const activeProfiles = profiles.filter((profile) => profile.isActive);
+    const index = activeProfiles.findIndex((profile) => profile.id === profileId);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= activeProfiles.length) return;
+    const profileIds = activeProfiles.map((profile) => profile.id);
+    [profileIds[index], profileIds[targetIndex]] = [profileIds[targetIndex]!, profileIds[index]!];
+    setBusy(true);
+    setError('');
+    setStatusMessage('');
+    try {
+      const result = await reorderAiProviderProfiles({ profileIds });
+      setProfiles(result.profiles);
+      setStatusMessage('优先级已更新');
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : '优先级更新失败。');
     } finally {
       setBusy(false);
     }
@@ -4572,6 +5596,11 @@ function AiProviderSettingsPanel({
             <span className="appearance-swatch appearance-swatch-autumn" aria-hidden="true" />
             <span>秋日枫叶</span>
           </label>
+          <label className="appearance-option">
+            <input type="radio" name="appearance" value="kuromi" checked={appearance === 'kuromi'} onChange={() => onAppearanceChange('kuromi')} />
+            <span className="appearance-swatch appearance-swatch-kuromi" aria-hidden="true" />
+            <span>库洛米</span>
+          </label>
         </div>
         <div className="color-mode-control" role="radiogroup" aria-label="显示模式">
           <label className="color-mode-option">
@@ -4600,20 +5629,23 @@ function AiProviderSettingsPanel({
               <li className="settings-profile-row" key={profile.id}>
                 <label className="settings-profile-main">
                   <input
-                    type="radio"
-                    name="active-ai-provider"
+                    type="checkbox"
                     checked={profile.isActive}
-                    onChange={() => { void activate(profile.id); }}
+                    onChange={(event) => { void updateProfileState(profile.id, event.target.checked); }}
                     disabled={busy}
-                    aria-label={`启用${profile.name}`}
+                    aria-label={`${profile.isActive ? '移出' : '纳入'}候选池：${profile.name}`}
                   />
                   <span>
                     <strong>{profile.name}</strong>
                     <small>{aiProviderLabels[profile.provider]} · {profile.model}</small>
-                    <small>{profile.hasApiKey ? '密钥已保存' : '未配置密钥'} · {profile.baseUrl}</small>
+                    <small>{profile.isActive ? `候选 ${profile.priority}` : '未纳入候选池'} · {profile.hasApiKey ? '密钥已保存' : '未配置密钥'}</small>
                   </span>
                 </label>
                 <div className="settings-profile-actions">
+                  {profile.isActive ? <>
+                    <button className="icon-button provider-priority-button" type="button" onClick={() => { void moveProfile(profile.id, -1); }} disabled={busy || profile.priority <= 1} aria-label={`提高${profile.name}优先级`} title="提高优先级"><ArrowUp size={17} aria-hidden="true" /></button>
+                    <button className="icon-button provider-priority-button" type="button" onClick={() => { void moveProfile(profile.id, 1); }} disabled={busy || profile.priority >= profiles.filter((item) => item.isActive).length} aria-label={`降低${profile.name}优先级`} title="降低优先级"><ArrowDown size={17} aria-hidden="true" /></button>
+                  </> : null}
                   <button type="button" onClick={() => { void testProfile(profile.id); }} disabled={busy}>测试</button>
                   <button type="button" onClick={() => openEdit(profile)} disabled={busy}>编辑</button>
                   <button className="danger-action" type="button" onClick={() => setPendingDelete(profile)} disabled={busy}>删除</button>
@@ -4682,7 +5714,7 @@ function AiProviderSettingsPanel({
               {!draft.id ? (
                 <label className="settings-active-toggle">
                   <input type="checkbox" checked={draft.isActive} onChange={(event) => setDraft({ ...draft, isActive: event.target.checked })} />
-                  <span>设为当前</span>
+                  <span>纳入候选池</span>
                 </label>
               ) : null}
             </div>
@@ -4710,6 +5742,172 @@ function AiProviderSettingsPanel({
   );
 }
 
+function GlobalSearchPanel({
+  onClose,
+  onSelect,
+}: {
+  onClose: () => void;
+  onSelect: (result: GlobalSearchResult) => void;
+}) {
+  const panelRef = useRef<HTMLElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const filterTriggerRef = useRef<HTMLButtonElement>(null);
+  const filterSheetRef = useRef<HTMLElement>(null);
+  const filterCloseRef = useRef<HTMLButtonElement>(null);
+  const [query, setQuery] = useState('');
+  const [courseId, setCourseId] = useState('');
+  const [subjectId, setSubjectId] = useState('');
+  const [types, setTypes] = useState<GlobalSearchContentType[]>(['material', 'card', 'question']);
+  const [courses, setCourses] = useState<CatalogCoursesResponse['courses']>([]);
+  const [subjects, setSubjects] = useState<CatalogCourseSubjectsResponse['subjects']>([]);
+  const [response, setResponse] = useState<GlobalSearchResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    void fetchCatalogCourses().then((next) => setCourses(next.courses)).catch((requestError) => setError(requestError instanceof Error ? requestError.message : '筛选加载失败。'));
+  }, []);
+
+  useEffect(() => {
+    setSubjectId('');
+    setSubjects([]);
+    if (!courseId) return;
+    void fetchCatalogCourseSubjects(courseId).then((next) => setSubjects(next.subjects)).catch((requestError) => setError(requestError instanceof Error ? requestError.message : '筛选加载失败。'));
+  }, [courseId]);
+
+  useEffect(() => {
+    const normalized = query.trim();
+    if (Array.from(normalized).length < 2 || types.length === 0) {
+      setResponse(null);
+      setLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      setError('');
+      void fetchGlobalSearch({ query: normalized, courseId: courseId || undefined, subjectId: subjectId || undefined, types }, controller.signal)
+        .then((next) => setResponse(next))
+        .catch((requestError) => {
+          if (!isRequestCancelled(requestError)) setError(requestError instanceof Error ? requestError.message : '检索失败。');
+        })
+        .finally(() => setLoading(false));
+    }, 220);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [query, courseId, subjectId, types]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (filtersOpen) setFiltersOpen(false);
+        else onClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [filtersOpen, onClose]);
+
+  useEffect(() => {
+    if (filtersOpen || !panelRef.current) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !panelRef.current) return;
+      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled)'));
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [filtersOpen]);
+
+  useEffect(() => {
+    if (!filtersOpen) return;
+    filterCloseRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !filterSheetRef.current) return;
+      const focusable = Array.from(filterSheetRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled)'));
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.setTimeout(() => filterTriggerRef.current?.focus(), 0);
+    };
+  }, [filtersOpen]);
+
+  function toggleType(type: GlobalSearchContentType) {
+    setTypes((current) => current.includes(type) ? current.filter((item) => item !== type) : [...current, type]);
+  }
+
+  const groups: Array<{ type: GlobalSearchContentType; label: string }> = [
+    { type: 'material', label: '资料' },
+    { type: 'card', label: '闪卡' },
+    { type: 'question', label: '题目' },
+  ];
+
+  return (
+    <div className="global-search-backdrop" role="presentation">
+      <section className="global-search-panel" ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="global-search-title">
+        <header className="global-search-header">
+          <h1 id="global-search-title">检索</h1>
+          <div className="header-actions">
+            <button className="icon-button" ref={filterTriggerRef} type="button" onClick={() => setFiltersOpen(true)} aria-label="筛选" aria-expanded={filtersOpen} title="筛选"><SlidersHorizontal size={18} aria-hidden="true" /></button>
+            <button className="icon-button" type="button" onClick={onClose} aria-label="关闭检索" title="关闭"><X size={18} aria-hidden="true" /></button>
+          </div>
+        </header>
+        <div className="global-search-input-wrap">
+          <Search size={19} aria-hidden="true" />
+          <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="输入关键词" aria-label="检索词" maxLength={120} />
+          {query ? <button className="global-search-clear" type="button" onClick={() => setQuery('')} aria-label="清除检索词" title="清除"><X size={17} aria-hidden="true" /></button> : null}
+        </div>
+        <div className="feedback global-search-feedback" aria-live="polite">
+          {loading ? <p className="feedback-muted">检索中</p> : null}
+          {error ? <p className="feedback-error" role="alert">{error}</p> : null}
+        </div>
+        {Array.from(query.trim()).length < 2 ? <p className="empty-state">输入两个字符开始检索</p> : null}
+        {!loading && response && response.results.length === 0 ? <p className="empty-state">没有结果</p> : null}
+        {response?.results.length ? <div className="global-search-groups">{groups.map((group) => {
+          const results = response.results.filter((result) => result.type === group.type);
+          if (!results.length) return null;
+          return <section className="global-search-group" key={group.type} aria-labelledby={`global-search-${group.type}`}>
+            <h2 id={`global-search-${group.type}`}>{group.label}</h2>
+            <div className="global-search-results">{results.map((result) => <button className="global-search-result" type="button" key={`${result.type}:${result.id}`} onClick={() => onSelect(result)}>
+              <span className="global-search-result-title" title={result.title}>{result.title}</span>
+              <span className="global-search-result-path">{result.course.name} · {result.subject.name}</span>
+              {result.summary ? <span className="global-search-result-summary">{result.summary}</span> : null}
+            </button>)}</div>
+          </section>;
+        })}</div> : null}
+        {filtersOpen ? <div className="sheet-backdrop" role="presentation"><section className="sheet global-search-filter-sheet" ref={filterSheetRef} role="dialog" aria-modal="true" aria-labelledby="global-search-filter-title">
+          <header className="sheet-header"><h2 id="global-search-filter-title">筛选</h2><button className="icon-button" ref={filterCloseRef} type="button" onClick={() => setFiltersOpen(false)} aria-label="关闭筛选" title="关闭"><X size={18} aria-hidden="true" /></button></header>
+          <label className="field-column"><span>课程</span><select value={courseId} onChange={(event) => setCourseId(event.target.value)}><option value="">全部课程</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}</select></label>
+          <label className="field-column"><span>科目</span><select value={subjectId} onChange={(event) => setSubjectId(event.target.value)} disabled={!courseId}><option value="">全部科目</option>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></label>
+          <fieldset className="global-search-types"><legend>内容类型</legend>{groups.map((group) => <label key={group.type}><input type="checkbox" checked={types.includes(group.type)} onChange={() => toggleType(group.type)} disabled={types.length === 1 && types.includes(group.type)} /><span>{group.label}</span></label>)}</fieldset>
+          <div className="action-row"><button className="button-secondary" type="button" onClick={() => { setCourseId(''); setSubjectId(''); setTypes(['material', 'card', 'question']); }}>重置</button><button className="button-primary" type="button" onClick={() => setFiltersOpen(false)}>完成</button></div>
+        </section></div> : null}
+      </section>
+    </div>
+  );
+}
+
 export default function App() {
   const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>('checking');
   const [authUsername, setAuthUsername] = useState<string | null>(null);
@@ -4720,10 +5918,16 @@ export default function App() {
   const [materialsRoute, setMaterialsRoute] = useState<MaterialsRoute>(() =>
     materialsRouteFromLocation() ?? { kind: 'courses' });
   const [reviewDashboard, setReviewDashboard] = useState<ReviewDashboardResponse | null>(null);
+  const [reviewWorkspace, setReviewWorkspace] = useState<ReviewWorkspaceResponse | null>(null);
   const [reviewCard, setReviewCard] = useState<ReviewCardSummary | null>(null);
   const [reviewNavigation, setReviewNavigation] = useState<ReviewCardNavigation | null>(null);
   const [reviewFilters, setReviewFilters] = useState<ReviewFilters>({});
+  const [reviewMemorizationMode, setReviewMemorizationMode] = useState(false);
+  const [reviewPractice, setReviewPractice] = useState<PracticeSessionResponse | null>(null);
+  const [practiceReturnTarget, setPracticeReturnTarget] = useState<PracticeReturnTarget>({ kind: 'workspace' });
   const [showReviewFilters, setShowReviewFilters] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
   const [reviewLoading, setReviewLoading] = useState(true);
   const [reviewStatusSaving, setReviewStatusSaving] = useState(false);
   const [reviewHighlightSaving, setReviewHighlightSaving] = useState(false);
@@ -4779,6 +5983,21 @@ export default function App() {
     }
   }
 
+  async function loadReviewWorkspace(options: { courseId?: string; subjectId?: string | null; mode?: 'flashcards' | 'questions' } = {}) {
+    setReviewLoading(true);
+    setReviewError('');
+    try {
+      const nextWorkspace = await fetchReviewWorkspace(options);
+      if (options.mode && nextWorkspace.context.mode !== options.mode) {
+        setReviewWorkspace(await updateReviewWorkspace({ ...nextWorkspace.context, mode: options.mode }));
+      } else {
+        setReviewWorkspace(nextWorkspace);
+      }
+    }
+    catch (requestError) { setReviewError(requestError instanceof Error ? requestError.message : '复习工作台加载失败。'); }
+    finally { setReviewLoading(false); }
+  }
+
   async function loadHierarchy() {
     setHierarchyLoading(true);
     setHierarchyError('');
@@ -4820,12 +6039,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (authState === 'authenticated') {
-      void loadReviewDashboard();
-    }
-  }, [authState]);
-
-  useEffect(() => {
     function synchronizeLocation() {
       const nextRoute = materialsRouteFromLocation();
       if (nextRoute) {
@@ -4834,16 +6047,30 @@ export default function App() {
         setReviewCard(null);
       } else {
         setView('review');
+        if (authState !== 'authenticated') {
+          return;
+        }
+        const reviewRoute = reviewRouteFromLocation();
+        if (reviewRoute.kind === 'workspace') {
+          setReviewCard(null);
+          setReviewPractice(null);
+          void loadReviewWorkspace({ courseId: reviewRoute.courseId, subjectId: reviewRoute.subjectId, mode: reviewRoute.mode });
+        } else if (reviewRoute.kind === 'flashcard') {
+          void restoreFlashcardRoute(reviewRoute);
+        } else {
+          void restorePracticeRoute(reviewRoute.sessionId);
+        }
       }
     }
 
     window.addEventListener('popstate', synchronizeLocation);
     window.addEventListener('hashchange', synchronizeLocation);
+    synchronizeLocation();
     return () => {
       window.removeEventListener('popstate', synchronizeLocation);
       window.removeEventListener('hashchange', synchronizeLocation);
     };
-  }, []);
+  }, [authState]);
 
   const handleCatalogAuthExpired = useCallback(() => {
     void fetchAuthSession()
@@ -4889,9 +6116,48 @@ export default function App() {
     }
     setView(nextView);
     setReviewCard(null);
+    setReviewPractice(null);
   }
 
-  async function handleStartReview(scope: ReviewStartScope, materialId?: string) {
+  function navigateToReviewRoute(route: ReviewRoute, replace = false) {
+    const nextUrl = reviewRouteUrl(route);
+    if (window.location.hash !== nextUrl) {
+      window.history[replace ? 'replaceState' : 'pushState'](null, '', nextUrl);
+    }
+    setView('review');
+  }
+
+  function closeGlobalSearch(restoreFocus = true) {
+    setSearchOpen(false);
+    if (restoreFocus) window.setTimeout(() => searchTriggerRef.current?.focus(), 0);
+  }
+
+  function handleGlobalSearchSelect(result: GlobalSearchResult) {
+    closeGlobalSearch(false);
+    if (result.type === 'material' && result.materialId) {
+      navigateToMaterials({ kind: 'material', courseId: result.course.id, subjectId: result.subject.id, materialId: result.materialId });
+      return;
+    }
+    if (result.type === 'card' && result.cardId) {
+      void handleNavigateReviewCard(result.cardId, { kind: 'flashcard', materialId: result.materialId, mode: 'read', scope: 'all' });
+      return;
+    }
+    if (result.type === 'question' && result.questionBankId && result.questionId) {
+      navigateToMaterials({ kind: 'question-banks', courseId: result.course.id, subjectId: result.subject.id, questionBankId: result.questionBankId, questionId: result.questionId });
+    }
+  }
+
+  function closePractice() {
+    setReviewPractice(null);
+    if (practiceReturnTarget.kind === 'question-banks') {
+      navigateToMaterials(practiceReturnTarget);
+      return;
+    }
+    navigateToReviewRoute({ kind: 'workspace' }, true);
+    void loadReviewWorkspace();
+  }
+
+  async function handleStartReview(scope: ReviewStartScope, materialId?: string, mode: 'read' | 'memorize' = 'read') {
     setReviewLoading(true);
     setReviewError('');
     setReviewStatusMessage('');
@@ -4904,6 +6170,9 @@ export default function App() {
       setReviewFilters(filters);
       setReviewNavigation(result.navigation);
       setReviewCard(result.card);
+      setReviewPractice(null);
+      setReviewMemorizationMode(mode === 'memorize');
+      navigateToReviewRoute({ kind: 'flashcard', cardId: result.card.id, mode, materialId: materialId ?? null, scope });
     } catch (requestError) {
       setReviewError(requestError instanceof Error ? requestError.message : '没有可复习的闪卡。');
     } finally {
@@ -4911,16 +6180,98 @@ export default function App() {
     }
   }
 
-  async function handleNavigateReviewCard(cardId: string) {
+  async function handleUpdateReviewWorkspace(request: ReviewWorkspaceContextUpdateRequest) {
+    setReviewError('');
+    try {
+      const nextWorkspace = await updateReviewWorkspace(request);
+      setReviewWorkspace(nextWorkspace);
+      navigateToReviewRoute({ kind: 'workspace', courseId: nextWorkspace.context.courseId, subjectId: nextWorkspace.context.subjectId, mode: nextWorkspace.context.mode }, true);
+    }
+    catch (requestError) { setReviewError(requestError instanceof Error ? requestError.message : '复习上下文保存失败。'); throw requestError; }
+  }
+
+  function handleContinueWorkspace(item: ReviewWorkspaceContinue) {
+    if (item.kind === 'flashcard') {
+      void restoreFlashcardRoute({ kind: 'flashcard', cardId: item.cardId, mode: 'read', materialId: item.materialId, scope: 'all' });
+      return;
+    }
+    void restorePracticeRoute(item.sessionId);
+  }
+
+  async function handleNavigateReviewCard(cardId: string, route?: Omit<Extract<ReviewRoute, { kind: 'flashcard' }>, 'cardId'>) {
     setReviewLoading(true);
     setReviewError('');
     setReviewStatusMessage('');
     try {
-      const result = await fetchReviewCard(cardId, reviewFilters);
+      const filters: ReviewFilters = route
+        ? { materialId: route.materialId ?? undefined, statuses: route.scope === 'all' ? undefined : [route.scope] }
+        : reviewFilters;
+      const result = await fetchReviewCard(cardId, filters);
+      setReviewFilters(filters);
       setReviewNavigation(result.navigation);
       setReviewCard(result.card);
+      setReviewPractice(null);
+      const mode = route?.mode ?? (reviewMemorizationMode ? 'memorize' : 'read');
+      const selectedScope: ReviewStartScope = route?.scope ?? (reviewFilters.statuses?.[0] === 'unassessed' || reviewFilters.statuses?.[0] === 'effort' ? reviewFilters.statuses[0] : 'all');
+      navigateToReviewRoute({ kind: 'flashcard', cardId: result.card.id, mode, materialId: route?.materialId ?? reviewFilters.materialId ?? null, scope: selectedScope });
     } catch (requestError) {
       setReviewError(requestError instanceof Error ? requestError.message : '闪卡加载失败。');
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
+  async function restoreFlashcardRoute(route: Extract<ReviewRoute, { kind: 'flashcard' }>) {
+    setReviewMemorizationMode(route.mode === 'memorize');
+    await handleNavigateReviewCard(route.cardId, route);
+  }
+
+  async function startWorkspacePractice(questionBankId: string, questionChapterId: string | null, mode: PracticeMode, options: PracticeLaunchOptions) {
+    setReviewLoading(true);
+    setReviewError('');
+    try {
+      const session = await startPracticeSession(questionBankId, questionChapterId, mode, 'full', null, options);
+      setPracticeReturnTarget({ kind: 'workspace' });
+      setReviewPractice(session);
+      setReviewCard(null);
+      navigateToReviewRoute({ kind: 'practice', sessionId: session.session.id });
+    } catch (requestError) {
+      setReviewError(requestError instanceof Error ? requestError.message : '无法开始会话。');
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
+  async function startWorkspaceFavoritePractice(subjectId: string, mode: PracticeMode, options: PracticeLaunchOptions) {
+    setReviewLoading(true);
+    setReviewError('');
+    try {
+      const session = await startFavoritePracticeSession(subjectId, mode, options);
+      setPracticeReturnTarget({ kind: 'workspace' });
+      setReviewPractice(session);
+      setReviewCard(null);
+      navigateToReviewRoute({ kind: 'practice', sessionId: session.session.id });
+    } catch (requestError) {
+      setReviewError(requestError instanceof Error ? requestError.message : '无法开始收藏题练习。');
+    } finally {
+      setReviewLoading(false);
+    }
+  }
+
+  async function restorePracticeRoute(sessionId: string) {
+    setReviewLoading(true);
+    setReviewError('');
+    try {
+      const session = await fetchPracticeSession(sessionId);
+      setPracticeReturnTarget({ kind: 'workspace' });
+      setReviewPractice(session);
+      setReviewCard(null);
+      navigateToReviewRoute({ kind: 'practice', sessionId: session.session.id }, true);
+    } catch (requestError) {
+      setReviewError(requestError instanceof Error ? requestError.message : '会话不存在或已失效。');
+      setReviewPractice(null);
+      navigateToReviewRoute({ kind: 'workspace' }, true);
+      await loadReviewWorkspace();
     } finally {
       setReviewLoading(false);
     }
@@ -5266,16 +6617,33 @@ export default function App() {
 
   return (
     <main className="app-shell">
+      {appearance === 'kuromi' ? (
+        <div className="kuromi-decoration" aria-hidden="true">
+          <span className="kuromi-ear kuromi-ear-left" />
+          <span className="kuromi-ear kuromi-ear-right" />
+          <span className="kuromi-ribbon" />
+          <span className="kuromi-skull"><span /><span /></span>
+          <span className="kuromi-charm" />
+          <span className="kuromi-sparkle kuromi-sparkle-one" />
+          <span className="kuromi-sparkle kuromi-sparkle-two" />
+        </div>
+      ) : null}
       <section className="content">
-        <nav className="app-nav" aria-label="主导航">
-          <button className={`nav-item ${view === 'review' ? 'nav-item-active' : ''}`} type="button" onClick={() => { navigateToView('review'); void loadReviewDashboard(); }}>复习</button>
+        {!reviewPractice ? <nav className="app-nav" aria-label="主导航">
+          <button className={`nav-item ${view === 'review' ? 'nav-item-active' : ''}`} type="button" onClick={() => { navigateToView('review'); void loadReviewWorkspace(); }}>复习</button>
           <button className={`nav-item ${view === 'materials' ? 'nav-item-active' : ''}`} type="button" onClick={() => navigateToMaterials({ kind: 'courses' })}>资料</button>
           <button className={`nav-item ${view === 'import' ? 'nav-item-active' : ''}`} type="button" onClick={() => { setQuestionImportTarget(null); navigateToView('import'); }}>导入</button>
           <button className={`nav-item ${view === 'settings' ? 'nav-item-active' : ''}`} type="button" onClick={() => navigateToView('settings')}>设置</button>
-        </nav>
+          {view === 'review' ? <button className="icon-button nav-search" ref={searchTriggerRef} type="button" onClick={() => setSearchOpen(true)} aria-label="检索" title="检索"><Search size={18} aria-hidden="true" /></button> : null}
+        </nav> : null}
 
         {view === 'review' ? (
-          <ReviewPanel
+          reviewPractice ? <PracticeSessionPanel
+            initialSession={reviewPractice}
+            onClose={closePractice}
+            onFinished={(next) => { setReviewPractice(next); void loadReviewWorkspace(); }}
+            onStartWrong={() => undefined}
+          /> : reviewCard ? <ReviewPanel
             dashboard={reviewDashboard}
             card={reviewCard}
             navigation={reviewNavigation}
@@ -5297,7 +6665,26 @@ export default function App() {
             onReleaseEditLock={handleReleaseReviewEditLock}
             onUploadResource={handleUploadReviewResource}
             onShowFilters={() => setShowReviewFilters(true)}
-            onBack={() => { setReviewCard(null); void loadReviewDashboard(); }}
+            onBack={() => { setReviewCard(null); setReviewPractice(null); navigateToReviewRoute({ kind: 'workspace' }, true); void loadReviewWorkspace(); }}
+            initialMemorizationMode={reviewMemorizationMode}
+            onMemorizationModeChange={(enabled) => {
+              setReviewMemorizationMode(enabled);
+              if (reviewCard) {
+                const route = reviewRouteFromLocation();
+                if (route.kind === 'flashcard') navigateToReviewRoute({ ...route, mode: enabled ? 'memorize' : 'read' }, true);
+              }
+            }}
+          /> : <ReviewWorkspacePanel
+            workspace={reviewWorkspace}
+            loading={reviewLoading}
+            error={reviewError}
+            onRefresh={() => { void loadReviewWorkspace(); }}
+            onUpdateContext={handleUpdateReviewWorkspace}
+            onStartFlashcards={(materialId, scope, mode) => { void handleStartReview(scope, materialId, mode); }}
+            onStartPractice={(bankId, questionChapterId, mode, options) => { void startWorkspacePractice(bankId, questionChapterId, mode, options); }}
+            onStartFavoritePractice={(subjectId, mode, options) => { void startWorkspaceFavoritePractice(subjectId, mode, options); }}
+            onResumePractice={(sessionId) => { void restorePracticeRoute(sessionId); }}
+            onContinue={handleContinueWorkspace}
           />
         ) : view === 'materials' && materialsRoute.kind === 'manage' ? (
           <HierarchyPanel
@@ -5323,6 +6710,12 @@ export default function App() {
             route={materialsRoute}
             onNavigate={navigateToMaterials}
             onOpenImport={() => { setQuestionImportTarget({ courseId: materialsRoute.courseId, subjectId: materialsRoute.subjectId }); navigateToView('import'); }}
+            onOpenPractice={(session) => {
+              setPracticeReturnTarget({ kind: 'question-banks', courseId: materialsRoute.courseId, subjectId: materialsRoute.subjectId });
+              setReviewPractice(session);
+              setReviewCard(null);
+              navigateToReviewRoute({ kind: 'practice', sessionId: session.session.id });
+            }}
             onAuthExpired={handleCatalogAuthExpired}
           />
         ) : view === 'materials' && catalogRoute ? (
@@ -5463,6 +6856,7 @@ export default function App() {
             onClose={() => setShowReviewFilters(false)}
           />
         ) : null}
+        {searchOpen ? <GlobalSearchPanel onClose={() => closeGlobalSearch()} onSelect={handleGlobalSearchSelect} /> : null}
       </section>
     </main>
   );

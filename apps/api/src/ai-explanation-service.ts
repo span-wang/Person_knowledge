@@ -6,7 +6,7 @@ import {
 } from '@knowledge-flashcards/shared';
 import { config } from './config.js';
 import { createDatabasePool } from './database.js';
-import { decryptAiProviderApiKey, type AiProviderApiError } from './ai-provider-service.js';
+import { activeAiProviders, AiProviderApiError } from './ai-provider-service.js';
 
 const defaultSystemPrompt = '你是一名严谨、清晰的中文学习助手。只根据闪卡提供的内容进行解释，不编造资料中没有的事实。';
 const maxPromptLength = 4_000;
@@ -212,33 +212,6 @@ export class AiExplanationServiceImpl implements AiExplanationService {
       throw new AiExplanationApiError(404, '闪卡不存在或已删除。');
     }
 
-    const [providerRows] = await this.options.database.execute(
-      `
-        SELECT id, provider, base_url, model, api_key_ciphertext
-        FROM ai_provider_profiles
-        WHERE is_active = TRUE
-        ORDER BY updated_at DESC, id
-        LIMIT 1
-      `,
-    );
-    const provider = rowsFrom(providerRows)[0];
-    if (!provider) {
-      throw new AiExplanationApiError(503, '尚未配置启用的 AI Provider。');
-    }
-    if (!provider.api_key_ciphertext) {
-      throw new AiExplanationApiError(503, '当前 AI Provider 尚未配置 API Key。');
-    }
-
-    let apiKey: string;
-    try {
-      apiKey = decryptAiProviderApiKey(provider.api_key_ciphertext as Buffer, this.options.encryptionSecret);
-    } catch (error) {
-      if (error instanceof Error && 'statusCode' in error) {
-        throw new AiExplanationApiError((error as AiProviderApiError).statusCode, error.message);
-      }
-      throw new AiExplanationApiError(503, 'AI 密钥解密失败。');
-    }
-
     if (request !== undefined && !isRecord(request)) {
       throw new AiExplanationApiError(400, '临时提示词格式无效。');
     }
@@ -252,55 +225,45 @@ export class AiExplanationServiceImpl implements AiExplanationService {
       temporaryPrompt ? `本次额外要求：${temporaryPrompt}` : '',
     ].filter(Boolean).join('\n\n');
 
-    const controller = new AbortController();
-    let timedOut = false;
-    const onRequestAbort = () => controller.abort();
-    const timer = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, this.requestTimeoutMs);
-    if (options.signal?.aborted) {
-      onRequestAbort();
-    } else {
-      options.signal?.addEventListener('abort', onRequestAbort, { once: true });
-    }
-    let response: Response;
+    let providers;
     try {
-      response = await this.fetchImplementation(endpointFor(textValue(provider.base_url)), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: textValue(provider.model),
-          messages: [
-            { role: 'system', content: defaultSystemPrompt },
-            { role: 'user', content: promptText },
-          ],
-        }),
-        signal: controller.signal,
-      });
+      providers = await activeAiProviders(this.options.database, this.options.encryptionSecret);
     } catch (error) {
-      if (options.signal?.aborted) {
-        throw cancelledRequestError();
+      if (error instanceof AiProviderApiError) throw new AiExplanationApiError(error.statusCode, error.message);
+      throw new AiExplanationApiError(503, '没有可用的已启用 AI Provider。');
+    }
+    let provider = providers[0]!;
+    let content = '';
+    let lastFailure: unknown;
+    for (const candidate of providers) {
+      throwIfRequestCancelled(options.signal);
+      const controller = new AbortController();
+      const onRequestAbort = () => controller.abort();
+      const timer = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+      if (options.signal?.aborted) onRequestAbort(); else options.signal?.addEventListener('abort', onRequestAbort, { once: true });
+      try {
+        const response = await this.fetchImplementation(endpointFor(candidate.baseUrl), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${candidate.apiKey}` },
+          body: JSON.stringify({ model: candidate.model, messages: [{ role: 'system', content: defaultSystemPrompt }, { role: 'user', content: promptText }] }),
+          signal: controller.signal,
+        });
+        const payload = await readJson(response);
+        throwIfRequestCancelled(options.signal);
+        if (!response.ok) throw new Error('AI Provider 返回错误。');
+        content = responseContent(payload);
+        if (!content || content.length > maxExplanationLength) throw new Error('AI 返回内容无效。');
+        provider = candidate;
+        break;
+      } catch (error) {
+        if (options.signal?.aborted) throw cancelledRequestError();
+        lastFailure = error;
+      } finally {
+        clearTimeout(timer);
+        options.signal?.removeEventListener('abort', onRequestAbort);
       }
-      throw new AiExplanationApiError(502, timedOut ? 'AI 请求超时。' : 'AI 请求失败。');
-    } finally {
-      clearTimeout(timer);
-      options.signal?.removeEventListener('abort', onRequestAbort);
     }
-
-    const payload = await readJson(response);
-    throwIfRequestCancelled(options.signal);
-    if (!response.ok) {
-      throw new AiExplanationApiError(502, 'AI Provider 返回错误。');
-    }
-    const content = responseContent(payload);
-    if (!content || content.length > maxExplanationLength) {
-      throw new AiExplanationApiError(502, 'AI 返回内容无效。');
-    }
-    throwIfRequestCancelled(options.signal);
+    if (!content) throw new AiExplanationApiError(502, lastFailure instanceof Error ? lastFailure.message : '所有 AI Provider 均请求失败。');
 
     await this.options.database.execute(
       `
@@ -317,9 +280,9 @@ export class AiExplanationServiceImpl implements AiExplanationService {
       `,
       [
         normalizedCardId,
-        textValue(provider.id),
-        textValue(provider.provider),
-        textValue(provider.model),
+        provider.id,
+        provider.provider,
+        provider.model,
         promptText,
         JSON.stringify({ text: content }),
       ],
@@ -334,8 +297,8 @@ export class AiExplanationServiceImpl implements AiExplanationService {
       [normalizedCardId],
     );
     const explanation = explanationFromRow(rowsFrom(savedRows)[0]) ?? {
-      provider: textValue(provider.provider),
-      model: textValue(provider.model),
+      provider: provider.provider,
+      model: provider.model,
       promptText,
       content,
       generatedAt: new Date().toISOString(),

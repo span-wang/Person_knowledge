@@ -9,15 +9,18 @@ import {
   importPreviewPath,
   importTemplatePath,
   reviewCardPath,
+  reviewCardNotesPath,
   reviewCardHighlightPath,
   reviewCardsPath,
   reviewDashboardPath,
+  reviewWorkspacePath,
   reviewResourcePath,
   reviewStartPath,
   hierarchyPath,
   hierarchyTrashPath,
   aiProviderProfilesPath,
   reviewCardExplanationPath,
+  studyAssistantPath,
   dataMarkdownExportPath,
   dataJsonExportPath,
   dataJsonRestorePath,
@@ -37,12 +40,19 @@ import {
   questionsPath,
   practiceSessionsPath,
   practiceQuestionBanksPath,
+  practiceSubjectFavoritesPath,
   questionAiExplanationsPath,
+  globalSearchPath,
+  wrongAnswerReviewPath,
+  learningInsightsPath,
   type AuthLoginRequest,
   type AuthSessionResponse,
   type AiProviderProfileCreateRequest,
+  type AiProviderProfileStateUpdateRequest,
   type AiProviderProfileUpdateRequest,
+  type AiProviderProfilesReorderRequest,
   type ReviewAiExplanationGenerateRequest,
+  type StudyAssistantAskRequest,
   type ImportApplyRequest,
   type ImportAiCorrectionRequest,
   type ErrorResponse,
@@ -50,6 +60,7 @@ import {
   type ReviewFilters,
   type ReviewHighlightCreateRequest,
   type ReviewCardContentUpdateRequest,
+  type CardReviewNoteUpdateRequest,
   type ReviewMasteryStatus,
   type ReviewStatusUpdateRequest,
   type ReviewStartScope,
@@ -77,13 +88,20 @@ import {
   type QuestionMoveRequest,
   type QuestionReorderRequest,
   type QuestionUpdateRequest,
+  type QuestionFavoriteUpdateRequest,
+  type QuestionReviewNoteUpdateRequest,
   type PracticeAnswerRequest,
   type PracticeSessionStartRequest,
+  type PracticeFavoriteSessionStartRequest,
+  type WrongAnswerPracticeStartRequest,
+  type GlobalSearchFilters,
   type QuestionAiExplanationGenerateRequest,
+  type WrongAnswerFilterRequest,
 } from '@knowledge-flashcards/shared';
 import { config } from './config.js';
 import { createImportTemplate, createImportService, ImportApiError, type ImportService } from './import-service.js';
 import { createReviewService, ReviewApiError, type ReviewEditLockCredentials, type ReviewService } from './review-service.js';
+import { createCardReviewNoteService, CardReviewNoteApiError, type CardReviewNoteService } from './card-review-note-service.js';
 import { createResourceService, ResourceApiError, type ResourceService } from './resource-service.js';
 import { createHierarchyService, HierarchyApiError, type HierarchyService } from './hierarchy-service.js';
 import { AiProviderApiError, createAiProviderService, type AiProviderService } from './ai-provider-service.js';
@@ -97,6 +115,28 @@ import { createQuestionService, QuestionApiError, type QuestionService } from '.
 import { createPracticeService, PracticeApiError, type PracticeService } from './practice-service.js';
 import { createPracticeStatisticsService, PracticeStatisticsApiError, type PracticeStatisticsService } from './practice-statistics-service.js';
 import { createQuestionAiService, QuestionAiApiError, type QuestionAiService } from './question-ai-service.js';
+import { createStudyAssistantService, StudyAssistantApiError, type StudyAssistantService } from './study-assistant-service.js';
+import { createReviewWorkspaceService, type ReviewWorkspaceService } from './review-workspace-service.js';
+import { createGlobalSearchService, GlobalSearchApiError, type GlobalSearchService } from './global-search-service.js';
+import { createWrongAnswerService, WrongAnswerApiError, type WrongAnswerService } from './wrong-answer-service.js';
+import { createLearningInsightsService, LearningInsightsApiError, type LearningInsightsService } from './learning-insights-service.js';
+
+function writeStudyAssistantEvent(response: express.Response, event: unknown) {
+  response.write(`data: ${JSON.stringify(event)}\n\n`);
+}
+
+function startStudyAssistantStream(response: express.Response) {
+  response.status(200).set({
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'Content-Encoding': 'identity',
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'X-Accel-Buffering': 'no',
+  });
+  response.flushHeaders();
+  // 先写入 SSE 注释，避免兼容代理等到首个回答分段才建立下行通道。
+  response.write(': stream-ready\n\n');
+}
 
 function createRequestLogger() {
   return (request: express.Request, response: express.Response, next: express.NextFunction) => {
@@ -135,6 +175,12 @@ const errorHandler: ErrorRequestHandler = (error, _request, response, next) => {
     return;
   }
 
+  if (error instanceof CardReviewNoteApiError) {
+    const body: ErrorResponse = { error: error.message };
+    response.status(error.statusCode).json(body);
+    return;
+  }
+
   if (error instanceof ResourceApiError) {
     const body: ErrorResponse = { error: error.message };
     response.status(error.statusCode).json(body);
@@ -154,6 +200,12 @@ const errorHandler: ErrorRequestHandler = (error, _request, response, next) => {
   }
 
   if (error instanceof AiExplanationApiError) {
+    const body: ErrorResponse = { error: error.message };
+    response.status(error.statusCode).json(body);
+    return;
+  }
+
+  if (error instanceof StudyAssistantApiError) {
     const body: ErrorResponse = { error: error.message };
     response.status(error.statusCode).json(body);
     return;
@@ -207,6 +259,24 @@ const errorHandler: ErrorRequestHandler = (error, _request, response, next) => {
     return;
   }
 
+  if (error instanceof GlobalSearchApiError) {
+    const body: ErrorResponse = { error: error.message };
+    response.status(error.statusCode).json(body);
+    return;
+  }
+
+  if (error instanceof WrongAnswerApiError) {
+    const body: ErrorResponse = { error: error.message };
+    response.status(error.statusCode).json(body);
+    return;
+  }
+
+  if (error instanceof LearningInsightsApiError) {
+    const body: ErrorResponse = { error: error.message };
+    response.status(error.statusCode).json(body);
+    return;
+  }
+
   if (typeof error === 'object' && error !== null && 'type' in error && error.type === 'entity.too.large') {
     response.status(413).json({ error: '上传文件不能超过 5MB。' } satisfies ErrorResponse);
     return;
@@ -249,6 +319,12 @@ function readReviewFilters(request: express.Request): ReviewFilters {
   };
 }
 
+function readGlobalSearchFilters(request: express.Request): GlobalSearchFilters {
+  const value = (name: string) => typeof request.query[name] === 'string' ? request.query[name].trim() : undefined;
+  const types = value('types')?.split(',').map((type) => type.trim()).filter(Boolean);
+  return { query: value('q') ?? '', courseId: value('courseId'), subjectId: value('subjectId'), types: types as GlobalSearchFilters['types'] };
+}
+
 function readDeviceId(request: express.Request): string {
   const deviceId = request.header('x-device-id')?.trim();
   if (!deviceId || deviceId.length > 255) {
@@ -289,6 +365,7 @@ export interface AppDependencies {
   importService?: ImportService;
   questionImportService?: QuestionImportService;
   reviewService?: ReviewService;
+  cardReviewNoteService?: CardReviewNoteService;
   resourceService?: ResourceService;
   hierarchyService?: HierarchyService;
   aiProviderService?: AiProviderService;
@@ -300,6 +377,11 @@ export interface AppDependencies {
   practiceService?: PracticeService;
   practiceStatisticsService?: PracticeStatisticsService;
   questionAiService?: QuestionAiService;
+  studyAssistantService?: StudyAssistantService;
+  reviewWorkspaceService?: ReviewWorkspaceService;
+  globalSearchService?: GlobalSearchService;
+  wrongAnswerService?: WrongAnswerService;
+  learningInsightsService?: LearningInsightsService;
   authService?: AuthService;
 }
 
@@ -308,6 +390,7 @@ export function createApp(startedAt = new Date(), dependencies: AppDependencies 
   const importService = dependencies.importService ?? createImportService();
   const questionImportService = dependencies.questionImportService ?? createQuestionImportService();
   const reviewService = dependencies.reviewService ?? createReviewService();
+  const cardReviewNoteService = dependencies.cardReviewNoteService ?? createCardReviewNoteService();
   const resourceService = dependencies.resourceService ?? createResourceService();
   const hierarchyService = dependencies.hierarchyService ?? createHierarchyService();
   const aiProviderService = dependencies.aiProviderService ?? createAiProviderService();
@@ -319,6 +402,11 @@ export function createApp(startedAt = new Date(), dependencies: AppDependencies 
   const practiceService = dependencies.practiceService ?? createPracticeService();
   const practiceStatisticsService = dependencies.practiceStatisticsService ?? createPracticeStatisticsService();
   const questionAiService = dependencies.questionAiService ?? createQuestionAiService();
+  const studyAssistantService = dependencies.studyAssistantService ?? createStudyAssistantService();
+  const reviewWorkspaceService = dependencies.reviewWorkspaceService ?? createReviewWorkspaceService();
+  const globalSearchService = dependencies.globalSearchService ?? createGlobalSearchService();
+  const wrongAnswerService = dependencies.wrongAnswerService ?? createWrongAnswerService();
+  const learningInsightsService = dependencies.learningInsightsService ?? createLearningInsightsService();
   const authService = dependencies.authService;
   const jsonBodyParser = express.json({ limit: '50mb' });
   app.disable('x-powered-by');
@@ -437,6 +525,41 @@ export function createApp(startedAt = new Date(), dependencies: AppDependencies 
     }
   });
 
+  app.get(globalSearchPath, async (request, response, next) => {
+    try {
+      response.status(200).json(await globalSearchService.search(readGlobalSearchFilters(request)));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get(reviewWorkspacePath, async (request, response, next) => {
+    try {
+      const courseId = typeof request.query.courseId === 'string' ? request.query.courseId : undefined;
+      const subjectQuery = typeof request.query.subjectId === 'string' ? request.query.subjectId : undefined;
+      const subjectId = subjectQuery === undefined ? undefined : subjectQuery === 'all' ? null : subjectQuery;
+      response.status(200).json(await reviewWorkspaceService.getWorkspace({ courseId, subjectId }));
+    } catch (error) { next(error); }
+  });
+
+  app.get(learningInsightsPath, async (request, response, next) => {
+    try {
+      const rawPeriod = typeof request.query.periodDays === 'string' ? request.query.periodDays : undefined;
+      const periodDays = rawPeriod === undefined ? undefined : Number(rawPeriod);
+      if (periodDays !== undefined && periodDays !== 7 && periodDays !== 30) {
+        throw new LearningInsightsApiError(400, '统计周期无效。');
+      }
+      const courseId = typeof request.query.courseId === 'string' ? request.query.courseId : undefined;
+      const subjectQuery = typeof request.query.subjectId === 'string' ? request.query.subjectId : undefined;
+      const subjectId = subjectQuery === undefined ? undefined : subjectQuery === 'all' ? null : subjectQuery;
+      response.status(200).json(await learningInsightsService.get({ periodDays: periodDays as 7 | 30 | undefined, courseId, subjectId }));
+    } catch (error) { next(error); }
+  });
+
+  app.put(reviewWorkspacePath, async (request, response, next) => {
+    try { response.status(200).json(await reviewWorkspaceService.updateContext(request.body)); } catch (error) { next(error); }
+  });
+
   app.get(hierarchyPath, async (_request, response, next) => {
     try {
       response.status(200).json(await hierarchyService.list());
@@ -520,6 +643,15 @@ export function createApp(startedAt = new Date(), dependencies: AppDependencies 
   app.patch(`${questionsPath}/:questionId`, async (request, response, next) => {
     try { response.status(200).json(await questionService.update(request.params.questionId, request.body as QuestionUpdateRequest)); } catch (error) { next(error); }
   });
+  app.put(`${questionsPath}/:questionId/favorite`, async (request, response, next) => {
+    try { response.status(200).json(await questionService.setFavorite(request.params.questionId, request.body as QuestionFavoriteUpdateRequest)); } catch (error) { next(error); }
+  });
+  app.get(`${questionsPath}/:questionId/review-note`, async (request, response, next) => {
+    try { response.status(200).json(await questionService.getReviewNote(request.params.questionId)); } catch (error) { next(error); }
+  });
+  app.put(`${questionsPath}/:questionId/review-note`, async (request, response, next) => {
+    try { response.status(200).json(await questionService.setReviewNote(request.params.questionId, request.body as QuestionReviewNoteUpdateRequest)); } catch (error) { next(error); }
+  });
   app.post(`${questionsPath}/:questionId/move`, async (request, response, next) => {
     try { response.status(200).json(await questionService.move(request.params.questionId, request.body as QuestionMoveRequest)); } catch (error) { next(error); }
   });
@@ -538,6 +670,9 @@ export function createApp(startedAt = new Date(), dependencies: AppDependencies 
   app.post(practiceSessionsPath, async (request, response, next) => {
     try { response.status(201).json(await practiceService.start(request.body as PracticeSessionStartRequest)); } catch (error) { next(error); }
   });
+  app.post(`${practiceSubjectFavoritesPath}/:subjectId/favorites/sessions`, async (request, response, next) => {
+    try { response.status(201).json(await practiceService.startFavorite({ ...(request.body as Omit<PracticeFavoriteSessionStartRequest, 'subjectId'>), subjectId: request.params.subjectId })); } catch (error) { next(error); }
+  });
   app.get(`${practiceSessionsPath}/:sessionId`, async (request, response, next) => {
     try { response.status(200).json(await practiceService.get(request.params.sessionId)); } catch (error) { next(error); }
   });
@@ -553,6 +688,12 @@ export function createApp(startedAt = new Date(), dependencies: AppDependencies 
   app.get(`${practiceQuestionBanksPath}/:bankId/statistics`, async (request, response, next) => {
     try { response.status(200).json(await practiceStatisticsService.get(request.params.bankId)); } catch (error) { next(error); }
   });
+  app.get(wrongAnswerReviewPath, async (request, response, next) => {
+    try { response.status(200).json(await wrongAnswerService.list({ subjectId: String(request.query.subjectId ?? ''), knowledgePoint: typeof request.query.knowledgePoint === 'string' ? request.query.knowledgePoint : undefined, type: typeof request.query.type === 'string' ? request.query.type as WrongAnswerFilterRequest['type'] : undefined, since: typeof request.query.since === 'string' ? request.query.since : undefined })); } catch (error) { next(error); }
+  });
+  app.post(`${wrongAnswerReviewPath}/sessions`, async (request, response, next) => {
+    try { response.status(201).json(await practiceService.startWrong(request.body as WrongAnswerPracticeStartRequest)); } catch (error) { next(error); }
+  });
   app.get(`${questionAiExplanationsPath}/:questionId`, async (request, response, next) => {
     try { response.status(200).json(await questionAiService.list(request.params.questionId)); } catch (error) { next(error); }
   });
@@ -564,6 +705,36 @@ export function createApp(startedAt = new Date(), dependencies: AppDependencies 
     } catch (error) {
       if (!abort.signal.aborted) next(error);
     } finally { abort.dispose(); }
+  });
+  app.post(`${studyAssistantPath}/cards/:cardId`, async (request, response) => {
+    const abort = requestAbortSignal(request, response);
+    startStudyAssistantStream(response);
+    try {
+      for await (const content of studyAssistantService.streamFlashcard(request.params.cardId, request.body as StudyAssistantAskRequest, { signal: abort.signal })) {
+        if (!abort.signal.aborted) writeStudyAssistantEvent(response, { type: 'delta', content });
+      }
+      if (!abort.signal.aborted) writeStudyAssistantEvent(response, { type: 'done' });
+    } catch (error) {
+      if (!abort.signal.aborted) writeStudyAssistantEvent(response, { type: 'error', error: error instanceof Error ? error.message : '问答失败。' });
+    } finally {
+      if (!response.writableEnded) response.end();
+      abort.dispose();
+    }
+  });
+  app.post(`${studyAssistantPath}/practice-sessions/:sessionId/questions/:questionId`, async (request, response) => {
+    const abort = requestAbortSignal(request, response);
+    startStudyAssistantStream(response);
+    try {
+      for await (const content of studyAssistantService.streamPractice(request.params.sessionId, request.params.questionId, request.body as StudyAssistantAskRequest, { signal: abort.signal })) {
+        if (!abort.signal.aborted) writeStudyAssistantEvent(response, { type: 'delta', content });
+      }
+      if (!abort.signal.aborted) writeStudyAssistantEvent(response, { type: 'done' });
+    } catch (error) {
+      if (!abort.signal.aborted) writeStudyAssistantEvent(response, { type: 'error', error: error instanceof Error ? error.message : '问答失败。' });
+    } finally {
+      if (!response.writableEnded) response.end();
+      abort.dispose();
+    }
   });
 
   app.get(`${catalogMaterialsPath}/:materialId`, async (request, response, next) => {
@@ -799,6 +970,25 @@ export function createApp(startedAt = new Date(), dependencies: AppDependencies 
     }
   });
 
+  app.put(`${aiProviderProfilesPath}/:profileId/state`, async (request, response, next) => {
+    try {
+      response.status(200).json(await aiProviderService.setState(
+        request.params.profileId,
+        request.body as AiProviderProfileStateUpdateRequest,
+      ));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put(`${aiProviderProfilesPath}/order`, async (request, response, next) => {
+    try {
+      response.status(200).json(await aiProviderService.reorder(request.body as AiProviderProfilesReorderRequest));
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.delete(`${aiProviderProfilesPath}/:profileId`, async (request, response, next) => {
     try {
       response.status(200).json(await aiProviderService.remove(request.params.profileId));
@@ -898,6 +1088,22 @@ export function createApp(startedAt = new Date(), dependencies: AppDependencies 
   app.get(`${reviewCardPath}/:cardId`, async (request, response, next) => {
     try {
       response.status(200).json(await reviewService.getCard(request.params.cardId, readReviewFilters(request)));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get(`${reviewCardNotesPath}/:cardId/note`, async (request, response, next) => {
+    try {
+      response.status(200).json(await cardReviewNoteService.get(request.params.cardId));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.put(`${reviewCardNotesPath}/:cardId/note`, async (request, response, next) => {
+    try {
+      response.status(200).json(await cardReviewNoteService.set(request.params.cardId, request.body as CardReviewNoteUpdateRequest));
     } catch (error) {
       next(error);
     }

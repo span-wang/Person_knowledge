@@ -10,7 +10,7 @@ import type {
 } from '@knowledge-flashcards/shared';
 import { config } from './config.js';
 import { createDatabasePool } from './database.js';
-import { decryptAiProviderApiKey, type AiProviderApiError } from './ai-provider-service.js';
+import { activeAiProviders, AiProviderApiError } from './ai-provider-service.js';
 
 const defaultSystemPrompt = '你是一名严谨、清晰的中文学习助手。只根据题目提供的内容进行讲解，不编造题目之外的事实。';
 const maxPromptLength = 4_000;
@@ -196,16 +196,6 @@ export class QuestionAiServiceImpl implements QuestionAiService {
     const normalizedQuestionId = normalizedId(questionId);
     const question = await this.currentQuestion(normalizedQuestionId);
     const normalized = normalizedRequest(request);
-    const [providerRows] = await this.options.database.execute('SELECT id, provider, base_url, model, api_key_ciphertext FROM ai_provider_profiles WHERE is_active = TRUE ORDER BY updated_at DESC, id LIMIT 1');
-    const provider = rowsFrom(providerRows)[0];
-    if (!provider) throw new QuestionAiApiError(503, '尚未配置启用的 AI Provider。');
-    if (!provider.api_key_ciphertext) throw new QuestionAiApiError(503, '当前 AI Provider 尚未配置 API Key。');
-    let apiKey: string;
-    try { apiKey = decryptAiProviderApiKey(provider.api_key_ciphertext as Buffer, this.options.encryptionSecret); }
-    catch (error) {
-      if (error instanceof Error && 'statusCode' in error) throw new QuestionAiApiError((error as AiProviderApiError).statusCode, error.message);
-      throw new QuestionAiApiError(503, 'AI 密钥解密失败。');
-    }
     const attemptText = normalized.attempt
       ? `本次作答：${normalized.attempt.answer?.join('、') || '未作答'}；判定：${normalized.attempt.result === 'correct' ? '正确' : normalized.attempt.result === 'incorrect' ? '错误' : '未作答'}`
       : '';
@@ -220,38 +210,51 @@ export class QuestionAiServiceImpl implements QuestionAiService {
       attemptText,
       normalized.prompt ? `本次额外要求：${normalized.prompt}` : '',
     ].filter(Boolean).join('\n\n');
-    const controller = new AbortController();
-    let timedOut = false;
-    const onAbort = () => controller.abort();
-    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, this.requestTimeoutMs);
-    if (options.signal?.aborted) onAbort(); else options.signal?.addEventListener('abort', onAbort, { once: true });
-    let response: Response;
+    let providers;
     try {
-      response = await this.fetchImplementation(endpointFor(textValue(provider.base_url)), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({ model: textValue(provider.model), messages: [{ role: 'system', content: defaultSystemPrompt }, { role: 'user', content: promptText }] }),
-        signal: controller.signal,
-      });
-    } catch {
-      if (options.signal?.aborted) throw cancelledError();
-      throw new QuestionAiApiError(502, timedOut ? 'AI 请求超时。' : 'AI 请求失败。');
-    } finally {
-      clearTimeout(timer);
-      options.signal?.removeEventListener('abort', onAbort);
+      providers = await activeAiProviders(this.options.database, this.options.encryptionSecret);
+    } catch (error) {
+      if (error instanceof AiProviderApiError) throw new QuestionAiApiError(error.statusCode, error.message);
+      throw new QuestionAiApiError(503, '没有可用的已启用 AI Provider。');
     }
-    const payload = await readJson(response);
-    throwIfCancelled(options.signal);
-    if (!response.ok) throw new QuestionAiApiError(502, 'AI Provider 返回错误。');
-    const content = responseContent(payload);
-    if (!content || content.length > maxExplanationLength) throw new QuestionAiApiError(502, 'AI 返回内容无效。');
-    throwIfCancelled(options.signal);
+    let provider = providers[0]!;
+    let content = '';
+    let lastFailure: unknown;
+    for (const candidate of providers) {
+      throwIfCancelled(options.signal);
+      const controller = new AbortController();
+      const onAbort = () => controller.abort();
+      const timer = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+      if (options.signal?.aborted) onAbort(); else options.signal?.addEventListener('abort', onAbort, { once: true });
+      try {
+        const response = await this.fetchImplementation(endpointFor(candidate.baseUrl), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${candidate.apiKey}` },
+          body: JSON.stringify({ model: candidate.model, messages: [{ role: 'system', content: defaultSystemPrompt }, { role: 'user', content: promptText }] }),
+          signal: controller.signal,
+        });
+        const payload = await readJson(response);
+        throwIfCancelled(options.signal);
+        if (!response.ok) throw new Error('AI Provider 返回错误。');
+        content = responseContent(payload);
+        if (!content || content.length > maxExplanationLength) throw new Error('AI 返回内容无效。');
+        provider = candidate;
+        break;
+      } catch (error) {
+        if (options.signal?.aborted) throw cancelledError();
+        lastFailure = error;
+      } finally {
+        clearTimeout(timer);
+        options.signal?.removeEventListener('abort', onAbort);
+      }
+    }
+    if (!content) throw new QuestionAiApiError(502, lastFailure instanceof Error ? lastFailure.message : '所有 AI Provider 均请求失败。');
     const id = randomUUID();
     await this.options.database.execute(
       'INSERT INTO question_ai_explanations (id, question_id, question_version, provider_profile_id, provider, model, prompt_text, content_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, normalizedQuestionId, question.version, textValue(provider.id), textValue(provider.provider), textValue(provider.model), promptText, JSON.stringify({ text: content })],
+      [id, normalizedQuestionId, question.version, provider.id, provider.provider, provider.model, promptText, JSON.stringify({ text: content })],
     );
-    const explanation: QuestionAiExplanation = { id, questionId: normalizedQuestionId, questionVersion: question.version, provider: textValue(provider.provider), model: textValue(provider.model), promptText, content, generatedAt: new Date().toISOString(), stale: false };
+    const explanation: QuestionAiExplanation = { id, questionId: normalizedQuestionId, questionVersion: question.version, provider: provider.provider, model: provider.model, promptText, content, generatedAt: new Date().toISOString(), stale: false };
     return { explanation };
   }
 }

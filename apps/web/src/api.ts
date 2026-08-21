@@ -4,13 +4,18 @@ import {
   importPreviewPath,
   importTemplatePath,
   reviewCardPath,
+  reviewCardNotesPath,
   reviewCardHighlightPath,
   reviewCardStatusPath,
   reviewCardExplanationPath,
+  studyAssistantPath,
   reviewCardsPath,
   reviewDashboardPath,
+  reviewWorkspacePath,
+  learningInsightsPath,
   reviewResourcePath,
   reviewStartPath,
+  globalSearchPath,
   hierarchyPath,
   hierarchyTrashPath,
   catalogCoursesPath,
@@ -19,9 +24,12 @@ import {
   questionBanksPath,
   questionAiExplanationsPath,
   questionChaptersPath,
+  questionReviewNotesPath,
+  wrongAnswerReviewPath,
   questionsPath,
   practiceSessionsPath,
   practiceQuestionBanksPath,
+  practiceSubjectFavoritesPath,
   aiProviderProfilesPath,
   dataMarkdownExportPath,
   dataJsonExportPath,
@@ -41,8 +49,14 @@ import {
   type ReviewCardResponse,
   type ReviewCardContentUpdateRequest,
   type ReviewCardContentUpdateResponse,
+  type CardReviewNote,
+  type CardReviewNoteUpdateRequest,
   type ReviewCardsResponse,
   type ReviewDashboardResponse,
+  type ReviewWorkspaceContextUpdateRequest,
+  type ReviewWorkspaceResponse,
+  type LearningInsightsPeriod,
+  type LearningInsightsResponse,
   type ReviewEditLock,
   type ReviewEditLockResponse,
   type ReviewFilters,
@@ -51,9 +65,12 @@ import {
   type ReviewHighlightResponse,
   type ReviewResourceUploadResponse,
   type ReviewStartScope,
+  type GlobalSearchFilters,
+  type GlobalSearchResponse,
   type ReviewStatusUpdateRequest,
   type ReviewAiExplanation,
   type ReviewAiExplanationGenerateRequest,
+  type StudyAssistantStreamEvent,
   type HierarchyCreateRequest,
   type HierarchyEntityType,
   type HierarchyMoveRequest,
@@ -74,11 +91,20 @@ import {
   type QuestionAiExplanationHistoryResponse,
   type QuestionAiExplanationResponse,
   type QuestionCreateRequest,
+  type QuestionFavoriteUpdateRequest,
+  type QuestionReviewNote,
+  type QuestionReviewNoteUpdateRequest,
+  type WrongAnswerFilterRequest,
+  type WrongAnswerFilterResponse,
+  type WrongAnswerPracticeStartRequest,
   type QuestionMutationResponse,
   type QuestionTrashResponse,
   type QuestionUpdateRequest,
   type PracticeSessionListResponse,
   type PracticeSessionResponse,
+  type PracticeFavoriteSessionStartRequest,
+  type PracticeSessionOptions,
+  type PracticeAnswerResponse,
   type PracticeMode,
   type PracticeSource,
   type PracticeStatisticsResponse,
@@ -88,7 +114,9 @@ import {
   type QuestionImportPreviewResponse,
   type QuestionImportTemplateFormat,
   type AiProviderProfileCreateRequest,
+  type AiProviderProfileStateUpdateRequest,
   type AiProviderProfileUpdateRequest,
+  type AiProviderProfilesReorderRequest,
   type AiProviderProfilesResponse,
   type AiProviderConnectionTestResponse,
   type DataJsonExport,
@@ -225,6 +253,41 @@ export async function fetchReviewDashboard(): Promise<ReviewDashboardResponse> {
   return (await response.json()) as ReviewDashboardResponse;
 }
 
+export async function fetchGlobalSearch(filters: GlobalSearchFilters, signal?: AbortSignal): Promise<GlobalSearchResponse> {
+  const params = new URLSearchParams({ q: filters.query });
+  if (filters.courseId) params.set('courseId', filters.courseId);
+  if (filters.subjectId) params.set('subjectId', filters.subjectId);
+  if (filters.types?.length) params.set('types', filters.types.join(','));
+  const response = await fetch(`${globalSearchPath}?${params.toString()}`, { signal });
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as GlobalSearchResponse;
+}
+
+export async function fetchReviewWorkspace(options: { courseId?: string; subjectId?: string | null } = {}): Promise<ReviewWorkspaceResponse> {
+  const params = new URLSearchParams();
+  if (options.courseId) params.set('courseId', options.courseId);
+  if (options.subjectId !== undefined) params.set('subjectId', options.subjectId ?? 'all');
+  const response = await fetch(`${reviewWorkspacePath}${params.toString() ? `?${params.toString()}` : ''}`);
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as ReviewWorkspaceResponse;
+}
+
+export async function fetchLearningInsights(options: { periodDays?: LearningInsightsPeriod; courseId?: string; subjectId?: string | null } = {}): Promise<LearningInsightsResponse> {
+  const params = new URLSearchParams();
+  if (options.periodDays) params.set('periodDays', String(options.periodDays));
+  if (options.courseId) params.set('courseId', options.courseId);
+  if (options.subjectId !== undefined) params.set('subjectId', options.subjectId ?? 'all');
+  const response = await fetch(`${learningInsightsPath}?${params.toString()}`);
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as LearningInsightsResponse;
+}
+
+export async function updateReviewWorkspace(request: ReviewWorkspaceContextUpdateRequest): Promise<ReviewWorkspaceResponse> {
+  const response = await fetch(reviewWorkspacePath, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request) });
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as ReviewWorkspaceResponse;
+}
+
 export async function startReview(scope: ReviewStartScope, materialId?: string): Promise<ReviewCardResponse> {
   const params = new URLSearchParams({ scope });
   if (materialId) {
@@ -283,6 +346,62 @@ export async function generateReviewAiExplanation(
   return ((await response.json()) as { explanation: ReviewAiExplanation }).explanation;
 }
 
+async function readStudyAssistantStream(response: Response, onDelta: (content: string) => void | Promise<void>): Promise<void> {
+  if (!response.headers.get('content-type')?.includes('text/event-stream')) {
+    throw new Error('学习助手未收到流式响应，请检查当前 AI Provider 是否支持 stream。');
+  }
+  if (!response.body) throw new Error('问答响应为空。');
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  const consume = async (block: string) => {
+    const data = block.split('\n').map((line) => line.replace(/\r$/, '')).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trimStart()).join('\n');
+    if (!data) return;
+    let event: StudyAssistantStreamEvent;
+    try {
+      event = JSON.parse(data) as StudyAssistantStreamEvent;
+    } catch {
+      throw new Error('问答响应格式无效。');
+    }
+    if (event.type === 'delta') await onDelta(event.content);
+    if (event.type === 'error') throw new Error(event.error);
+  };
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, '\n');
+    let boundary = buffer.indexOf('\n\n');
+    while (boundary >= 0) {
+      await consume(buffer.slice(0, boundary));
+      buffer = buffer.slice(boundary + 2);
+      boundary = buffer.indexOf('\n\n');
+    }
+    if (done) break;
+  }
+  if (buffer.trim()) await consume(buffer);
+}
+
+export async function streamFlashcardStudyAssistant(cardId: string, prompt: string, onDelta: (content: string) => void | Promise<void>, signal?: AbortSignal): Promise<void> {
+  const response = await fetch(`${studyAssistantPath}/cards/${encodeURIComponent(cardId)}`, {
+    method: 'POST',
+    headers: { Accept: 'text/event-stream', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+    signal,
+  });
+  if (!response.ok) throw await readError(response);
+  await readStudyAssistantStream(response, onDelta);
+}
+
+export async function streamPracticeStudyAssistant(sessionId: string, questionId: string, prompt: string, onDelta: (content: string) => void | Promise<void>, signal?: AbortSignal): Promise<void> {
+  const response = await fetch(`${studyAssistantPath}/practice-sessions/${encodeURIComponent(sessionId)}/questions/${encodeURIComponent(questionId)}`, {
+    method: 'POST',
+    headers: { Accept: 'text/event-stream', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+    signal,
+  });
+  if (!response.ok) throw await readError(response);
+  await readStudyAssistantStream(response, onDelta);
+}
+
 export async function updateReviewStatus(
   cardId: string,
   status: ReviewMasteryStatus,
@@ -315,6 +434,22 @@ export async function updateReviewContent(
     throw await readError(response);
   }
   return (await response.json()) as ReviewCardContentUpdateResponse;
+}
+
+export async function fetchCardReviewNote(cardId: string): Promise<CardReviewNote | null> {
+  const response = await fetch(`${reviewCardNotesPath}/${encodeURIComponent(cardId)}/note`);
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as CardReviewNote | null;
+}
+
+export async function saveCardReviewNote(cardId: string, request: CardReviewNoteUpdateRequest): Promise<CardReviewNote | null> {
+  const response = await fetch(`${reviewCardNotesPath}/${encodeURIComponent(cardId)}/note`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as CardReviewNote | null;
 }
 
 export async function acquireReviewEditLock(cardId: string): Promise<ReviewEditLock> {
@@ -705,6 +840,41 @@ export async function updateQuestion(questionId: string, request: QuestionUpdate
   return (await response.json()) as QuestionMutationResponse;
 }
 
+export async function setQuestionFavorite(questionId: string, isFavorite: boolean): Promise<QuestionMutationResponse> {
+  const response = await fetch(`${questionsPath}/${encodeURIComponent(questionId)}/favorite`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isFavorite } satisfies QuestionFavoriteUpdateRequest) });
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as QuestionMutationResponse;
+}
+
+export async function fetchQuestionReviewNote(questionId: string): Promise<QuestionReviewNote | null> {
+  const response = await fetch(`${questionReviewNotesPath}/${encodeURIComponent(questionId)}/review-note`);
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as QuestionReviewNote | null;
+}
+
+export async function saveQuestionReviewNote(questionId: string, request: QuestionReviewNoteUpdateRequest | string): Promise<QuestionReviewNote | null> {
+  const body: QuestionReviewNoteUpdateRequest = typeof request === 'string' ? { noteText: request } : request;
+  const response = await fetch(`${questionReviewNotesPath}/${encodeURIComponent(questionId)}/review-note`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as QuestionReviewNote | null;
+}
+
+export async function fetchWrongAnswers(filters: WrongAnswerFilterRequest): Promise<WrongAnswerFilterResponse> {
+  const params = new URLSearchParams({ subjectId: filters.subjectId });
+  if (filters.knowledgePoint) params.set('knowledgePoint', filters.knowledgePoint);
+  if (filters.type) params.set('type', filters.type);
+  if (filters.since) params.set('since', filters.since);
+  const response = await fetch(`${wrongAnswerReviewPath}?${params.toString()}`);
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as WrongAnswerFilterResponse;
+}
+
+export async function startWrongAnswerPractice(request: WrongAnswerPracticeStartRequest): Promise<PracticeSessionResponse> {
+  const response = await fetch(`${wrongAnswerReviewPath}/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request) });
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as PracticeSessionResponse;
+}
+
 export async function moveQuestion(questionId: string, questionBankId: string, questionChapterId: string | null): Promise<QuestionMutationResponse> {
   const response = await fetch(`${questionsPath}/${encodeURIComponent(questionId)}/move`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ questionBankId, questionChapterId }) });
   if (!response.ok) throw await readError(response);
@@ -735,8 +905,14 @@ export async function fetchInProgressPracticeSessions(bankId: string): Promise<P
   return (await response.json()) as PracticeSessionListResponse;
 }
 
-export async function startPracticeSession(questionBankId: string, questionChapterId: string | null, mode: PracticeMode, source: PracticeSource = 'full', sourceSessionId: string | null = null): Promise<PracticeSessionResponse> {
-  const response = await fetch(practiceSessionsPath, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ questionBankId, questionChapterId, mode, source, sourceSessionId }) });
+export async function startPracticeSession(questionBankId: string, questionChapterId: string | null, mode: PracticeMode, source: PracticeSource = 'full', sourceSessionId: string | null = null, options: PracticeSessionOptions = {}): Promise<PracticeSessionResponse> {
+  const response = await fetch(practiceSessionsPath, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ questionBankId, questionChapterId, mode, source, sourceSessionId, ...options }) });
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as PracticeSessionResponse;
+}
+
+export async function startFavoritePracticeSession(subjectId: string, mode: PracticeMode, options: PracticeSessionOptions = {}): Promise<PracticeSessionResponse> {
+  const response = await fetch(`${practiceSubjectFavoritesPath}/${encodeURIComponent(subjectId)}/favorites/sessions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subjectId, mode, ...options } satisfies PracticeFavoriteSessionStartRequest) });
   if (!response.ok) throw await readError(response);
   return (await response.json()) as PracticeSessionResponse;
 }
@@ -753,10 +929,10 @@ export async function fetchPracticeSession(sessionId: string): Promise<PracticeS
   return (await response.json()) as PracticeSessionResponse;
 }
 
-export async function answerPracticeQuestion(sessionId: string, questionId: string, answer: string[]): Promise<PracticeSessionResponse> {
+export async function answerPracticeQuestion(sessionId: string, questionId: string, answer: string[]): Promise<PracticeAnswerResponse> {
   const response = await fetch(`${practiceSessionsPath}/${encodeURIComponent(sessionId)}/questions/${encodeURIComponent(questionId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer }) });
   if (!response.ok) throw await readError(response);
-  return (await response.json()) as PracticeSessionResponse;
+  return (await response.json()) as PracticeAnswerResponse;
 }
 
 export async function completePracticeSession(sessionId: string): Promise<PracticeSessionResponse> {
@@ -884,6 +1060,31 @@ export async function activateAiProviderProfile(profileId: string): Promise<AiPr
   if (!response.ok) {
     throw await readError(response);
   }
+  return (await response.json()) as AiProviderProfilesResponse;
+}
+
+export async function updateAiProviderProfileState(
+  profileId: string,
+  request: AiProviderProfileStateUpdateRequest,
+): Promise<AiProviderProfilesResponse> {
+  const response = await fetch(`${aiProviderProfilesPath}/${encodeURIComponent(profileId)}/state`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw await readError(response);
+  return (await response.json()) as AiProviderProfilesResponse;
+}
+
+export async function reorderAiProviderProfiles(
+  request: AiProviderProfilesReorderRequest,
+): Promise<AiProviderProfilesResponse> {
+  const response = await fetch(`${aiProviderProfilesPath}/order`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw await readError(response);
   return (await response.json()) as AiProviderProfilesResponse;
 }
 

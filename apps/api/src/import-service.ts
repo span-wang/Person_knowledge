@@ -14,7 +14,7 @@ import type {
 } from '@knowledge-flashcards/shared';
 import { config } from './config.js';
 import { createDatabasePool } from './database.js';
-import { decryptAiProviderApiKey, type AiProviderApiError } from './ai-provider-service.js';
+import { activeAiProviders, AiProviderApiError } from './ai-provider-service.js';
 import {
   parseImportPackage,
   parseContentMarkdown,
@@ -341,10 +341,6 @@ function previewResponse(
     issues: packageResult.issues.map(toIssueResponse),
     aiCorrectionAvailable: !valid && canAiCorrect(packageResult),
   };
-}
-
-function textValue(value: unknown): string {
-  return typeof value === 'string' ? value : String(value ?? '');
 }
 
 function endpointFor(baseUrl: string): string {
@@ -911,72 +907,46 @@ export class ImportService {
       throw new ImportApiError(400, '需要修正的正文过长，请手动处理格式。');
     }
 
-    const [providerRows] = await this.options.database.execute(
-      `
-        SELECT id, provider, base_url, model, api_key_ciphertext
-        FROM ai_provider_profiles
-        WHERE is_active = TRUE
-        ORDER BY updated_at DESC, id
-        LIMIT 1
-      `,
-    );
-    const provider = rowsFrom(providerRows)[0];
-    if (!provider) {
-      throw new ImportApiError(503, '尚未配置启用的 AI Provider。');
-    }
-    if (!provider.api_key_ciphertext) {
-      throw new ImportApiError(503, '当前 AI Provider 尚未配置 API Key。');
-    }
-
-    let apiKey: string;
+    let providers;
     try {
-      apiKey = decryptAiProviderApiKey(provider.api_key_ciphertext as Buffer, this.options.encryptionSecret ?? config.ai.providerKeyEncryptionSecret);
+      providers = await activeAiProviders(this.options.database, this.options.encryptionSecret ?? config.ai.providerKeyEncryptionSecret);
     } catch (error) {
-      if (error instanceof Error && 'statusCode' in error) {
-        throw new ImportApiError((error as AiProviderApiError).statusCode, error.message);
+      if (error instanceof AiProviderApiError) throw new ImportApiError(error.statusCode, error.message);
+      throw new ImportApiError(503, '没有可用的已启用 AI Provider。');
+    }
+    let content = '';
+    let lastFailure: unknown;
+    for (const provider of providers) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.aiCorrectionTimeoutMs);
+      try {
+        const response = await this.fetchImplementation(endpointFor(provider.baseUrl), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${provider.apiKey}` },
+          body: JSON.stringify({
+            model: provider.model,
+            messages: [
+              {
+                role: 'system',
+                content: '你是 Markdown 格式修正器。只能修正输入正文中的 Markdown、GFM 表格、HTML 转 Markdown 或 LaTeX 格式错误。严禁润色、改写、增删、翻译、解释或重排正文内容；标题、正文措辞和可供既有高亮定位的文字及公式必须保持不变。直接返回修正后的完整 Markdown 正文，不要 JSON、代码围栏、标题或解释。',
+              },
+              { role: 'user', content: requestCard.body },
+            ],
+          }),
+          signal: controller.signal,
+        });
+        const payload = await readJson(response);
+        if (!response.ok) throw new Error('AI Provider 返回错误。');
+        content = responseContent(payload);
+        if (!content) throw new Error('AI 返回内容无效。');
+        break;
+      } catch (error) {
+        lastFailure = error;
+      } finally {
+        clearTimeout(timer);
       }
-      throw new ImportApiError(503, 'AI 密钥解密失败。');
     }
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.aiCorrectionTimeoutMs);
-    let response: Response;
-    try {
-      response = await this.fetchImplementation(endpointFor(textValue(provider.base_url)), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: textValue(provider.model),
-          messages: [
-            {
-              role: 'system',
-              content: '你是 Markdown 格式修正器。只能修正输入正文中的 Markdown、GFM 表格、HTML 转 Markdown 或 LaTeX 格式错误。严禁润色、改写、增删、翻译、解释或重排正文内容；标题、正文措辞和可供既有高亮定位的文字及公式必须保持不变。直接返回修正后的完整 Markdown 正文，不要 JSON、代码围栏、标题或解释。',
-            },
-            {
-              role: 'user',
-              content: requestCard.body,
-            },
-          ],
-        }),
-        signal: controller.signal,
-      });
-    } catch {
-      throw new ImportApiError(502, 'AI 格式修正请求失败。');
-    } finally {
-      clearTimeout(timer);
-    }
-
-    const payload = await readJson(response);
-    if (!response.ok) {
-      throw new ImportApiError(502, 'AI Provider 返回错误。');
-    }
-    const content = responseContent(payload);
-    if (!content) {
-      throw new ImportApiError(502, 'AI 返回内容无效。');
-    }
+    if (!content) throw new ImportApiError(502, lastFailure instanceof Error ? lastFailure.message : '所有 AI Provider 均请求失败。');
     let correctedBodies: Map<number, string>;
     try {
       correctedBodies = new Map([[targetIndex, readAiCorrectedBody(content, targetIndex)]]);

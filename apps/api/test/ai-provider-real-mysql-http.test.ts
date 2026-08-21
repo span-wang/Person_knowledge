@@ -91,13 +91,17 @@ test('PH4-01 Provider 配置通过真实 MySQL + HTTP 验收', { timeout: 60_000
     assert.ok(secondProfile);
     assert.equal(secondProfile.isActive, false);
 
-    const switched = await requestJson<AiProviderProfilesResponse>(
+    const enabled = await requestJson<AiProviderProfilesResponse>(
       `${started.baseUrl}${aiProviderProfilesPath}/${encodeURIComponent(secondProfile.id)}/activate`,
       { method: 'POST' },
     );
-    assert.equal(switched.response.status, 200);
-    assert.equal(switched.body.profiles.find((profile) => profile.id === firstProfile.id)?.isActive, false);
-    assert.equal(switched.body.profiles.find((profile) => profile.id === secondProfile.id)?.isActive, true);
+    assert.equal(enabled.response.status, 200);
+    assert.equal(enabled.body.profiles.find((profile) => profile.id === firstProfile.id)?.isActive, true);
+    assert.equal(enabled.body.profiles.find((profile) => profile.id === secondProfile.id)?.isActive, true);
+    const firstPriority = enabled.body.profiles.find((profile) => profile.id === firstProfile.id)?.priority;
+    const secondPriority = enabled.body.profiles.find((profile) => profile.id === secondProfile.id)?.priority;
+    assert.ok(firstPriority !== undefined && secondPriority !== undefined);
+    assert.equal(secondPriority > firstPriority, true);
 
     const [secondRowsBeforeUpdate] = await pool.execute(
       'SELECT api_key_ciphertext FROM ai_provider_profiles WHERE id = ?',

@@ -6,6 +6,10 @@ import type {
   QuestionBankSummary,
   QuestionChapterSummary,
   QuestionCreateRequest,
+  QuestionFavoriteUpdateRequest,
+  QuestionReviewNoteUpdateRequest,
+  QuestionReviewNote,
+  HandwrittenStroke,
   QuestionMoveRequest,
   QuestionMutationResponse,
   QuestionQuestion,
@@ -16,6 +20,7 @@ import type {
   ReviewContentNode,
 } from '@knowledge-flashcards/shared';
 import { createDatabasePool } from './database.js';
+import { normalizeHandwrittenStrokes } from './card-review-note-service.js';
 
 const optionKeys = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
 const questionTypes = new Set<QuestionType>(['single', 'multiple', 'true_false']);
@@ -59,6 +64,9 @@ export interface QuestionService {
   reorder(questionId: string, request: QuestionReorderRequest): Promise<QuestionMutationResponse>;
   remove(questionId: string): Promise<QuestionMutationResponse>;
   restore(questionId: string): Promise<QuestionMutationResponse>;
+  setFavorite(questionId: string, request: QuestionFavoriteUpdateRequest): Promise<QuestionMutationResponse>;
+  getReviewNote(questionId: string): Promise<QuestionReviewNote | null>;
+  setReviewNote(questionId: string, request: QuestionReviewNoteUpdateRequest): Promise<QuestionReviewNote | null>;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -292,14 +300,20 @@ function questionFromRow(row: Record<string, unknown>): QuestionQuestion {
     analysis: row.analysis_json === null ? null : normalizeContent(readJson(row.analysis_json, '解析'), '解析', false),
     knowledgePoints: readJson(row.knowledge_points_json, '题目知识点') as string[],
   });
-  return { id: textValue(row.id), questionBankId: textValue(row.question_bank_id), questionChapterId: row.question_chapter_id === null ? null : textValue(row.question_chapter_id), ...data, version: numberValue(row.version), sortOrder: numberValue(row.sort_order), createdAt: dateValue(row.created_at), updatedAt: dateValue(row.updated_at) };
+  return { id: textValue(row.id), questionBankId: textValue(row.question_bank_id), questionChapterId: row.question_chapter_id === null ? null : textValue(row.question_chapter_id), ...data, isFavorite: Boolean(row.is_favorite), version: numberValue(row.version), sortOrder: numberValue(row.sort_order), createdAt: dateValue(row.created_at), updatedAt: dateValue(row.updated_at), reviewNote: row.review_note === null || row.review_note === undefined ? null : textValue(row.review_note) };
+}
+
+function reviewNoteFromRow(row: Record<string, unknown>): QuestionReviewNote {
+  const ink = row.ink_json === null || row.ink_json === undefined ? [] : readJson(row.ink_json, '题目手写备注');
+  const strokes = normalizeHandwrittenStrokes(ink, (message) => new QuestionApiError(409, `已保存的${message}`));
+  return { questionId: textValue(row.question_id), noteText: textValue(row.note_text), strokes, updatedAt: dateValue(row.updated_at) };
 }
 
 async function listFrom(database: QuestionSqlExecutor, bankId: string): Promise<QuestionBankQuestionsResponse> {
   const bank = await activeBank(database, bankId);
   const [chapterRows, questionRows] = await Promise.all([
     database.execute('SELECT id, question_bank_id, title, sort_order, (SELECT COUNT(*) FROM questions AS q WHERE q.question_chapter_id = question_chapters.id AND q.deleted_at IS NULL) AS question_count FROM question_chapters WHERE question_bank_id = ? AND deleted_at IS NULL ORDER BY sort_order, created_at, id', [bank.id]),
-    database.execute('SELECT id, question_bank_id, question_chapter_id, stem_json, question_type, options_json, answer_json, analysis_json, knowledge_points_json, version, sort_order, created_at, updated_at FROM questions WHERE question_bank_id = ? AND deleted_at IS NULL ORDER BY question_chapter_id IS NOT NULL, question_chapter_id, sort_order, created_at, id', [bank.id]),
+    database.execute('SELECT q.id, q.question_bank_id, q.question_chapter_id, q.stem_json, q.question_type, q.options_json, q.answer_json, q.analysis_json, q.knowledge_points_json, q.is_favorite, q.version, q.sort_order, q.created_at, q.updated_at, n.note_text AS review_note FROM questions AS q LEFT JOIN question_review_notes AS n ON n.question_id = q.id WHERE q.question_bank_id = ? AND q.deleted_at IS NULL ORDER BY q.question_chapter_id IS NOT NULL, q.question_chapter_id, q.sort_order, q.created_at, q.id', [bank.id]),
   ]);
   const chapters: QuestionChapterSummary[] = rowsFrom(chapterRows[0]).map((row) => ({ id: textValue(row.id), questionBankId: textValue(row.question_bank_id), title: textValue(row.title), sortOrder: numberValue(row.sort_order), questionCount: numberValue(row.question_count) }));
   return { bank: bank.summary, chapters, questions: rowsFrom(questionRows[0]).map(questionFromRow) };
@@ -424,7 +438,7 @@ export function createQuestionService(options: { database?: QuestionDatabase } =
     async remove(questionId) {
       return transaction(database, async (connection) => {
         const question = await activeQuestion(connection, questionId, true);
-        const [rows] = await connection.execute('SELECT id, question_bank_id, question_chapter_id, stem_json, question_type, options_json, answer_json, analysis_json, knowledge_points_json, version, sort_order FROM questions WHERE id = ? FOR UPDATE', [question.id]);
+        const [rows] = await connection.execute('SELECT q.id, q.question_bank_id, q.question_chapter_id, q.stem_json, q.question_type, q.options_json, q.answer_json, q.analysis_json, q.knowledge_points_json, q.version, q.sort_order, n.note_text AS review_note FROM questions AS q LEFT JOIN question_review_notes AS n ON n.question_id = q.id WHERE q.id = ? FOR UPDATE', [question.id]);
         const saved = questionFromRow(rowsFrom(rows)[0]!);
         await connection.execute('INSERT INTO trash_items (id, entity_type, entity_id, payload_json) VALUES (?, ?, ?, ?)', [randomUUID(), 'question', question.id, JSON.stringify(saved)]);
         await connection.execute('UPDATE questions SET deleted_at = CURRENT_TIMESTAMP(3) WHERE id = ?', [question.id]);
@@ -446,6 +460,39 @@ export function createQuestionService(options: { database?: QuestionDatabase } =
         await connection.execute('UPDATE questions SET deleted_at = NULL, question_bank_id = ?, question_chapter_id = ?, sort_order = ? WHERE id = ?', [target.bank.id, target.chapterId, await nextOrder(connection, target.bank.id, target.chapterId), id]);
         await connection.execute("UPDATE trash_items SET restored_at = CURRENT_TIMESTAMP(3) WHERE entity_type = 'question' AND entity_id = ? AND restored_at IS NULL", [id]);
         return { questions: await listFrom(connection, target.bank.id) };
+      });
+    },
+    async setFavorite(questionId, request) {
+      if (typeof request?.isFavorite !== 'boolean') throw new QuestionApiError(400, '收藏状态无效。');
+      return transaction(database, async (connection) => {
+        const question = await activeQuestion(connection, questionId, true);
+        await connection.execute('UPDATE questions SET is_favorite = ? WHERE id = ?', [request.isFavorite ? 1 : 0, question.id]);
+        return { questions: await listFrom(connection, question.questionBankId) };
+      });
+    },
+    async getReviewNote(questionId) {
+      const question = await activeQuestion(database, questionId);
+      const [rows] = await database.execute('SELECT question_id, note_text, ink_json, updated_at FROM question_review_notes WHERE question_id = ? LIMIT 1', [question.id]);
+      const row = rowsFrom(rows)[0];
+      return row ? reviewNoteFromRow(row) : null;
+    },
+    async setReviewNote(questionId, request) {
+      const question = await activeQuestion(database, questionId);
+      if (!request || (request.noteText === undefined && request.strokes === undefined) || (request.noteText !== undefined && (typeof request.noteText !== 'string' || request.noteText.length > 2000))) {
+        throw new QuestionApiError(400, '文字备注不能超过 2000 个字符。');
+      }
+      return transaction(database, async (connection) => {
+        const [existingRows] = await connection.execute('SELECT question_id, note_text, ink_json, updated_at FROM question_review_notes WHERE question_id = ? LIMIT 1 FOR UPDATE', [question.id]);
+        const existing = rowsFrom(existingRows)[0];
+        const noteText = request.noteText === undefined ? (existing ? textValue(existing.note_text) : '') : request.noteText.trim();
+        const strokes: HandwrittenStroke[] = request.strokes === undefined
+          ? (existing ? reviewNoteFromRow(existing).strokes : [])
+          : normalizeHandwrittenStrokes(request.strokes, (message) => new QuestionApiError(400, message));
+        if (!noteText && strokes.length === 0) await connection.execute('DELETE FROM question_review_notes WHERE question_id = ?', [question.id]);
+        else await connection.execute('INSERT INTO question_review_notes (question_id, note_text, ink_json) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE note_text = VALUES(note_text), ink_json = VALUES(ink_json), updated_at = CURRENT_TIMESTAMP(3)', [question.id, noteText, JSON.stringify(strokes)]);
+        const [rows] = await connection.execute('SELECT question_id, note_text, ink_json, updated_at FROM question_review_notes WHERE question_id = ? LIMIT 1', [question.id]);
+        const row = rowsFrom(rows)[0];
+        return row ? reviewNoteFromRow(row) : null;
       });
     },
   };

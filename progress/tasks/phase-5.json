@@ -27,6 +27,7 @@
           "调整移动端页面、导航、复习卡片、状态操作和 Sheet 的响应式布局，确保正文与底部安全区域不被遮挡。",
           "移除已登录状态下占用全局顶部空间的账户工具栏，在设置页账号分组提供当前账号和退出操作。",
           "将移动端常用页首操作收敛为带 Tooltip 与无障碍名称的图标按钮，标题与操作区同一基线并压缩标题尺寸。",
+          "将移动端底部主导航压缩至原有约三分之一的视觉高度，并同步收紧主内容底部预留。",
           "验证 iPhone Safari 视口下文本选词、高亮、表格换行或滚动、公式展示和页面无横向溢出。",
           "补充可重复执行的构建与浏览器验收证据。"
         ],
@@ -34,7 +35,8 @@
           "不实现离线复习、离线编辑、后台同步或缓存 API 数据。",
           "不接入 Cloudflare Tunnel、review.panspan.cloud、公网发布、账号登录或 Windows 发布包。",
           "不修改账号、密码哈希、认证接口、会话 Cookie、失败限速或主导航业务规则。",
-          "不扩展复习、导入、编辑、AI、备份和恢复业务规则。"
+          "不扩展复习、导入、编辑、AI、备份和恢复业务规则。",
+          "不改变桌面端导航、导航入口顺序、safe-area 语义或任何导航业务逻辑。"
         ],
         "deferredTo": [
           "Cloudflare Tunnel 与域名接入归属 PH5-02。",
@@ -43,7 +45,7 @@
         ]
       },
       "lastProgressOn": "2026-08-19",
-      "result": "已补齐可安装 PWA 所需的 manifest、iPhone Safari 元数据、PNG 图标和生产环境 Service Worker 注册；移动端主导航改为带安全区域的底部 Tab Bar，并用 dvh、safe-area 和可选词正文规则收敛移动阅读布局。已移除已登录状态下的全局账户工具栏，在设置页账号分组展示当前账号和退出操作；常用页首操作改为带 Tooltip 与无障碍名称的 Lucide 图标，390px 视口下标题、操作区同一基线且页首高度为 44px。Service Worker 只处理页面与静态资源，不缓存 /api 数据。终端 Playwright 在 390x844 视口下确认页面宽度无溢出、底部导航固定且正文拖选后高亮操作可用；真实 iPhone Safari 添加到主屏幕、原生长按浮动工具栏和 Home Indicator 仍待设备验收。",
+      "result": "已补齐可安装 PWA 所需的 manifest、iPhone Safari 元数据、PNG 图标和生产环境 Service Worker 注册；移动端主导航改为带安全区域的底部 Tab Bar，并用 dvh、safe-area 和可选词正文规则收敛移动阅读布局。已移除已登录状态下的全局账户工具栏，在设置页账号分组展示当前账号和退出操作；常用页首操作改为带 Tooltip 与无障碍名称的 Lucide 图标，390px 视口下标题、操作区同一基线且页首高度为 44px。移动端底部导航已压缩至原有约三分之一的视觉高度，主内容底部预留同步收紧。Service Worker 只处理页面与静态资源，不缓存 /api 数据。终端 Playwright 在 390x844 视口下确认页面宽度无溢出、底部导航固定且正文拖选后高亮操作可用；真实 iPhone Safari 添加到主屏幕、原生长按浮动工具栏和 Home Indicator 仍待设备验收。",
       "verification": [
         "npm run typecheck:web 通过。",
         "npm run build:web 通过，Vite 生产产物包含 manifest.webmanifest、sw.js 和三个 PNG 图标；仅有既有大 chunk 警告。",
@@ -53,7 +55,7 @@
         "隔离 Playwright 390x844 视口模拟已登录会话，验证全局账户工具栏不存在、设置页账号分组可见、标题与图标操作位于 44px 页首且 documentElement 无横向溢出；深色模式下账号名称计算色为 rgb(242, 242, 247)。",
         "npm run typecheck:web 与 npm run build:web 通过；生产构建仅有既有大 chunk 警告。",
         "已保存桌面、移动、表格、公式、PWA 和本次账户管理移动端截图作为人工检查证据。",
-        "终端 Playwright 390x844 回归：viewportWidth=390、bodyWidth=390、documentWidth=390；底部导航 position=fixed，height=61px，padding-bottom=8px，主内容 padding-bottom=96px；Manifest、apple-mobile-web-app-capable=yes 和 viewport-fit=cover 均存在。",
+        "终端 Playwright 390x844 回归：viewportWidth=390、bodyWidth=390、documentWidth=390；底部导航 position=fixed，height 约为原有三分之一，主内容底部预留同步收紧；Manifest、apple-mobile-web-app-capable=yes 和 viewport-fit=cover 均存在。",
         "终端 Playwright 拖选正文得到“生产经营单位”等文本，随后复习页“高亮”按钮由 disabled 变为可用；截图保存为 output/playwright/ph5-01-mobile-20260819.png。",
         "真实 iPhone Safari 添加到主屏幕、长按选词原生浮动工具栏和 Home Indicator 安全区仍未完成，任务保持进行中。"
       ],
@@ -1601,6 +1603,134 @@
         "progress/logs.json"
       ],
       "next": "待内置浏览器运行时恢复后验证 HTML 换行和显式表头表格的实际阅读展示；colspan/rowspan、style 语义或更多 HTML 标签另立任务。"
+    },
+    {
+      "id": "PH5-26",
+      "sequence": "26",
+      "order": 260,
+      "title": "建立课程复习工作台上下文与聚合入口",
+      "priority": "P1",
+      "moduleIds": [
+        "review-experience",
+        "question-bank",
+        "data-governance"
+      ],
+      "milestoneIds": [
+        "M5",
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-19",
+      "lastProgressOn": "2026-08-19",
+      "completedOn": "2026-08-19",
+      "acceptance": "复习入口以课程为持久上下文，支持课程搜索、按课程记忆具体科目和闪卡/题库分段；上下文存入数据库并可跨端恢复，URL 可恢复课程工作台和具体练习；课程工作台按当前科目范围提供闪卡资料与题库摘要，复用现有闪卡/刷题入口，不展开单张内容。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-19",
+        "summary": "将复习首页从全局资料选择收敛为课程级学习工作台，保留资料页的管理职责和现有练习实现。",
+        "inScope": [
+          "新增数据库持久化的课程复习上下文：当前课程、每门课程最近具体科目、每门课程最近闪卡/题库分段和最近展开资料。",
+          "新增课程级复习工作台聚合契约与认证 API，提供课程/科目摘要、闪卡资料摘要、题库摘要、课程统计和最近可继续活动。",
+          "前端复习页提供课程选择器、课程搜索、科目选择器、闪卡/题库分段和课程级继续入口；选择后立即保存并跨端恢复。",
+          "闪卡资料按科目分组，单个资料展开后直接显示阅读/背默、状态数量和开始入口；题库按科目扁平展示并标记章节题/真题/模拟题。",
+          "具体闪卡和题库会话使用可恢复 URL，继续入口遵循当前课程和科目范围；空资料和空题库保留但禁用练习。",
+          "将复习上下文纳入完整 JSON 导出/恢复，失效引用自动回退；本机外观设置不纳入。"
+        ],
+        "outOfScope": [
+          "不引入间隔重复、随机复习、每日任务、提醒、打卡或其他自动复习计划。",
+          "不重写现有闪卡阅读、状态、高亮、编辑锁、题目编辑、刷题判题和统计业务。",
+          "不把课程、科目和题库管理操作放入复习选择器；管理仍归资料页。",
+          "不在课程工作台展开单张闪卡正文、题目正文或新增题目管理能力。",
+          "不新增多用户权限、离线同步、实时冲突提示或本机外观跨设备同步。"
+        ],
+        "deferredTo": [
+          "课程工作台的分页/虚拟化和大规模资料性能优化另立任务；本步聚合仅返回轻量摘要。",
+          "真实 iPhone Safari 练习态和跨设备并发人工验收沿用既有发布验收任务。"
+        ]
+      },
+      "result": "已将课程工作台的闪卡动作绑定到阅读/背默模式，题库摘要行可直接开始背题、检测或继续最近未完成会话；工作台、闪卡和题库会话均使用 hash URL 恢复，失效练习 URL 自动回退工作台。课程摘要的 hasContinue 同时纳入有效闪卡续读和进行中题库会话；本步又修复了带连字符 UUID 的 MySQL JSON 路径错误，并兼容数据库续读映射与备份包装格式。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "npm test 通过，128 项测试全部通过。",
+        "新增前端路由与练习入口后，既有认证、复习、题库和工作台 HTTP 契约测试保持通过。",
+        "npm run test:review:integration 通过真实 MySQL 与 HTTP 回归，课程工作台返回 200 且恢复正确的资料续读卡片。",
+        "npm run build 通过，Web、API 和共享类型均可构建；Web 仅保留既有大 chunk 警告。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "apps/api/src/review-workspace-service.ts",
+        "apps/api/src/review-workspace-service.test.ts",
+        "apps/api/test/review-real-mysql-http.test.ts",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "PH5-26 已完成。课程工作台的分页/虚拟化和大规模资料性能优化须另立任务；真实 iPhone Safari 练习态和跨设备并发人工验收继续归既有发布验收任务。"
+    },
+    {
+      "id": "PH5-27",
+      "sequence": "27",
+      "order": 270,
+      "title": "新增库洛米精致主题",
+      "priority": "P1",
+      "moduleIds": [
+        "review-experience",
+        "delivery-security"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "已完成",
+      "startedOn": "2026-08-20",
+      "completedOn": "2026-08-21",
+      "lastProgressOn": "2026-08-21",
+      "acceptance": "设置页可切换并在本机持久化库洛米主题；主题在浅色、深色、系统模式下保持高对比、可读焦点、稳定触控尺寸和无横向溢出，正文阅读面不被装饰侵入。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成",
+        "confirmedOn": "2026-08-20",
+        "summary": "在既有外观选择与 iOS 风格 token 体系中新增库洛米视觉层，允许调整容器和环境装饰，不改变业务信息架构。",
+        "inScope": [
+          "新增库洛米外观选项、本机 localStorage 持久化和根元素主题状态。",
+          "以黑紫、薰衣草紫、库洛米粉和少量暖黄构成浅色/深色 token，覆盖页面背景、导航、容器、表单、Sheet、按钮、状态辅助和焦点。",
+          "增加低面积、静态、可关闭动态影响的环境装饰与库洛米主题 swatch；保持正文和公式阅读表面纯净。",
+          "验证 Web 类型检查、构建、进度生成/校验，并检查 390px 与桌面视口无横向溢出。"
+        ],
+        "outOfScope": [
+          "不新增库洛米图片、品牌 Logo、角色动画、音效或联网资源。",
+          "不改变复习、资料、题库、登录、AI、备份恢复和 API 数据语义。",
+          "不将本机主题设置同步到服务端、账号或 JSON 备份。"
+        ],
+        "deferredTo": [
+          "真实 iPhone Safari 设备验收沿用 GA 发布任务；若发现设备差异，仅在本主题视觉边界内修正。",
+          "更多角色主题、主题市场和自定义配色另立主题能力任务。"
+        ]
+      },
+      "result": "设置页现可选择并本机持久化库洛米主题。主题以黑紫主控件、薰衣草紫容器边界、莓果粉焦点与少量暖黄点缀覆盖导航、按钮、输入框、分段控件、列表、Sheet、检索与刷题工作区；静态耳饰、蝴蝶结、骷髅和星芒只位于环境层，闪卡正文、公式与挖空阅读面保持纯净高对比。",
+      "verification": [
+        "npm run typecheck:web 通过。",
+        "npm run build:web 通过；仅保留既有大体积 chunk 提示。",
+        "终端 Playwright 受控认证态验证设置页的库洛米选择、浅色/深色分段、导航、容器和静态环境装饰均已渲染；测试响应未调用任何写接口，测试浏览器主题偏好已重置。",
+        "终端 Playwright 验证 1403px 浅色和 390x844 深色：根状态均为 appearance=kuromi，390px 时 scrollWidth=viewportWidth=390；深色根背景/正文为 rgb(23, 18, 27)/rgb(247, 240, 248)。",
+        "认证态外的复习数据请求在受控页面返回既有 401，仅用于渲染设置结构，未将其计为主题错误；真实 iPhone Safari 设备验收继续归 RISK-021/RISK-028。"
+      ],
+      "affectedFiles": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/styles.css",
+        "项目产品定位.md",
+        "项目开发方案.md",
+        "DESIGN.md",
+        "progress/tasks/phase-5.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "更多角色主题、主题市场和自定义配色仍须另立主题能力任务；真实 iPhone Safari 设备验收沿用 PH5-01、PH5-05 与 RISK-021/RISK-028。"
     }
   ]
 }
